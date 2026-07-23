@@ -1534,6 +1534,15 @@
     font-size: 13px; cursor: pointer; transition: background 0.2s;
   }
   .novetats-btn:hover { background: rgba(245,247,73,0.06); }
+  .novetats-btn-final { background: var(--accent); color: var(--bg); }
+  .novetats-btn-final:hover { background: var(--accent); opacity: 0.9; }
+  .benvinguda-punts { display: flex; gap: 7px; justify-content: center; margin-top: 20px; }
+  .benvinguda-punt {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--border-dim); transition: background 0.25s;
+  }
+  .benvinguda-punt.actiu { background: var(--accent); }
+  .benvinguda-cos { min-height: 190px; }
 
   /* Botons del diàleg de recepta duplicada */
   .dup-btn {
@@ -1687,69 +1696,7 @@
 <body>
 
 <!-- PANTALLA DE PASSWORD -->
-<div id="passwordScreen" style="
-  display:none;
-  position:fixed; inset:0; z-index:9999;
-  background:#0B2027;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:24px;
-  font-family:'Poppins',sans-serif;
-">
-  <svg width="90" height="90" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="100" cy="100" r="100" fill="#0B2027"/>
-    <circle cx="100" cy="100" r="91" fill="none" stroke="#F5F749" stroke-width="1.5"/>
-    <path d="M 135 58 A 55 55 0 1 0 135 142" fill="none" stroke="#40798C" stroke-width="3" stroke-linecap="round"/>
-  </svg>
-  <div style="color:#F6F5AE; font-size:1.1rem; font-weight:500; letter-spacing:0.04em;">Les millors receptes</div>
-  <div style="display:flex; flex-direction:column; align-items:center; gap:12px; width:220px;">
-    <input id="passwordInput" type="password" placeholder="Contrasenya"
-      style="
-        width:100%; padding:0.7rem 1rem; text-align:center;
-        background:#112830; border:1.5px solid #40798C;
-        border-radius:10px; color:#F6F5AE;
-        font-family:'Poppins',sans-serif; font-size:1.1rem;
-        outline:none; letter-spacing:0.2em;
-      "
-    />
-    <div id="passwordError" style="color:#E87A7A; font-size:0.8rem; min-height:1rem;"></div>
-    <button onclick="comprovarPassword()" style="
-      width:100%; padding:0.7rem;
-      background:#F5F749; color:#0B2027;
-      border:none; border-radius:10px;
-      font-family:'Poppins',sans-serif; font-size:0.95rem;
-      font-weight:600; cursor:pointer;
-    ">Entrar</button>
-  </div>
-</div>
 
-<script>
-  (function() {
-    if (localStorage.getItem('receptes_auth') !== '1') {
-      const screen = document.getElementById('passwordScreen');
-      screen.style.display = 'flex';
-      document.getElementById('passwordInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') comprovarPassword();
-      });
-    }
-  })();
-
-  function comprovarPassword() {
-    const val = document.getElementById('passwordInput').value;
-    if (val === '4030') {
-      localStorage.setItem('receptes_auth', '1');
-      document.getElementById('passwordScreen').style.display = 'none';
-      mostrarNovetats();
-      // Si l'app s'ha obert des d'un "Compartir", ara reprenem la importació
-      if (typeof processarUrlCompartida === 'function') setTimeout(processarUrlCompartida, 400);
-    } else {
-      document.getElementById('passwordError').textContent = 'Contrasenya incorrecta';
-      document.getElementById('passwordInput').value = '';
-      document.getElementById('passwordInput').focus();
-    }
-  }
-</script>
 
 <!-- ══════════════════════════════════════
      MODAL D'INICI DE SESSIÓ / REGISTRE
@@ -1814,7 +1761,87 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     MODAL DE BENVINGUDA (només el primer cop)
+══════════════════════════════════════ -->
+<div class="novetats-overlay" id="benvinguda-overlay">
+  <div class="novetats-modal">
+    <div class="novetats-badge">BENVINGUDA</div>
+    <div class="novetats-titol" id="benvinguda-titol"></div>
+    <div class="novetats-text benvinguda-cos" id="benvinguda-text"></div>
+    <div class="benvinguda-punts" id="benvinguda-punts"></div>
+    <div class="novetats-btn-wrap">
+      <button class="novetats-btn" id="benvinguda-btn" onclick="avancarBenvinguda()">Següent</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ══════════════════════════════════════════════
+// BENVINGUDA — Modifica aquí!
+// Surt un únic cop, la primera vegada que una usuària
+// entra al seu receptari acabat de crear.
+// ══════════════════════════════════════════════
+// Cada element de la llista és una pantalla. Pots afegir-ne o treure'n:
+// els puntets de sota s'ajusten sols. Dins del text pots fer servir <br>
+// per separar paràgrafs i <strong>…</strong> per destacar una paraula.
+const BENVINGUDA = [
+  {
+    titol: 'Hola, benvinguda!',
+    text: 'Ja tens el teu receptari: un lloc per anar guardant tot el que cuines, o el que vols provar algun dia.'
+        + '<br><br>Les receptes que tens repartides en diferents notes, el que trobes per internet o el que t\'inventes, '
+        + 'tot en un sol lloc i sempre a mà, també quan siguis a la cuina amb el mòbil.',
+  },
+  {
+    titol: 'Com hi afegeixes receptes',
+    text: 'A mà, escanejant una fotografia o captura de pantalla, important un document o enganxant l\'adreça '
+        + 'd\'una web de cuina. Ho trobaràs tot a la pestanya <strong>Afegir</strong>.'
+        + '<br><br>Les receptes i les fotos que hi desis són només teves. Cap altra usuària no hi pot entrar; '
+        + 'només la Clara, que és qui manté l\'aplicació i qui t\'ajudarà si alguna cosa falla.',
+  },
+  {
+    titol: 'Tingues-la sempre a mà',
+    text: 'Al mòbil, clica <strong>Afegeix a la pantalla d\'inici</strong> o <strong>Instal·la l\'aplicació</strong> '
+        + 'i la tindràs com qualsevol altra app. A l\'iPhone, des de Safari i el menú de compartir; '
+        + 'a l\'Android, a Chrome i el menú dels tres puntets.'
+        + '<br><br>Si tens qualsevol problema, avisa la Clara. Espero que t\'agradi i que la gaudeixis!',
+  },
+];
+
+let pantallaBenvinguda = 0;
+
+function pintarBenvinguda() {
+  const p = BENVINGUDA[pantallaBenvinguda];
+  document.getElementById('benvinguda-titol').textContent = p.titol;
+  document.getElementById('benvinguda-text').innerHTML = p.text;
+  document.getElementById('benvinguda-punts').innerHTML = BENVINGUDA
+    .map((_, i) => `<span class="benvinguda-punt${i === pantallaBenvinguda ? ' actiu' : ''}"></span>`)
+    .join('');
+  const btn = document.getElementById('benvinguda-btn');
+  const ultima = pantallaBenvinguda === BENVINGUDA.length - 1;
+  btn.textContent = ultima ? 'Comencem!' : 'Següent';
+  btn.classList.toggle('novetats-btn-final', ultima);
+}
+
+function mostrarBenvinguda() {
+  pantallaBenvinguda = 0;
+  pintarBenvinguda();
+  document.getElementById('benvinguda-overlay').classList.add('visible');
+}
+
+function avancarBenvinguda() {
+  if (pantallaBenvinguda < BENVINGUDA.length - 1) {
+    pantallaBenvinguda++;
+    pintarBenvinguda();
+  } else {
+    tancarBenvinguda();
+  }
+}
+
+function tancarBenvinguda() {
+  document.getElementById('benvinguda-overlay').classList.remove('visible');
+}
+
 // ══════════════════════════════════════════════
 // NOVETATS — Modifica aquí!
 // Canvia VERSIO_NOVETATS i la llista per mostrar
@@ -1828,8 +1855,13 @@ const NOVETATS = [
   { titol: 'Importar des d\'un enllaç', desc: 'enganxa l\'adreça d\'una web de cuina i la recepta s\'importa sola. La trobaràs a la pestanya "Afegir".' },
 ];
 
+// A partir de quantes obertures ensenyem les novetats a una usuària nova
+const OBERTURES_NOVETATS = 4;
+
+function clauNovetats() { return 'novetats_versio:' + (usuariaId || ''); }
+
 function mostrarNovetats() {
-  if (localStorage.getItem('novetats_versio') === VERSIO_NOVETATS) return;
+  if (localStorage.getItem(clauNovetats()) === VERSIO_NOVETATS) return;
   const llista = document.getElementById('novetats-llista');
   llista.innerHTML = NOVETATS.map(n =>
     `<div class="novetats-item"><div class="novetats-dot"></div><div class="novetats-text"><strong>${n.titol}:</strong> ${n.desc}</div></div>`
@@ -1839,13 +1871,8 @@ function mostrarNovetats() {
 }
 
 function tancarNovetats() {
-  localStorage.setItem('novetats_versio', VERSIO_NOVETATS);
+  localStorage.setItem(clauNovetats(), VERSIO_NOVETATS);
   document.getElementById('novetats-overlay').classList.remove('visible');
-}
-
-// Si l'auth ja estava feta (no passa per comprovarPassword), mirem novetats directament
-if (localStorage.getItem('receptes_auth') === '1') {
-  mostrarNovetats();
 }
 </script>
 
@@ -2368,8 +2395,20 @@ sb.auth.getSession().then(({ data, error }) => {
   }
 });
 
+// Compta quantes vegades ha obert l'app aquesta usuària i decideix què li ensenyem:
+// la benvinguda el primer cop, i les novetats a partir de la quarta vegada
+// (així una usuària nova no rep totes dues coses de cop).
+function missatgesDInici() {
+  const clau = 'obertures:' + usuariaId;
+  const n = (parseInt(localStorage.getItem(clau), 10) || 0) + 1;
+  localStorage.setItem(clau, String(n));
+  if (n === 1) { mostrarBenvinguda(); return; }
+  if (n >= OBERTURES_NOVETATS) mostrarNovetats();
+}
+
 // Carrega (o recarrega) tot el receptari d'una usuària
 function engegarReceptari() {
+  missatgesDInici();
   receptes = []; oberts.clear();
   cacheMostrada = false;
   ideesCarregades = false;
@@ -5587,10 +5626,7 @@ function gestionarCompartit() {
   history.replaceState(null, '', location.pathname);
   if (!m) return;
   urlCompartidaPendent = m[0];
-  // Si la porta amb contrasenya està oberta, esperem: comprovarPassword() reprendrà el procés
-  if (localStorage.getItem('receptes_auth') === '1') {
-    setTimeout(processarUrlCompartida, 500); // marge perquè acabi la inicialització
-  }
+  setTimeout(processarUrlCompartida, 500); // marge perquè acabi la inicialització
 }
 document.addEventListener('DOMContentLoaded', gestionarCompartit);
 
