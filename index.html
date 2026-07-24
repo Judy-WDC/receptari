@@ -1492,6 +1492,36 @@
   .auth-missatge.error { color: #ff8f7a; }
   .auth-missatge.ok { color: var(--accent); }
   .auth-compte { font-size: 13px; color: var(--text-dim); margin: 0 0 16px; word-break: break-all; }
+  /* ── Modal del compte: capçalera i llista d'opcions ── */
+  .compte-cap {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    text-align: left; gap: 12px; margin-bottom: 20px;
+  }
+  .compte-cap h3 { margin: 0 0 5px; }
+  .compte-cap .auth-compte { margin: 0; }
+  .compte-tanca {
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    font-size: 18px; padding: 0; line-height: 1; flex-shrink: 0;
+  }
+  .compte-tanca:hover { color: var(--accent); }
+  .compte-opcio {
+    display: flex; align-items: flex-start; gap: 11px; width: 100%;
+    background: none; border: none; border-top: 0.5px solid var(--border-dim);
+    padding: 15px 2px; text-align: left; cursor: pointer;
+    font-family: inherit; color: inherit;
+  }
+  .compte-opcio i { font-size: 18px; color: var(--text-dim); margin-top: 1px; flex-shrink: 0; }
+  .compte-opcio strong {
+    display: block; font-size: 14.5px; font-weight: 400;
+    color: var(--text); margin-bottom: 3px;
+  }
+  .compte-opcio em {
+    display: block; font-style: normal; font-size: 11.5px;
+    line-height: 1.5; color: var(--text-dim);
+  }
+  .compte-opcio:hover strong { color: var(--accent); }
+  .compte-opcio:disabled { cursor: default; opacity: 0.55; }
+  .compte-opcio:disabled:hover strong { color: var(--text); }
   /* Botó d'engranatge per canviar d'usuària */
   .btn-config-url {
     background: none; border: none; color: var(--text-muted); cursor: pointer;
@@ -1721,10 +1751,31 @@
 
     <!-- Vista B: sessió iniciada -->
     <div id="auth-vista-compte" style="display:none">
-      <h3>El teu compte</h3>
-      <p class="auth-compte" id="auth-compte-correu"></p>
-      <button class="config-user-btn" style="width:100%" onclick="tancarSessio()">Tancar la sessió</button>
-      <button class="auth-secundari" onclick="tancarConfigUrl()">Tornar al receptari</button>
+      <div class="compte-cap">
+        <div>
+          <h3>El teu compte</h3>
+          <p class="auth-compte" id="auth-compte-correu"></p>
+        </div>
+        <button class="compte-tanca" onclick="tancarConfigUrl()" aria-label="Tancar">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <button class="compte-opcio" id="btn-descarrega" onclick="descarregarReceptes()">
+        <i class="ti ti-download" aria-hidden="true"></i>
+        <span>
+          <strong>Descarrega les teves receptes</strong>
+          <em id="btn-descarrega-nota">Un fitxer amb totes les receptes i idees, per llegir o imprimir. No inclou les fotografies.</em>
+        </span>
+      </button>
+
+      <button class="compte-opcio" onclick="tancarSessio()">
+        <i class="ti ti-logout" aria-hidden="true"></i>
+        <span>
+          <strong>Tancar la sessió</strong>
+          <em>Quan vulguis tornar a entrar-hi, hauràs de tornar a escriure el correu i la contrasenya.</em>
+        </span>
+      </button>
     </div>
 
   </div>
@@ -1957,7 +2008,7 @@ function tancarNovetats() {
   <header>
     <h1>Què vols cuinar avui?</h1>
     <p id="subtitol">Carregant...</p>
-    <button class="btn-config-url" onclick="obrirConfigUrl()" title="Canviar la URL del receptari"><i class="ti ti-settings"></i></button>
+    <button class="btn-config-url" onclick="obrirConfigUrl()" title="El teu compte" aria-label="El teu compte"><i class="ti ti-settings"></i></button>
   </header>
 
   <div class="container">
@@ -2301,6 +2352,12 @@ function obrirConfigUrl() {
     entrar.style.display = 'none';
     compte.style.display = '';
     document.getElementById('auth-compte-correu').textContent = usuariaActiva;
+    // Si encara no hi ha res desat, la descàrrega no té sentit
+    const buit = receptes.length === 0 && idees.length === 0;
+    document.getElementById('btn-descarrega').disabled = buit;
+    document.getElementById('btn-descarrega-nota').textContent = buit
+      ? 'Quan tinguis receptes desades, aquí te les podràs descarregar.'
+      : 'Un fitxer amb totes les receptes i idees, per llegir o imprimir. No inclou les fotografies.';
   } else {
     entrar.style.display = '';
     compte.style.display = 'none';
@@ -2367,6 +2424,129 @@ async function enviarAuth() {
     btn.disabled = false;
     btn.textContent = modeRegistre ? 'Crear el compte' : 'Entrar';
   }
+}
+
+// ══════════════════════════════════════════════
+// DESCARREGAR UNA CÒPIA LLEGIBLE DEL RECEPTARI
+// Genera un únic fitxer HTML que s'obre amb doble clic,
+// es pot buscar amb Ctrl+F i imprimir o desar en PDF.
+// ══════════════════════════════════════════════
+function escHtml(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// Converteix un text de diverses línies en HTML respectant els salts
+function liniesHtml(t) {
+  return escHtml(t).split(/\r?\n/).filter(l => l.trim()).join('<br>');
+}
+
+function fitxaRecepta(r, i) {
+  const dades = [];
+  if (r['Categoria']) dades.push(escHtml(r['Categoria']));
+  if (r['Racions'])   dades.push(escHtml(r['Racions']) + ' racions');
+  if (r['Etiquetes']) dades.push(escHtml(r['Etiquetes']));
+  if (r['Font'])      dades.push(escHtml(r['Font']));
+  if (r['URL'])       dades.push('<a href="' + escHtml(r['URL']) + '">' + escHtml(r['URL']) + '</a>');
+
+  const ings = getIngredientsParsed(r)
+    .map(ing => escHtml(renderScaledIngredientPlain(ing, 1)))
+    .filter(Boolean);
+
+  let html = '<article id="r' + i + '">';
+  html += '<h2>' + escHtml(r['Nom de la recepta'] || 'Sense nom') + '</h2>';
+  if (dades.length) html += '<p class="meta">' + dades.join(' &middot; ') + '</p>';
+  if (ings.length) html += '<h3>Ingredients</h3><p class="cos">' + ings.join('<br>') + '</p>';
+  if (r['Instruccions']) html += '<h3>Preparació</h3><p class="cos">' + liniesHtml(r['Instruccions']) + '</p>';
+  if (r['Comentaris'] || r['Foto']) {
+    html += '<div class="nota">';
+    if (r['Comentaris']) html += liniesHtml(r['Comentaris']);
+    if (r['Foto']) {
+      html += (r['Comentaris'] ? '<br>' : '')
+            + '<span class="foto">Fotografia: <a href="' + escHtml(r['Foto']) + '">'
+            + escHtml(r['Foto']) + '</a></span>';
+    }
+    html += '</div>';
+  }
+  return html + '</article>';
+}
+
+function fitxaIdea(idea) {
+  const dades = [];
+  if (idea['Etiquetes']) dades.push(escHtml(idea['Etiquetes']));
+  if (idea['Recepta'])   dades.push('recepta: ' + escHtml(idea['Recepta']));
+  let html = '<article class="idea"><h2>' + escHtml(idea['Títol'] || 'Sense títol') + '</h2>';
+  if (dades.length) html += '<p class="meta">' + dades.join(' &middot; ') + '</p>';
+  if (idea['Comentari']) html += '<p class="cos">' + liniesHtml(idea['Comentari']) + '</p>';
+  return html + '</article>';
+}
+
+async function descarregarReceptes() {
+  // Les idees potser encara no s'han carregat (si no s'ha obert mai la pestanya)
+  if (!ideesCarregades) { try { await carregarIdees(); } catch (e) {} }
+  if (!receptes.length && !idees.length) { mostrarToast('Encara no hi ha res per descarregar'); return; }
+
+  const ara = new Date();
+  const dataLlarga = ara.toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dataCurta  = ara.toISOString().slice(0, 10);
+
+  const recompte = [];
+  if (receptes.length) recompte.push(receptes.length + (receptes.length === 1 ? ' recepta' : ' receptes'));
+  if (idees.length)    recompte.push(idees.length + (idees.length === 1 ? ' idea' : ' idees'));
+
+  const index = receptes
+    .map((r, i) => '<li><a href="#r' + i + '">' + escHtml(r['Nom de la recepta'] || 'Sense nom') + '</a></li>')
+    .join('');
+
+  const doc = '<!DOCTYPE html>\n<html lang="ca"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<title>El meu receptari</title><style>'
+    + 'body{max-width:720px;margin:0 auto;padding:34px 26px 60px;background:#fff;color:#2c2c28;'
+    + 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6}'
+    + 'header{border-bottom:2px solid #0B2027;padding-bottom:14px;margin-bottom:10px}'
+    + 'h1{color:#0B2027;font-size:26px;font-weight:600;margin:0 0 6px}'
+    + '.sub{color:#6b6b66;font-size:13px;margin:0}'
+    + '.avis{color:#6b6b66;font-size:12.5px;margin:0 0 30px}'
+    + 'nav{margin-bottom:34px}'
+    + 'nav h3{margin:0 0 10px}'
+    + 'nav ul{margin:0;padding-left:20px;columns:2;column-gap:26px}'
+    + 'nav li{font-size:13.5px;margin-bottom:4px;break-inside:avoid}'
+    + 'nav a{color:#2c2c28;text-decoration:none}'
+    + 'nav a:hover{text-decoration:underline}'
+    + 'article{margin-bottom:30px;padding-top:20px;border-top:1px solid #e2e0d8}'
+    + 'h2{color:#0B2027;font-size:19px;font-weight:600;margin:0 0 4px}'
+    + 'h3{color:#44443f;font-size:11px;letter-spacing:.08em;text-transform:uppercase;'
+    + 'font-weight:600;margin:16px 0 6px}'
+    + '.meta{color:#8a8a84;font-size:12px;margin:0}'
+    + '.meta a{color:#8a8a84}'
+    + '.cos{font-size:14px;margin:0;white-space:normal}'
+    + '.nota{border-left:2px solid #d8d6cc;padding-left:12px;margin-top:14px;color:#6b6b66;font-size:13px}'
+    + '.foto{font-size:11.5px;color:#8a8a84;word-break:break-all}'
+    + '.foto a{color:#8a8a84}'
+    + '.seccio{border-top:2px solid #0B2027;margin-top:46px;padding-top:22px}'
+    + '@media print{body{padding:0}nav{page-break-after:always}article{page-break-inside:avoid}}'
+    + '</style></head><body>'
+    + '<header><h1>El meu receptari</h1><p class="sub">'
+    + escHtml(usuariaActiva) + ' &middot; còpia del ' + dataLlarga
+    + (recompte.length ? ' &middot; ' + recompte.join(' i ') : '') + '</p></header>'
+    + '<p class="avis">Les fotografies no s\'inclouen en aquest fitxer. Cada recepta en conté l\'enllaç, '
+    + 'que només funciona mentre el receptari segueixi actiu.</p>'
+    + (index ? '<nav><h3>Índex</h3><ul>' + index + '</ul></nav>' : '')
+    + receptes.map(fitxaRecepta).join('')
+    + (idees.length ? '<div class="seccio"><h1>Idees</h1></div>' + idees.map(fitxaIdea).join('') : '')
+    + '</body></html>';
+
+  const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'receptari-' + dataCurta + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+
+  tancarConfigUrl();
+  mostrarToast('⬇️ Còpia descarregada');
 }
 
 async function tancarSessio() {
@@ -2955,7 +3135,7 @@ function getIngredientsParsed(r) {
       return items.map(ing => {
         if (ing.q === null && ing.n) {
           const reParsed = parseIngredientLine(ing.n);
-          if (reParsed && reParsed.q !== null) return reParsed;
+          if (reParsed) return reParsed;
         }
         return ing;
       });
