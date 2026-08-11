@@ -842,6 +842,7 @@
   }
   textarea:focus { outline: none; border-color: var(--accent); }
   textarea::placeholder { color: var(--text-muted); }
+  .ta-scan-instr { min-height: 100px; } /* alçada d'escriptori (en mòbil s'amplia) */
 
   /* Badges escàner */
   .badge {
@@ -1352,6 +1353,21 @@
     .targeta-top { grid-template-columns: 56px 1fr auto; }
     .targeta-preview, .targeta-icona { width: 56px; height: 56px; }
     .nav-tab { padding: 0.85rem 1rem; font-size: 0.78rem; }
+
+    /* Formularis de repàs de l'escaneig: més grans i còmodes en mòbil.
+       16px de lletra = més llegible i evita el zoom automàtic de l'iPhone. */
+    .targeta-form { gap: 1rem; padding: 1rem 1rem 1.15rem; }
+    .targeta-form label { font-size: 0.82rem; }
+    .targeta-form textarea,
+    .targeta-form input[type=text],
+    .targeta-form input[type=number],
+    .targeta-form input[type=url],
+    .targeta-form select {
+      font-size: 16px; padding: 0.7rem 0.85rem;
+    }
+    .targeta-form .ta-scan       { min-height: 150px; }  /* ingredients */
+    .targeta-form .ta-scan-instr { min-height: 230px; }  /* instruccions */
+    .targeta-form .btn-desar { padding: 0.7rem 1.4rem; font-size: 0.9rem; }
   }
 
   /* ══════════════════════════════════════
@@ -5173,11 +5189,11 @@ function renderItem(item) {
       </div>
       <div class="form-group full">
         <label>Ingredients detectats</label>
-        <textarea id="ing-${idx}" placeholder="Ingredients…"></textarea>
+        <textarea id="ing-${idx}" class="ta-scan" placeholder="Ingredients…"></textarea>
       </div>
       <div class="form-group full">
         <label>Instruccions detectades</label>
-        <textarea id="instruccions-${idx}" placeholder="Instruccions…" style="min-height:100px"></textarea>
+        <textarea id="instruccions-${idx}" class="ta-scan ta-scan-instr" placeholder="Instruccions…"></textarea>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -5412,7 +5428,7 @@ function detectarFont(lines, fontDefecte) {
   const fi = idxIng >= 1 ? idxIng : Math.min(4, lines.length);
   const zonaAutoria = lines.slice(1, fi);
   const reMetadades = /\b(racions?|minuts?|hores?|temps|porcions?|persones?|serves?|comensals?)\b/i;
-  const reCapcalera = /^(ingredients?|ingredientes|preparaci[óo]n?|elaboraci[óo]n?|instruccions?|instrucciones|m[èe]tode|m[ée]todo|passos?|pasos?|steps?)\b/i;
+  const reCapcalera = /^(ingredients?|ingredientes|preparaci[óo]n?|preparation|elaboraci[óo]n?|instruccions?|instrucciones|instructions?|m[èe]tode|m[ée]todo|method|passos?|pasos?|directions?|steps?)\b/i;
   const candidats = zonaAutoria.filter(l => {
     const t = l.trim();
     if (t.length < 3 || t.length > 60) return false;
@@ -5439,12 +5455,31 @@ function normalitzarTitol(titol) {
   return net.charAt(0).toUpperCase() + net.slice(1);
 }
 
-// Un "verb de cuina": imperatiu de vosaltres (peleu, salteu-hi, tapeu-les...)
-// o infinitiu (pelar, coure, afegir...)
+// Verbs de cuina en anglès (imperatius que solen encapçalar un pas:
+// "Preheat the oven…", "Mix the flour…"). Serveix per detectar les
+// instruccions en receptes escanejades en anglès.
+const VERBS_CUINA_EN = new Set([
+  'add','allow','arrange','bake','baste','beat','blend','boil','bring','broil',
+  'brown','brush','chill','chop','coat','combine','continue','cook','cool','cover',
+  'crack','cream','crush','cube','cut','dice','dip','dissolve','divide','drain',
+  'drizzle','dust','fill','flip','fold','form','freeze','fry','garnish','grate',
+  'grease','grill','heat','knead','ladle','layer','let','line','marinate','mash',
+  'melt','microwave','mince','mix','peel','place','pour','preheat','prepare','press',
+  'punch','puree','reduce','refrigerate','remove','repeat','reserve','rinse','roast',
+  'roll','rub','saute','scatter','scoop','scrape','sear','season','separate','serve',
+  'set','shape','shred','sieve','sift','simmer','slice','soak','spoon','spread',
+  'sprinkle','squeeze','steam','stir','strain','stuff','sweat','taste','tip','toast',
+  'top','toss','transfer','turn','warm','wash','whisk','whip','wrap','zest'
+]);
+
+// Un "verb de cuina": imperatiu de vosaltres (peleu, salteu-hi, tapeu-les...),
+// infinitiu (pelar, coure, afegir...) o un verb de cuina anglès (mix, preheat...)
 function esVerbCuina(paraula) {
   const p = (paraula || '').toLowerCase();
   if (/^[a-zà-ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/.test(p)) return true;   // imperatiu (+pronom)
   if (/^[a-zà-ú·ç]{3,}(ar|er|re|ir)(-[a-zà-ú·]+)?$/.test(p)) return true; // infinitiu
+  const pEn = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); // "Preheat," → "preheat"
+  if (pEn && VERBS_CUINA_EN.has(pEn)) return true;                 // verb de cuina anglès
   return false;
 }
 
@@ -5469,7 +5504,7 @@ function extraccioLocal(text, fontDefecte) {
 
   // ── Capçaleres explícites (si el llibre en té, les aprofitem) ──
   const reCapIng   = /^(ingredients?|ingredientes?|ingr\.?)(\s*:)?(\s.{0,30})?\s*$/i;
-  const reCapInstr = /^(preparació|preparación|elaboració|elaboración|mètode|method|instruccions?|instrucciones|passos?|pasos?|directions?|steps?|com es fa|cómo se hace)(\s*:)?(\s.{0,25})?\s*$/i;
+  const reCapInstr = /^(preparació|preparación|preparation|elaboració|elaboración|mètode|método|method|instruccions?|instrucciones|instructions?|passos?|pasos?|directions?|steps?|com es fa|cómo se hace)(\s*:)?(\s.{0,25})?\s*$/i;
 
   const idxCapIng   = lines.findIndex(l => reCapIng.test(l));
   const idxCapInstr = lines.findIndex(l => reCapInstr.test(l));
@@ -5485,8 +5520,10 @@ function extraccioLocal(text, fontDefecte) {
   // imperatiu de cuina ("Renteu les verdures i talleu-les...")
   if (idxPrimerPas === -1) {
     for (let i = 0; i < lines.length; i++) {
-      const primera = (lines[i].match(/^(\S+)/) || [])[1] || '';
-      if (lines[i].length > 25 && /^[a-zà-úA-ZÀ-Ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/i.test(primera)) {
+      const net = lines[i].replace(/^[\-–—•*·]\s*/, '');           // treu vinyetes inicials
+      const primera = (net.match(/^(\S+)/) || [])[1] || '';
+      const esImperatiuCat = /^[a-zà-úA-ZÀ-Ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/i.test(primera);
+      if (net.length > 25 && (esImperatiuCat || esVerbCuina(primera))) { // català o anglès
         idxPrimerPas = i; break;
       }
     }
@@ -5504,9 +5541,17 @@ function extraccioLocal(text, fontDefecte) {
     const inici = saltaCapcalera ? idxInstr + 1 : idxInstr;
     for (let i = inici; i < lines.length; i++) {
       const m = lines[i].match(/^([1-9]\d?)[\.\)]?\s+(.*)/);
-      if (m) passos.push({ num: m[1], text: m[2].trim() });
-      else if (passos.length > 0) passos[passos.length - 1].text += ' ' + lines[i]; // continuació
-      else passos.push({ num: null, text: lines[i] }); // instruccions sense numerar
+      if (m) { passos.push({ num: m[1], text: m[2].trim() }); continue; } // pas numerat
+      const ultim = passos[passos.length - 1];
+      if (!ultim) { passos.push({ num: null, text: lines[i] }); continue; }
+      if (ultim.num !== null) { ultim.text += ' ' + lines[i]; continue; } // continuació d'un pas numerat
+      // Pas sense numerar: obre un pas nou si l'anterior ja tanca la frase
+      // o si aquesta línia comença amb un verb de cuina; si no, és continuació.
+      const netaInici = lines[i].replace(/^[\-–—•*·]\s*/, '');
+      const primera   = (netaInici.match(/^(\S+)/) || [])[1] || '';
+      const obrePas   = /[.!?:]\s*$/.test(ultim.text) || esVerbCuina(primera);
+      if (obrePas) passos.push({ num: null, text: netaInici });
+      else ultim.text += ' ' + lines[i];
     }
     instruccions = passos.map(p => (p.num ? p.num + '. ' : '') + p.text).join('\n');
   }
