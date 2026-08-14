@@ -56,6 +56,7 @@
     color: var(--text);
     font-family: 'Poppins', sans-serif;
     min-height: 100vh;
+    overscroll-behavior-y: contain;  /* evita el "pull-to-refresh" accidental en fer scroll amunt */
   }
 
   /* ══════════════════════════════════════
@@ -102,7 +103,7 @@
   /* ══════════════════════════════════════
      PANELLS
   ══════════════════════════════════════ */
-  html { scroll-padding-bottom: 140px; }
+  html { scroll-padding-bottom: 140px; overscroll-behavior-y: contain; }
   .panell {
     display: none;
     padding: 3rem 1.5rem 140px;
@@ -443,6 +444,56 @@
     cursor: pointer; transition: background 0.2s;
   }
   .camera-error-btn:hover { background: rgba(245,247,73,0.18); }
+
+  /* ── Dues portes de l'escàner (pujar fitxers / fer una foto) ── */
+  .scan-portes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  @media (max-width: 560px) { .scan-portes { grid-template-columns: 1fr; } }
+  .scan-porta {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; cursor: pointer; padding: 2rem 1.25rem;
+    border-radius: 14px; transition: all 0.25s;
+  }
+  .scan-porta .icon { font-size: 2.4rem; margin-bottom: 0.7rem; display: block; line-height: 1; }
+  .scan-porta .icon i { color: var(--accent); }
+  .scan-porta p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; margin: 0; }
+  .scan-porta strong { color: var(--accent2); font-weight: 500; }
+  .scan-porta-camera {
+    border: 2.5px solid var(--accent); background: var(--surface);
+  }
+  .scan-porta-camera:hover { background: var(--surface2); }
+  .scan-agrupar {
+    display: flex; align-items: center; justify-content: center; gap: 0.55rem;
+    margin-top: 0.85rem; padding: 0.85rem 1rem; cursor: pointer;
+    border: 1.5px dashed var(--border); border-radius: 12px;
+    color: var(--text-dim); font-size: 0.9rem; transition: all 0.2s;
+  }
+  .scan-agrupar:hover { border-color: var(--accent); background: var(--surface); }
+  .scan-agrupar .icon i { color: var(--accent); font-size: 1.15rem; display: block; }
+  .scan-agrupar strong { font-weight: 500; }
+
+  /* ── Captura múltiple de l'escàner ── */
+  .camera-comptador {
+    position: absolute; top: 1.1rem; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: #fff; backdrop-filter: blur(4px);
+    padding: 0.35rem 0.9rem; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 500; letter-spacing: 0.02em;
+  }
+  .camera-tira {
+    position: absolute; bottom: 7.5rem; left: 0; right: 0;
+    display: flex; gap: 0.4rem; padding: 0 1rem; overflow-x: auto;
+    justify-content: center;
+  }
+  .camera-tira img {
+    width: 46px; height: 46px; object-fit: cover; border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.6); flex-shrink: 0;
+  }
+  .camera-btn-fet {
+    background: var(--accent); border: none; cursor: pointer;
+    color: #0B2027; font-family: 'Poppins', sans-serif; font-weight: 500;
+    padding: 0 1.4rem; height: 44px; border-radius: 999px;
+    font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;
+  }
+  .camera-btn-fet:disabled { opacity: 0.35; cursor: default; }
 
   /* ── Mode cuinar ── */
   .btn-cuinar {
@@ -1755,9 +1806,11 @@
       <h3 id="auth-titol">Entra al teu receptari</h3>
       <p id="auth-subtitol">Escriu el teu correu i la teva contrasenya.</p>
       <input class="auth-camp" type="email" id="auth-correu" placeholder="El teu correu"
-             autocomplete="email" inputmode="email">
+             autocomplete="email" inputmode="email"
+             onkeydown="if(event.key==='Enter')enviarAuth()">
       <input class="auth-camp" type="password" id="auth-contrasenya" placeholder="Contrasenya"
-             autocomplete="current-password">
+             autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')enviarAuth()">
       <button class="auth-principal" id="auth-btn" onclick="enviarAuth()">Entrar</button>
       <p class="auth-missatge" id="auth-missatge"></p>
       <button class="auth-secundari" id="auth-canvi" onclick="canviarModeAuth()">
@@ -2169,19 +2222,30 @@ function tancarNovetats() {
                 </div>
               </div>
             </div>
-            <div class="drop-zone" id="dropZone">
-              <span class="icon">📂</span>
-              <p><strong>Arrossega els fitxers aquí</strong> o fes clic per seleccionar-los</p>
-              <p style="margin-top:0.3rem;font-size:0.78rem;">Pots barrejar imatges i documents alhora</p>
-              <div class="tipus-acceptats">
-                <span class="chip">📷 JPG · PNG · WEBP</span>
-                <span class="chip">📕 PDF</span>
-                <span class="chip">📘 Word (.docx)</span>
+            <div class="scan-portes">
+              <div class="drop-zone scan-porta" id="dropZone">
+                <span class="icon">📂</span>
+                <p><strong>Fitxers de receptes diferents</strong></p>
+                <div class="tipus-acceptats">
+                  <span class="chip">📷 Imatge</span>
+                  <span class="chip">📕 PDF</span>
+                  <span class="chip">📘 Word</span>
+                </div>
               </div>
-              <input type="file" id="fileInput"
-                accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                multiple style="display:none">
+              <div class="scan-porta scan-porta-camera" id="btnCameraEscaner" onclick="obrirCameraEscaner()">
+                <span class="icon"><i class="ti ti-camera" aria-hidden="true"></i></span>
+                <p><strong>Fes fotos</strong> amb la càmera</p>
+                <p style="margin-top:0.3rem;font-size:0.78rem;">Pots fer-ne diverses seguides per a una mateixa recepta</p>
+              </div>
             </div>
+            <div class="scan-agrupar" id="btnAgruparImatges" onclick="document.getElementById('fileInputGrup').click()">
+              <span class="icon"><i class="ti ti-stack-2" aria-hidden="true"></i></span>
+              <span><strong>Una recepta en diverses imatges</strong></span>
+            </div>
+            <input type="file" id="fileInput"
+              accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              multiple style="display:none">
+            <input type="file" id="fileInputGrup" accept="image/*" multiple style="display:none">
 
             <div class="cua" id="cua"></div>
 
@@ -2987,6 +3051,13 @@ function _variantsSingular(q) {
 }
 
 /**
+ * Paraules que NO s'han de truncar en cercar: comparteixen un prefix llarg amb
+ * una altra hortalissa, i el tronc curt ("carbass", "calaba") les confondria.
+ * Cas concret: carbassa ↔ carbassó (i el seu equivalent castellà calabaza ↔ calabacín).
+ */
+const NO_TRONCAR_CERCA = new Set(['carbassa', 'carbasso', 'calabaza', 'calabacin']);
+
+/**
  * Donada una query, retorna un array de termes addicionals a buscar (ca+es+en).
  * Fa matching parcial (prefixos), tolera plurals en els tres idiomes
  * i ignora els accents a l'hora de trobar el grup de sinònims.
@@ -3004,8 +3075,10 @@ function expandirCerca(q) {
     if (coincideix) {
       for (const s of sinSet) {
         extra.add(s);
-        // Afegim troncs per capturar variacions de plural al text de les receptes
-        for (const tr of _troncs(s)) extra.add(tr);
+        // Afegim troncs per capturar variacions de plural al text de les receptes.
+        // Excepció: les paraules confusibles (carbassa/carbassó…) no es tronquen.
+        if (!NO_TRONCAR_CERCA.has(_senseAccents(s.toLowerCase())))
+          for (const tr of _troncs(s)) extra.add(tr);
       }
     }
   }
@@ -3406,6 +3479,8 @@ function mostrarPanell(id) {
     document.getElementById('nav-principal').classList.add('visible');
     const tab = document.getElementById('nav-tab-' + id);
     if (tab) tab.classList.add('actiu');
+    // Cada cop que s'entra al receptari, un ordre aleatori nou
+    if (id === 'cerca' && receptes.length) { barrejarReceptari(); aplicar(); }
     // Càrrega mandrosa de les idees el primer cop que s'obre la pestanya
     if (id === 'idees' && !ideesCarregades) carregarIdees();
   }
@@ -3701,6 +3776,15 @@ function mostrarToast(msg) {
 // ══════════════════════════════════════════════
 
 let receptes = [];
+// Ordre aleatori del receptari: a cada recepta li assignem una clau a l'atzar.
+// Es barreja de nou cada cop que s'entra al receptari (barrejarReceptari), però
+// es manté estable mentre filtres o cerques dins d'aquella visita.
+let ordreReceptari = new Map();
+function barrejarReceptari() { ordreReceptari = new Map(); }
+function clauOrdreReceptari(nom) {
+  if (!ordreReceptari.has(nom)) ordreReceptari.set(nom, Math.random());
+  return ordreReceptari.get(nom);
+}
 // Previsualització optimista de fotos acabades de pujar (clau: nom de recepta → dataURL)
 // Es buida en recarregar, quan ja arriba l'URL definitiu de Drive des del full.
 const fotosLocals = {};
@@ -4341,6 +4425,10 @@ function aplicar() {
     return catOk && (nomOk || ingOk) && etOk && fontOk;
   });
 
+  // Ordre aleatori, estable durant aquesta visita al receptari
+  resultat.sort((a, b) =>
+    clauOrdreReceptari(a['Nom de la recepta'] || '') - clauOrdreReceptari(b['Nom de la recepta'] || ''));
+
   const comptador = document.getElementById('comptador');
   comptador.textContent = resultat.length === receptes.length
     ? '' : `${resultat.length} resultat${resultat.length !== 1 ? 's' : ''}`;
@@ -4942,6 +5030,82 @@ async function capturarFoto(nomId, nom) {
   }, 'image/jpeg', 0.92);
 }
 
+// ══════════════════════════════════════════════
+// CÀMERA DE L'ESCÀNER (captura múltiple)
+// Reaprofita el mateix visor i stream que la foto il·lustrativa,
+// però acumula diverses fotos i les aboca totes a la cua de l'escàner.
+// ══════════════════════════════════════════════
+let fotosEscaner = [];
+
+function obrirCameraEscaner() {
+  if (document.querySelector('.camera-overlay')) return;
+  fotosEscaner = [];
+  const overlay = document.createElement('div');
+  overlay.className = 'camera-overlay';
+  overlay.innerHTML = `
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-comptador" id="camera-comptador">0 fotos</div>
+    <button class="camera-btn-fet" id="camera-btn-fet" style="position:absolute;top:1rem;right:1rem" onclick="finalitzarCameraEscaner()" disabled>
+      <i class="ti ti-check" aria-hidden="true"></i> Fet
+    </button>
+    <div class="camera-tira" id="camera-tira"></div>
+    <div class="camera-controls">
+      <button class="camera-btn-close" onclick="tancarCameraEscaner()" aria-label="Cancel·lar">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+      <button class="camera-btn-capture" onclick="capturarFotoEscaner()" aria-label="Fer foto"></button>
+      <button class="camera-btn-flip" onclick="canviarCamera()" aria-label="Girar càmera">
+        <i class="ti ti-switch-horizontal" aria-hidden="true"></i>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  iniciarStream();
+}
+
+function capturarFotoEscaner() {
+  const video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(blob => {
+    if (!blob) { mostrarToast('❌ Error en capturar la foto'); return; }
+    const n = fotosEscaner.length + 1;
+    const file = new File([blob], 'foto-escaner-' + Date.now() + '-' + n + '.jpg', { type: 'image/jpeg' });
+    fotosEscaner.push(file);
+    actualitzarCameraEscaner();
+  }, 'image/jpeg', 0.92);
+}
+
+function actualitzarCameraEscaner() {
+  const n = fotosEscaner.length;
+  const comptador = document.getElementById('camera-comptador');
+  if (comptador) comptador.textContent = n + (n === 1 ? ' foto' : ' fotos');
+  const btn = document.getElementById('camera-btn-fet');
+  if (btn) btn.disabled = n === 0;
+  const tira = document.getElementById('camera-tira');
+  if (tira) {
+    tira.innerHTML = fotosEscaner
+      .map(f => '<img src="' + URL.createObjectURL(f) + '" alt="">')
+      .join('');
+  }
+}
+
+function tancarCameraEscaner() {
+  fotosEscaner = [];
+  tancarCamera();
+}
+
+function finalitzarCameraEscaner() {
+  const fotos = fotosEscaner;
+  fotosEscaner = [];
+  tancarCamera();
+  // Totes les fotos d'aquesta sessió = una sola recepta
+  if (fotos.length) afegirGrupFotos(fotos);
+}
+
 async function pujarFotoRecepta(nomId, nom, input) {
   const file = input.files && input.files[0];
   if (!file) return;
@@ -5050,6 +5214,10 @@ dropZone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', () => { afegirFitxers([...fileInput.files]); fileInput.value = ''; });
 
+// Entrada "Una recepta en diverses imatges": totes les triades = una sola recepta
+const fileInputGrup = document.getElementById('fileInputGrup');
+fileInputGrup.addEventListener('change', () => { afegirGrupFotos([...fileInputGrup.files]); fileInputGrup.value = ''; });
+
 function tipusFitxer(file) {
   if (file.type.startsWith('image/')) return 'imatge';
   if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) return 'pdf';
@@ -5072,6 +5240,22 @@ function afegirFitxers(files) {
   actualitzarBotons();
 }
 
+// Diverses fotos d'una mateixa sessió de càmera → un sol element de grup,
+// que es processarà com UNA sola recepta. Una sola foto entra pel camí normal.
+function afegirGrupFotos(files) {
+  if (!files || !files.length) return;
+  if (files.length === 1) { afegirFitxers(files); return; }
+  const idx = items.length;
+  const item = {
+    files, tipus: 'grup', status: 'pendent', recepta: null, idx,
+    objectURL: URL.createObjectURL(files[0]),
+    etiqueta: `📷 ${files.length} fotos`,
+  };
+  items.push(item);
+  renderItem(item);
+  actualitzarBotons();
+}
+
 function iconaTipus(tipus) {
   if (tipus === 'pdf')    return '📕';
   if (tipus === 'docx')   return '📘';
@@ -5080,6 +5264,7 @@ function iconaTipus(tipus) {
 }
 function etiquetaTipus(tipus) {
   if (tipus === 'imatge') return '';   // la miniatura ja ho diu tot
+  if (tipus === 'grup')   return '';   // ja porta etiqueta pròpia («📷 N fotos»)
   if (tipus === 'pdf')    return '📕 PDF';
   if (tipus === 'docx')   return '📘 Word';
   if (tipus === 'enllac') return '🔗 Enllaç';
@@ -5154,20 +5339,23 @@ function confirmarNovaCat(input) {
 }
 
 function renderItem(item) {
-  const { idx, tipus, file } = item;
+  const { idx, tipus } = item;
+  const esGrup = tipus === 'grup';
+  const file = esGrup ? item.files[0] : item.file;
+  const nomMostrat = esGrup ? `Recepta amb ${item.files.length} fotos` : file.name;
   const catDefecte = document.getElementById('catDefecte').value;
   const nomFitxer  = file.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const catSug = detectarCategoriaScan(nomFitxer, catDefecte);
   const div = document.createElement('div');
   div.className = 'targeta'; div.id = `targeta-${idx}`;
-  const previewHTML = tipus === 'imatge'
-    ? `<img class="targeta-preview" src="${item.objectURL}" alt="${escHTML(file.name)}">`
+  const previewHTML = (tipus === 'imatge' || esGrup)
+    ? `<img class="targeta-preview" src="${item.objectURL}" alt="${escHTML(nomMostrat)}">`
     : `<div class="targeta-icona">${iconaTipus(tipus)}</div>`;
   div.innerHTML = `
     <div class="targeta-top">
       ${previewHTML}
       <div class="targeta-info">
-        <div class="targeta-nom">${escHTML(file.name)}</div>
+        <div class="targeta-nom">${escHTML(nomMostrat)}</div>
         <div class="targeta-estat" id="estat-${idx}"></div>
         <span class="badge pendent" id="badge-${idx}">Pendent</span>
       </div>
@@ -5253,7 +5441,9 @@ btnProcessar.addEventListener('click', async () => {
     item.status = 'processant';
     setBadge(idx, 'processant', 'Processant…');
     try {
-      if (tipus === 'imatge') {
+      if (tipus === 'grup') {
+        await processarGrupImatges(item);
+      } else if (tipus === 'imatge') {
         await processarImatge(item);
       } else {
         await processarDocument(item);
@@ -5268,28 +5458,41 @@ btnProcessar.addEventListener('click', async () => {
   actualitzarBotons();
 });
 
-// ── OCR: primer al núvol (Google Drive); si falla, al servidor Python local ──
-async function processarImatge(item) {
+// ── Omple els camps d'una fitxa amb una recepta (compartit per imatge, grup i document) ──
+function omplirFormRecepta(idx, recepta) {
+  const catDef = document.getElementById('catDefecte').value || '';
+  const nomNorm = (recepta.nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const catSug  = detectarCategoriaScan(nomNorm, catDef);
+  const selCat  = document.getElementById(`cat-${idx}`);
+  if (catSug && selCat) selCat.value = catSug;
+  document.getElementById(`nom-${idx}`).value  = recepta.nom || '';
+  document.getElementById(`ing-${idx}`).value  = recepta.ingredients || '';
+  document.getElementById(`instruccions-${idx}`).value = recepta.instruccions || '';
+  document.getElementById(`font-${idx}`).value = recepta.font || '';
+  document.getElementById(`racions-${idx}`).value = recepta.racions || '';
+}
+
+// ── OCR d'una imatge → recepta. Primer al núvol (Drive); si falla, al servidor Python local.
+//    Retorna l'objecte recepta i NO toca el DOM (perquè el puguin reutilitzar
+//    tant la foto solta com el grup de fotos). ──
+async function receptaDesDeImatge(file, idx) {
   // 1r intent: el núvol, que és el camí habitual
   if (AJUDANT_URL) {
     try {
-      return await processarImatgeDrive(item);
+      return await receptaImatgeDrive(file);
     } catch (e) {
       console.warn('OCR al núvol fallit, provem el servidor local:', e.message);
-      setEstat(item.idx, 'L\'OCR al núvol ha fallat, provant el servidor local…');
+      setEstat(idx, 'L\'OCR al núvol ha fallat, provant el servidor local…');
     }
   }
   // 2n intent: el servidor Python d'aquest ordinador
-  if (await comprovarServidor()) return processarImatgeLocal(item);
+  if (await comprovarServidor()) return await receptaImatgeLocal(file);
   avisServidor.classList.add('visible');
   throw new Error('No s\'ha pogut llegir la fotografia (ni al núvol ni en local)');
 }
 
-// ── OCR en local: servidor Python en aquest ordinador ──
-async function processarImatgeLocal(item) {
-  const { idx, file } = item;
-  setEstat(idx, 'Extraient text de la imatge…');
-  setBadge(idx, 'processant', 'Escannejant…');
+// ── OCR en local: servidor Python en aquest ordinador (retorna els camps ja separats) ──
+async function receptaImatgeLocal(file) {
   const base64 = await new Promise((res, rej) => {
     const reader = new FileReader();
     reader.onload  = e => res(e.target.result);
@@ -5306,28 +5509,18 @@ async function processarImatgeLocal(item) {
   if (!resp.ok) throw new Error(dades.error || 'Error desconegut');
   let fontFinal = dades.font || fontDef;
   if (/^\s*DE\s*$/i.test(fontFinal)) fontFinal = 'Deliciously Ella';
-  document.getElementById(`nom-${idx}`).value  = dades.nom || '';
-  document.getElementById(`ing-${idx}`).value  = dades.ingredients || '';
-  document.getElementById(`instruccions-${idx}`).value = dades.instruccions || '';
-  document.getElementById(`font-${idx}`).value = fontFinal;
-  document.getElementById(`racions-${idx}`).value = dades.racions || '';
-  const catDef = document.getElementById('catDefecte').value;
-  const selCat = document.getElementById(`cat-${idx}`);
-  const nomImg = document.getElementById(`nom-${idx}`).value;
-  const catSugImg = detectarCategoriaScan(nomImg, catDef);
-  if (catSugImg) selCat.value = catSugImg;
-  item.status = 'fet';
-  setBadge(idx, 'fet', '✓ Escannejat');
-  setEstat(idx, 'Revisa i desa al receptari');
-  document.getElementById(`form-${idx}`).classList.add('visible');
+  return {
+    nom:          dades.nom || '',
+    ingredients:  dades.ingredients || '',
+    instruccions: dades.instruccions || '',
+    font:         fontFinal,
+    racions:      dades.racions || '',
+  };
 }
 
-// ── OCR al núvol: envia la imatge a l'Apps Script, que la converteix
-//    en un Google Doc temporal amb OCR i en retorna el text ──
-async function processarImatgeDrive(item) {
-  const { idx, file } = item;
-  setEstat(idx, 'Extraient text amb Google Drive…');
-  setBadge(idx, 'processant', 'Escannejant (núvol)…');
+// ── OCR al núvol: envia la imatge a l'Apps Script, que la converteix en un
+//    Google Doc temporal amb OCR i en retorna el text; després l'extracció local ──
+async function receptaImatgeDrive(file) {
   // Redimensiona per no enviar fotos de molts MB (l'OCR no ho necessita)
   const dataUrl = await redimensionaImatge(file, 1600, 0.85);
   // POST amb text/plain: evita el preflight CORS i permet llegir la resposta
@@ -5341,21 +5534,56 @@ async function processarImatgeDrive(item) {
   if (!dades.ok) throw new Error(dades.error || 'L\'OCR de Drive ha fallat');
   const text = (dades.text || '').trim();
   if (!text) throw new Error('No s\'ha trobat text a la imatge');
-  // A partir d'aquí, mateix camí que els PDF: extracció local del text
+  // Mateix camí que els PDF: extracció local del text
   const fontDefecte = document.getElementById('fontDefecte').value || '';
-  const recepta = extraccioLocal(text, fontDefecte);
-  const nomNorm = recepta.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const catDef  = document.getElementById('catDefecte').value || '';
-  const selCat  = document.getElementById(`cat-${idx}`);
-  const catSug  = detectarCategoriaScan(nomNorm, catDef);
-  if (catSug) selCat.value = catSug;
-  document.getElementById(`nom-${idx}`).value  = recepta.nom || '';
-  document.getElementById(`ing-${idx}`).value  = recepta.ingredients || '';
-  document.getElementById(`instruccions-${idx}`).value = recepta.instruccions || '';
-  document.getElementById(`font-${idx}`).value = recepta.font || '';
-  document.getElementById(`racions-${idx}`).value = recepta.racions || '';
+  return extraccioLocal(text, fontDefecte);
+}
+
+// ── Fusiona diverses receptes (una per foto) en una de sola ──
+//    El nom, la font i les racions es prenen de la primera foto que en tingui;
+//    els ingredients i les instruccions s'encadenen respectant l'ordre de les fotos.
+function fusionarReceptes(receptes) {
+  const primer = clau => {
+    for (const r of receptes) if (r && r[clau] && String(r[clau]).trim()) return String(r[clau]).trim();
+    return '';
+  };
+  const unir = clau =>
+    receptes.map(r => (r && r[clau] ? String(r[clau]).trim() : '')).filter(Boolean).join('\n');
+  return {
+    nom:          primer('nom'),
+    font:         primer('font'),
+    racions:      primer('racions'),
+    ingredients:  unir('ingredients'),
+    instruccions: unir('instruccions'),
+  };
+}
+
+// ── Processa una foto solta ──
+async function processarImatge(item) {
+  const { idx, file } = item;
+  setEstat(idx, 'Extraient text de la imatge…');
+  setBadge(idx, 'processant', 'Escannejant…');
+  const recepta = await receptaDesDeImatge(file, idx);
+  omplirFormRecepta(idx, recepta);
   item.recepta = recepta; item.status = 'fet';
   setBadge(idx, 'fet', '✓ Escannejat');
+  setEstat(idx, 'Revisa i desa al receptari');
+  document.getElementById(`form-${idx}`).classList.add('visible');
+}
+
+// ── Processa un grup de fotos com UNA sola recepta ──
+async function processarGrupImatges(item) {
+  const { idx, files } = item;
+  setBadge(idx, 'processant', 'Escannejant…');
+  const receptes = [];
+  for (let i = 0; i < files.length; i++) {
+    setEstat(idx, `Llegint foto ${i + 1} de ${files.length}…`);
+    receptes.push(await receptaDesDeImatge(files[i], idx));
+  }
+  const recepta = fusionarReceptes(receptes);
+  omplirFormRecepta(idx, recepta);
+  item.recepta = recepta; item.status = 'fet';
+  setBadge(idx, 'fet', `✓ ${files.length} fotos unides`);
   setEstat(idx, 'Revisa i desa al receptari');
   document.getElementById(`form-${idx}`).classList.add('visible');
 }
@@ -5472,14 +5700,28 @@ const VERBS_CUINA_EN = new Set([
   'top','toss','transfer','turn','warm','wash','whisk','whip','wrap','zest'
 ]);
 
+// Verbs de cuina en castellà: imperatiu de "tú" i altres formes habituals que
+// NO acaben en -amos/-emos/-imos ("precalienta el horno", "bate los huevos"…).
+// El present de "nosotros" (precalentamos, batimos, horneamos…), que és l'estil
+// dominant dels blogs de cuina en castellà, es detecta amb una regla a esVerbCuina.
+const VERBS_CUINA_ES = new Set([
+  'precalienta','calienta','bate','mezcla','anade','agrega','vierte','echa','hornea',
+  'incorpora','reserva','tamiza','reparte','decora','clava','unta','engrasa','amasa',
+  'pela','corta','pica','trocea','ralla','derrite','funde','monta','cuece','hierve',
+  'sofrie','frie','saltea','remueve','remoja','escurre','cuela','sirve','espolvorea',
+  'rellena','cubre','coloca','vaciamos','usa','coce','deja','pon','pica','trocea'
+]);
+
 // Un "verb de cuina": imperatiu de vosaltres (peleu, salteu-hi, tapeu-les...),
-// infinitiu (pelar, coure, afegir...) o un verb de cuina anglès (mix, preheat...)
+// infinitiu (pelar, coure, afegir...), verb de cuina anglès (mix, preheat...)
+// o castellà (imperatiu "bate…" o present de "nosotros" "batimos…").
 function esVerbCuina(paraula) {
   const p = (paraula || '').toLowerCase();
   if (/^[a-zà-ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/.test(p)) return true;   // imperatiu (+pronom)
   if (/^[a-zà-ú·ç]{3,}(ar|er|re|ir)(-[a-zà-ú·]+)?$/.test(p)) return true; // infinitiu
-  const pEn = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); // "Preheat," → "preheat"
-  if (pEn && VERBS_CUINA_EN.has(pEn)) return true;                 // verb de cuina anglès
+  if (/^[a-zà-úñç]{2,}(amos|emos|imos)$/.test(p)) return true;     // castellà "nosotros" (precalentamos…)
+  const net = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); // "Preheat," / "Precalienta:" → net
+  if (net && (VERBS_CUINA_EN.has(net) || VERBS_CUINA_ES.has(net))) return true; // anglès o castellà
   return false;
 }
 
@@ -5503,7 +5745,7 @@ function extraccioLocal(text, fontDefecte) {
   lines = lines.filter((_, i) => i !== idxTitol);
 
   // ── Capçaleres explícites (si el llibre en té, les aprofitem) ──
-  const reCapIng   = /^(ingredients?|ingredientes?|ingr\.?)(\s*:)?(\s.{0,30})?\s*$/i;
+  const reCapIng   = /^(ingredients?|ingredientes?|ingr\.?)(\s*:)?(\s.{0,60})?\s*$/i;
   const reCapInstr = /^(preparació|preparación|preparation|elaboració|elaboración|mètode|método|method|instruccions?|instrucciones|instructions?|passos?|pasos?|directions?|steps?|com es fa|cómo se hace)(\s*:)?(\s.{0,25})?\s*$/i;
 
   const idxCapIng   = lines.findIndex(l => reCapIng.test(l));
@@ -5534,12 +5776,24 @@ function extraccioLocal(text, fontDefecte) {
   if (idxCapInstr !== -1) { idxInstr = idxCapInstr; saltaCapcalera = true; }
   else if (idxPrimerPas !== -1) idxInstr = idxPrimerPas;
 
+  // ── Punt de tall: on s'acaba la recepta i comença la ferralla de la pàgina web
+  //    (publicitat, afiliats d'Amazon, comentaris, categories, altres receptes, peu…).
+  //    Només es busca A PARTIR del cos de la recepta, perquè el menú o els "5 comentarios"
+  //    de la capçalera no facin tallar abans d'hora. Serveix sobretot per a l'import d'enllaços.
+  const reFiRecepta = /(publicidad|publicitat|productos?\s+recomendados?|productes?\s+recomanats?|afiliad[oa]s?|comentarios?\b|comentaris\b|deja\s+(un|tu)\s+coment|leave\s+a\s+(reply|comment|rating|review)|[úu]ltimas?\s+recetas|[úu]ltimes?\s+receptes|otras?\s+recetas|altres?\s+receptes|m[áa]s\s+recetas|m[ée]s\s+receptes|recetas?\s+relacionadas?|related\s+recipes|categor[íi]as?\b|categories\b|compartir\s+esta\s+receta|comparteix\s+aquesta|pol[íi]tica\s+de\s+privac|aviso\s+legal|av[íi]s\s+legal|privacy\s+policy|susc?r[íi]b|newsletter|s[íi]guenos|segueix-?nos|no\s+te\s+pierdas\s+nuestro\s+libro|comprar\s+en\s+amazon|aconsejo\s+que\s+ve[áa]is\s+el\s+v[íi]deo|mira\s+el\s+v[íi]deo|veure\s+el\s+v[íi]deo|comments?\b|reader\s+interactions|more\s+recipes|you\s+(might|may)\s+also\s+(like|enjoy)|popular\s+(recipes|posts)|recent\s+(recipes|posts)|nutrition(al)?\s+(facts|information|info)|as\s+an\s+amazon\s+associate|print\s+recipe|pin\s+recipe|save\s+recipe|rate\s+this\s+recipe|share\s+this\s+recipe|share\s+on\s+(facebook|pinterest|twitter|whatsapp)|subscrib|sign\s+up|buy\s+on\s+amazon|shop\s+now|follow\s+(me|us)\b|watch\s+the\s+video|watch\s+how\s+to|filed\s+under|terms\s+(of\s+use|and\s+conditions))/i;
+  let idxTall = -1;
+  const desDeTall = idxInstr !== -1 ? idxInstr : (idxCapIng !== -1 ? idxCapIng : 0);
+  for (let i = desDeTall; i < lines.length; i++) {
+    if (reFiRecepta.test(lines[i])) { idxTall = i; break; }
+  }
+  const fiCos = idxTall !== -1 ? idxTall : lines.length;
+
   // ── Bloc d'instruccions: passos numerats + línies de continuació enganxades ──
   let instruccions = '';
   if (idxInstr !== -1) {
     const passos = [];
     const inici = saltaCapcalera ? idxInstr + 1 : idxInstr;
-    for (let i = inici; i < lines.length; i++) {
+    for (let i = inici; i < fiCos; i++) {
       const m = lines[i].match(/^([1-9]\d?)[\.\)]?\s+(.*)/);
       if (m) { passos.push({ num: m[1], text: m[2].trim() }); continue; } // pas numerat
       const ultim = passos[passos.length - 1];
@@ -5558,7 +5812,7 @@ function extraccioLocal(text, fontDefecte) {
 
   // ── Bloc d'ingredients: entre capçalera (o inici) i les instruccions ──
   const iniciIng = idxCapIng !== -1 ? idxCapIng + 1 : 0;
-  const fiIng    = idxInstr !== -1 ? idxInstr : lines.length;
+  const fiIng    = idxInstr !== -1 ? idxInstr : fiCos;
   let racions = '';
   let candidats = [];
   for (let i = iniciIng; i < fiIng; i++) {
