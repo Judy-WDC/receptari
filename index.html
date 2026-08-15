@@ -563,6 +563,11 @@
     margin-top: 10px; font-size: 12px; color: var(--text-muted);
     display: flex; align-items: center; gap: 5px;
   }
+  .card-llibre {
+    margin-top: 5px; font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .card-llibre i { font-size: 14px; color: var(--accent2); }
 
   /* ══════════════════════════════════════
      SELECTOR DE RACIONS
@@ -1289,6 +1294,12 @@
     display: flex; align-items: center; gap: 6px;
     margin-bottom: 1rem;
   }
+  .detall-llibre {
+    font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px;
+    margin-top: -0.6rem; margin-bottom: 1rem;
+  }
+  .detall-llibre i { font-size: 14px; color: var(--accent2); }
   .detall-btn-cuinar {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     width: 100%; padding: 14px; border-radius: 14px;
@@ -1316,6 +1327,7 @@
   .detall-col-ing { }
   .detall-col-instr { }
   .detall-meta .detall-font { margin-bottom: 0; }
+  .detall-meta .detall-llibre { margin-top: 0; margin-bottom: 0; }
   .detall-meta .detall-seccio { margin-bottom: 0; display: inline-flex; gap: 4px; flex-wrap: wrap; }
   .detall-ing-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -1791,6 +1803,9 @@
 </style>
 </head>
 <body>
+
+<!-- Suggeriments d'autocompletat per al camp "Llibre" (títols ja fets servir) -->
+<datalist id="dl-llibres"></datalist>
 
 <!-- PANTALLA DE PASSWORD -->
 
@@ -2322,6 +2337,10 @@ function tancarNovetats() {
               <label>Font</label>
               <input type="text" id="manual-font" placeholder="p.ex. Deliciously Ella">
             </div>
+            <div class="form-group">
+              <label>Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
+              <input type="text" id="manual-llibre" list="dl-llibres" placeholder="p.ex. Simple, pàg. 142">
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group full">
@@ -2527,6 +2546,7 @@ function fitxaRecepta(r, i) {
   if (r['Racions'])   dades.push(escHtml(r['Racions']) + ' racions');
   if (r['Etiquetes']) dades.push(escHtml(r['Etiquetes']));
   if (r['Font'])      dades.push(escHtml(r['Font']));
+  if (r['Llibre'])    dades.push(escHtml(r['Llibre']));
   if (r['URL'])       dades.push('<a href="' + escHtml(r['URL']) + '">' + escHtml(r['URL']) + '</a>');
 
   const ings = getIngredientsParsed(r)
@@ -2685,6 +2705,27 @@ function engegarReceptari() {
 // L'app treballa amb noms de columna en català ('Nom de la recepta'…)
 // i la base de dades amb noms curts (nom, categoria…). Aquí es tradueixen.
 // ══════════════════════════════════════════════
+// ── Autocompletat del camp "Llibre" ──────────────────────────────
+// El camp és text lliure ("Simple, pàg. 142"). Per suggerir només el TÍTOL,
+// en traiem la referència de pàgina (tot el que va després d'una coma, o d'un
+// " pàg"/" p."/" pg"). Així els títols queden consistents i la pàgina, lliure.
+function titolLlibre(valor) {
+  let t = (valor || '').split(',')[0];
+  t = t.replace(/\s+(p[àáa]g(in[ae]s?)?|p|pp|pg)\.?\s*\d.*$/i, '');
+  return t.trim();
+}
+function refrescarLlibresSuggeriments() {
+  const dl = document.getElementById('dl-llibres');
+  if (!dl) return;
+  const vistos = new Map(); // clau en minúscules → primera grafia trobada
+  for (const r of receptes) {
+    const t = titolLlibre(r['Llibre']);
+    if (t && !vistos.has(t.toLowerCase())) vistos.set(t.toLowerCase(), t);
+  }
+  const titols = [...vistos.values()].sort((a, b) => a.localeCompare(b, 'ca'));
+  dl.innerHTML = titols.map(t => `<option value="${escHTML(t)}"></option>`).join('');
+}
+
 function deDB(r) {
   return {
     '_id':               r.id,
@@ -2692,6 +2733,7 @@ function deDB(r) {
     'Categoria':         r.categoria    || '',
     'Ingredients':       r.ingredients  || '[]',
     'Font':              r.font         || '',
+    'Llibre':            r.llibre       || '',
     'URL':               r.url          || '',
     'Foto':              r.foto         || '',
     'Etiquetes':         r.etiquetes    || '',
@@ -3560,6 +3602,7 @@ function obrirDetall(nom, desDePopstate) {
   const cat        = r['Categoria'] || '';
   const ing        = r['Ingredients'] || '';
   const font       = r['Font'] || '';
+  const llibre     = r['Llibre'] || '';
   const url        = r['URL'] || '';
   const etiquetes  = r['Etiquetes'] || '';
   const instruccions = r['Instruccions'] || '';
@@ -3680,6 +3723,13 @@ function obrirDetall(nom, desDePopstate) {
        </div>`
     : '';
 
+  const llibreHTML = llibre
+    ? `<div class="detall-llibre">
+         <i class="ti ti-book-2" aria-hidden="true"></i>
+         ${escHTML(llibre)}
+       </div>`
+    : '';
+
   const panell = document.getElementById('panell-detall');
   panell.innerHTML = `
     <div class="detall-header">
@@ -3702,6 +3752,7 @@ function obrirDetall(nom, desDePopstate) {
             <span class="badge-cat" style="${badgeStyle(cat)}">${escHTML(cat)}</span>
             <div class="card-stars" id="detall-stars" data-nom="${escHTML(nom)}" aria-label="Valoració: ${valoracio} de 5">${starsHTML}</div>
             ${fontHTML}
+            ${llibreHTML}
             ${etHTML}
             <button class="btn-cuinar-detall-meta js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
@@ -4409,6 +4460,7 @@ function resetSorpren() {
 
 function aplicar() {
   resetSorpren(); // quan s'invoca aplicar des de cerca/filtre, sortim del mode sorpresa
+  refrescarLlibresSuggeriments();
   const q = (document.getElementById('cerca').value || '').toLowerCase();
   const qExpansio = expandirCerca(q);
   const resultat = receptes.filter(r => {
@@ -4450,6 +4502,7 @@ function aplicar() {
     const cat        = r['Categoria'] || '';
     const ing        = r['Ingredients'] || '';
     const font       = r['Font'] || '';
+    const llibre     = r['Llibre'] || '';
     const url        = r['URL'] || '';
     const etiquetes  = r['Etiquetes'] || '';
     const instruccions = r['Instruccions'] || '';
@@ -4577,6 +4630,10 @@ function aplicar() {
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               ${escHTML(font)}${url ? ` · <a href="${escHTML(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:12px;">ves-hi</a>` : ''}
             </p>` : ''}
+            ${llibre ? `<p class="card-llibre" id="vista-llibre-${nomId}">
+              <i class="ti ti-book-2" aria-hidden="true"></i>
+              ${escHTML(llibre)}
+            </p>` : ''}
             <div class="card-accions-inferiors" onclick="event.stopPropagation()">
               <button class="card-accio-btn" onclick="obrirDetall('${nom.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">Obrir</button>
               <button class="card-accio-btn${(cookState[nom] && cookState[nom].actiu) ? ' actiu' : ''}" id="card-accio-cuinar-${nomId}" onclick="toggleCookMode('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Mode cuinar</button>
@@ -4632,6 +4689,10 @@ function aplicar() {
                   <span class="card-edit-label">Font</span>
                   <input type="text" id="edit-font-${nomId}" value="${escHTML(font)}">
                 </div>
+              </div>
+              <div class="card-edit-group full">
+                <span class="card-edit-label">Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></span>
+                <input type="text" id="edit-llibre-${nomId}" list="dl-llibres" value="${escHTML(llibre)}" placeholder="p.ex. Simple, pàg. 142">
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">URL</span>
@@ -4831,6 +4892,7 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
   const nomNou  = document.getElementById('edit-nom-' + nomId).value.trim();
   const cat     = document.getElementById('edit-cat-' + nomId).value;
   const font    = document.getElementById('edit-font-' + nomId).value.trim();
+  const llibre  = document.getElementById('edit-llibre-' + nomId).value.trim();
   const url     = document.getElementById('edit-url-' + nomId).value.trim();
   const etiquetes = normalitzarEtiquetes(document.getElementById('edit-etiquetes-' + nomId).value);
   const instruccions = document.getElementById('edit-instruccions-' + nomId).value.trim();
@@ -4845,6 +4907,7 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
       categoria:    cat,
       ingredients:  ingJSON || '[]',
       font:         font,
+      llibre:       llibre,
       url:          url,
       etiquetes:    etiquetes,
       instruccions: instruccions,
@@ -4863,6 +4926,7 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
       receptes[idx]['Categoria']         = cat;
       receptes[idx]['Ingredients']       = ingJSON || '[]';
       receptes[idx]['Font']              = font;
+      receptes[idx]['Llibre']            = llibre;
       receptes[idx]['URL']               = url;
       receptes[idx]['Etiquetes']         = etiquetes;
       receptes[idx]['Instruccions']      = instruccions;
@@ -5385,12 +5449,18 @@ function renderItem(item) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Font / Llibre</label>
+          <label>Font</label>
           <input type="text" id="font-${idx}" placeholder="Font detectada…">
         </div>
         <div class="form-group">
           <label>Etiquetes</label>
           <input type="text" id="etiquetes-${idx}" placeholder="sopar ràpid, meal prep…">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
+          <input type="text" id="llibre-${idx}" list="dl-llibres" placeholder="p.ex. Simple, pàg. 142">
         </div>
       </div>
       <div class="form-row">
@@ -5862,6 +5932,7 @@ async function desarReceptaNova(recepta) {
     categoria:    recepta.categoria    || '',
     ingredients:  recepta.ingredients  || '[]',
     font:         recepta.font         || '',
+    llibre:       recepta.llibre       || '',
     url:          recepta.url          || '',
     foto:         '',
     etiquetes:    recepta.etiquetes    || '',
@@ -5971,6 +6042,7 @@ async function desarRecepta(idx) {
     categoria:    document.getElementById(`cat-${idx}`).value,
     ingredients:  ingJSONScan,
     font:         fontValue,
+    llibre:       (document.getElementById(`llibre-${idx}`)?.value || '').trim(),
     etiquetes:    normalitzarEtiquetes(document.getElementById(`etiquetes-${idx}`)?.value || ''),
     instruccions: document.getElementById(`instruccions-${idx}`)?.value.trim() || '',
     racions:      racionsScan,
@@ -6346,6 +6418,7 @@ async function confirmarDesarManual() {
     categoria:    document.getElementById('manual-cat').value,
     ingredients:  window._manualIngJSON || '[]',
     font:         normalitzarFont(document.getElementById('manual-font').value.trim()),
+    llibre:       document.getElementById('manual-llibre').value.trim(),
     url:          document.getElementById('manual-url').value.trim(),
     etiquetes:    normalitzarEtiquetes(document.getElementById('manual-etiquetes').value),
     instruccions: instruccions,
@@ -6361,7 +6434,7 @@ async function confirmarDesarManual() {
     mostrarToast('✅ "' + nom + '" desada al receptari');
 
     // Neteja el formulari
-    ['manual-nom','manual-font','manual-url','manual-etiquetes'].forEach(function(id){
+    ['manual-nom','manual-font','manual-llibre','manual-url','manual-etiquetes'].forEach(function(id){
       document.getElementById(id).value = '';
     });
     document.getElementById('manual-ing').value = '';
