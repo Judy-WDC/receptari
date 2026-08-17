@@ -3201,7 +3201,11 @@ function parseIngredientLine(text) {
     const words = rest.split(/\s+/);
     const unitCandidate = words[0]?.toLowerCase();
     if (unitCandidate && UNIT_MAP[unitCandidate]) {
-      u = UNIT_MAP[unitCandidate];
+      // El UNIT_MAP només serveix per RECONÈIXER que la paraula és una unitat.
+      // Conservem la unitat tal com l'ha escrita la recepta: si el llibre diu
+      // "teaspoons", no volem convertir-ho en "culleradetes" i deixar la resta
+      // de l'ingredient en anglès.
+      u = words[0];
       n = words.slice(1).join(' ');
     } else {
       n = rest;
@@ -3228,7 +3232,7 @@ function parseIngredientLine(text) {
     const words = rest.split(/\s+/);
     const unitCandidate = words[0]?.toLowerCase();
     if (unitCandidate && UNIT_MAP[unitCandidate]) {
-      u = UNIT_MAP[unitCandidate];
+      u = words[0];                       // la unitat, tal com la diu la recepta
       n = words.slice(1).join(' ');
     } else {
       n = rest;
@@ -3329,8 +3333,8 @@ const UNITATS_PLURALS = {
   unça:'unces', litre:'litres', quilo:'quilos', gram:'grams', tall:'talls', filet:'filets',
   peça:'peces', unitat:'unitats', llenca:'llenques', porció:'porcions', ració:'racions',
   làmina:'làmines', bola:'boles', cabeça:'cabeces', pastilla:'pastilles', bossa:'bosses',
-  ampolla:'ampolles', terrina:'terrines', pols:'polsos', pizca:'pizcas',
-  taza:'tazas', cucharada:'cucharadas', cucharadita:'cucharaditas', vaso:'vasos',
+  ampolla:'ampolles', terrina:'terrines', pols:'polsos', pizca:'pizcas', rajola:'rajoles',
+  taza:'tazas', cucharada:'cucharadas', cucharadita:'cucharaditas', vaso:'vasos', bolsa:'bolsas',
   diente:'dientes', hoja:'hojas', rodaja:'rodajas', trozo:'trozos', lata:'latas',
   bote:'botes', paquete:'paquetes', ramita:'ramitas', loncha:'lonchas', rebanada:'rebanadas',
 };
@@ -3415,10 +3419,21 @@ function singularitzaParaula(w) {
 
 // Retorna la unitat en singular o plural segons la quantitat (q > 1 → plural).
 // Les abreviatures (g, ml…) i les unitats de ≤2 lletres es deixen tal qual.
+// Sabem flexionar aquesta unitat? Només les que tenim al diccionari català/castellà.
+// Les d'altres idiomes ("teaspoons", "cups", "tbsp"…) no s'hi toquen: aplicar-hi les
+// regles del català donaria disbarats com "teaspoonsos".
+function unitatFlexionable(unitat) {
+  return unitat.split(/\s+/).every(w => {
+    const lw = w.toLowerCase();
+    return !!(UNITATS_PLURALS[lw] || UNITATS_SINGULARS[lw]);
+  });
+}
+
 function unitatSegonsQuantitat(unitat, q) {
   if (!unitat || q === null || q === undefined) return unitat;
   const neta = unitat.trim();
   if (neta.length <= 2 || UNITATS_INVARIABLES.has(neta.toLowerCase())) return unitat;
+  if (!unitatFlexionable(neta)) return unitat;   // unitat forana: es deixa tal qual
   return neta.split(/\s+/)
     .map(w => (q > 1 ? pluralitzaParaula(w) : singularitzaParaula(w)))
     .join(' ');
@@ -5577,6 +5592,10 @@ async function receptaImatgeLocal(file) {
   });
   const dades = await resp.json();
   if (!resp.ok) throw new Error(dades.error || 'Error desconegut');
+  // ⚠ TEMPORAL (v118) — diagnòstic de l'OCR: treure un cop resolt el repartiment d'ingredients.
+  window.__ocrCru = JSON.stringify(dades, null, 2);
+  console.log('%c[OCR servidor local] resposta sencera. Escriu  copy(__ocrCru)  per copiar-la:', 'color:#B03A2E;font-weight:bold');
+  console.log(dades);
   let fontFinal = dades.font || fontDef;
   if (/^\s*DE\s*$/i.test(fontFinal)) fontFinal = 'Deliciously Ella';
   return {
@@ -5603,6 +5622,10 @@ async function receptaImatgeDrive(file) {
   const dades = await resp.json();
   if (!dades.ok) throw new Error(dades.error || 'L\'OCR de Drive ha fallat');
   const text = (dades.text || '').trim();
+  // ⚠ TEMPORAL (v118) — diagnòstic de l'OCR: treure un cop resolt el repartiment d'ingredients.
+  window.__ocrCru = text;
+  console.log('%c[OCR Drive] text cru — ' + text.split('\n').length + ' línies. Escriu  copy(__ocrCru)  per copiar-lo:', 'color:#B03A2E;font-weight:bold');
+  console.log(text);
   if (!text) throw new Error('No s\'ha trobat text a la imatge');
   // Mateix camí que els PDF: extracció local del text
   const fontDefecte = document.getElementById('fontDefecte').value || '';
@@ -5795,6 +5818,88 @@ function esVerbCuina(paraula) {
   return false;
 }
 
+// ── L'OCR no retorna un ingredient per línia: sovint n'enganxa uns quants en una
+//    de sola ("2 teaspoons ground ginger 2 teaspoons ground cinnamon handful of
+//    parsley, chopped 45g dates..."). Aquí els tornem a separar.
+//
+//    On comença un ingredient nou? Allà on comença una quantitat: un número (o una
+//    fracció) seguit d'una UNITAT CONEGUDA, admetent-hi un adjectiu pel mig
+//    ("1 heaped tablespoon"); o bé una obertura sense número ("handful of parsley",
+//    "suc de llimona"). Exigir la unitat és el que evita partir un ingredient per
+//    qualsevol número que hi aparegui.
+//
+//    Les unitats surten del mateix UNIT_MAP que fa servir l'escalat de racions,
+//    així no hi ha dues llistes que puguin acabar dient coses diferents.
+const OBERTURES_ING = 'handful|pinch|juice|zest|grapat|pessic|suc|ratlladura|pu[ñn]ado|zumo|ralladura|raig|chorrito';
+let _reIniciIngredient = null;
+function reIniciIngredient() {
+  if (_reIniciIngredient) return _reIniciIngredient;
+  const unitats = Object.keys(UNIT_MAP)
+    .sort((a, b) => b.length - a.length)                    // "cullerades" abans que "cullerada"
+    .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  const quantitat = '\\d+(?:[.,]\\d+)?(?:\\s*[\\/⁄]\\s*\\d+)?\\s*[½¼¾⅓⅔⅛⅜⅝⅞]?';
+  const adjectiu  = '(?:[a-zà-úç]+\\s+)?';                  // "1 heaped tablespoon"
+  _reIniciIngredient = new RegExp(
+    '(?:' +
+      quantitat + '\\s*' + adjectiu + '(?:' + unitats + ')\\b' +
+      '|[½¼¾⅓⅔⅛⅜⅝⅞]\\s*' + adjectiu + '(?:' + unitats + ')\\b' +
+      '|(?:' + OBERTURES_ING + ')\\s+(?:of|de|d\'|dels?|de\\s+la)\\b' +
+    ')', 'gi');
+  return _reIniciIngredient;
+}
+
+// Paraules que, just abans d'una quantitat, volen dir que la quantitat FORMA PART
+// de l'ingredient que ve de darrere i no en comença un de nou: "parmesà, uns 50 g",
+// "suc de mitja llimona i la ratlladura de…". Si tallem aquí, partim l'ingredient.
+const CONNECTORS_NO_TALL = new Set([
+  'i','o','y','u','de','del','dels','d','amb','con','sense','sin','per','para','the','of',
+  'un','una','uns','unes','unos','unas','el','la','els','les','los','las','lo','al','als','a','an',
+  'mig','mitja','medio','media','and','or','with','about','around','plus','to','each',
+  'aprox','aproximadament','aproximadamente','approx','approximately',
+  'fins','hasta','cada','més','mes','más','mas','menys','menos','entre','com','como','ben','molt','muy',
+]);
+
+// És segur tallar la línia en aquest punt? Diem que no en dos casos:
+//  · si just abans hi ha un connector ("uns 50 g", "i la ratlladura de…")
+//  · si som dins d'un parèntesi obert ("1 llauna de cigrons (400 g)")
+function tallSegur(linia, idx) {
+  let obertura = 0;
+  for (let k = 0; k < idx; k++) {
+    const c = linia[k];
+    if (c === '(' || c === '[') obertura++;
+    else if (c === ')' || c === ']') obertura = Math.max(0, obertura - 1);
+  }
+  if (obertura > 0) return false;
+  const abans   = linia.slice(0, idx).trimEnd();
+  if (/[(\[]$/.test(abans)) return false;
+  const ultima  = (abans.match(/([\p{L}'’]+)$/u) || [])[1] || '';
+  const neta    = ultima.toLowerCase().replace(/['’]/g, '');
+  return !CONNECTORS_NO_TALL.has(neta);
+}
+
+function separarIngredientsEnganxats(linia) {
+  // Una línia curta ja és un ingredient sol: no la toquem.
+  if (linia.length <= 45) return [linia];
+  const re = reIniciIngredient();
+  re.lastIndex = 0;
+  const talls = [];
+  let m;
+  while ((m = re.exec(linia)) !== null) {
+    if (m.index > 0 && tallSegur(linia, m.index)) talls.push(m.index);
+    if (m.index === re.lastIndex) re.lastIndex++;  // coincidència buida: no ens hi encallem
+  }
+  if (!talls.length) return [linia];
+  const trossos = [];
+  let inici = 0;
+  for (const fi of [...talls, linia.length]) {
+    const tros = linia.slice(inici, fi).trim().replace(/[,;·]\s*$/, '');
+    if (tros.length >= 3) trossos.push(tros);
+    inici = fi;
+  }
+  return trossos.length ? trossos : [linia];
+}
+
 function extraccioLocal(text, fontDefecte) {
   let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const linesOriginals = lines.slice(); // per a detectarFont
@@ -5838,6 +5943,27 @@ function extraccioLocal(text, fontDefecte) {
       if (net.length > 25 && (esImperatiuCat || esVerbCuina(primera))) { // català o anglès
         idxPrimerPas = i; break;
       }
+    }
+  }
+
+  // ── Pla C: fotos de llibre a dues columnes ──
+  // Quan es fotografia la columna dels ingredients, pel marge hi entra un tros de
+  // la columna del mètode, retallat: "Preheat the oven", "Place the sweet p"…
+  // Cap d'aquestes línies arriba als 25 caràcters, així que els plans A i B no les
+  // veuen i tot el bloc acaba dins d'ingredients. Aquí ho tornem a mirar amb un
+  // llistó més baix, però NOMÉS si abans no hem trobat res: d'aquesta manera les
+  // receptes que ja es reparteixen bé no canvien gens.
+  if (idxPrimerPas === -1) {
+    const reObertura = new RegExp('^(?:' + OBERTURES_ING + ')\\s+(?:of|de|d\'|dels?|de\\s+la)\\b', 'i');
+    for (let i = 0; i < lines.length; i++) {
+      const net = lines[i].replace(/^[\-–—•*·]\s*/, '');
+      if (net.length <= 12) continue;                    // massa curta per ser un pas
+      if (net.split(/\s+/).length < 3) continue;         // un pas té subjecte i complement
+      if (/^\d/.test(net)) continue;                     // "2 tablespoons…" és un ingredient
+      if (reObertura.test(net)) continue;                // "zest of one lemon" també
+      const primera = (net.match(/^(\S+)/) || [])[1] || '';
+      const esImperatiuCat = /^[a-zà-úA-ZÀ-Ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/i.test(primera);
+      if (esImperatiuCat || esVerbCuina(primera)) { idxPrimerPas = i; break; }
     }
   }
 
@@ -5901,11 +6027,23 @@ function extraccioLocal(text, fontDefecte) {
         .trim();
       if (!l) continue;
     }
+    // Trossos retallats pel marge de la foto. Dues marques que no falien mai:
+    // acabar amb un guionet ("until they're reall-") o amb una consonant sola
+    // ("Place the sweet p", "everything with s"). Cap ingredient acaba així.
+    if (/[-–—]$/.test(l)) continue;
+    // (la lletra ha d'anar darrere d'una paraula, no d'un número: així
+    //  "Xocolata negra 200 g" es queda, que la "g" hi és a posta)
+    if (/[a-zà-úç]\s[b-df-hj-np-tv-xzç]$/i.test(l)) continue;
     // Descarta la descripció d'entrada: frases llargues acabades en punt
     if (l.length >= 45 && /\.\s*$/.test(l)) continue;
     if (l.length >= 60 && /\.\s+[A-ZÀ-Ú]/.test(l)) continue; // diverses frases seguides
-    if (l.length > 120) continue;
-    candidats.push(l);
+    // Primer separem els ingredients que l'OCR ha enganxat en una sola línia i
+    // NOMÉS DESPRÉS mirem la llargada: si no, un bloc de sis ingredients seguits
+    // passa dels 120 caràcters i es perden tots de cop.
+    for (const tros of separarIngredientsEnganxats(l)) {
+      if (tros.length > 120) continue;             // això sí que és un paràgraf
+      candidats.push(tros);
+    }
   }
   const ingredients = candidats.length > 0 ? candidats.join(' · ') : lines.slice(1, 8).join(' · ');
 
