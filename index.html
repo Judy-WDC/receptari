@@ -445,31 +445,35 @@
   }
   .camera-error-btn:hover { background: rgba(245,247,73,0.18); }
 
-  /* ── Dues portes de l'escàner (pujar fitxers / fer una foto) ── */
-  .scan-portes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-  @media (max-width: 560px) { .scan-portes { grid-template-columns: 1fr; } }
+  /* ── Portes d'entrada de l'escàner ──
+     Les tres maneres d'entrar receptes comparteixen format: mateixa vora, mateix
+     radi i mateix comportament. El groc no és un estat permanent de cap d'elles,
+     només marca on tens el ratolí (o on estàs deixant anar els fitxers). */
+  .scan-portes { display: flex; flex-direction: column; gap: 0.55rem; }
   .scan-porta {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; cursor: pointer; padding: 2rem 1.25rem;
-    border-radius: 14px; transition: all 0.25s;
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.7rem 1rem; cursor: pointer;
+    border: 1.5px solid var(--border-dim); border-radius: 14px;
+    background: var(--bg); transition: all 0.25s;
   }
-  .scan-porta .icon { font-size: 2.4rem; margin-bottom: 0.7rem; display: block; line-height: 1; }
-  .scan-porta .icon i { color: var(--accent); }
-  .scan-porta p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; margin: 0; }
-  .scan-porta strong { color: var(--accent2); font-weight: 500; }
-  .scan-porta-camera {
-    border: 2.5px solid var(--accent); background: var(--surface);
+  .scan-porta:hover, .scan-porta.drag-over {
+    border-color: var(--accent); background: var(--surface2);
   }
-  .scan-porta-camera:hover { background: var(--surface2); }
-  .scan-agrupar {
-    display: flex; align-items: center; justify-content: center; gap: 0.55rem;
-    margin-top: 0.85rem; padding: 0.85rem 1rem; cursor: pointer;
-    border: 1.5px dashed var(--border); border-radius: 12px;
-    color: var(--text-dim); font-size: 0.9rem; transition: all 0.2s;
+  /* La icona va dins d'una pastilla: ancora l'inici de cada fila i dona ritme
+     a la llista, que si no es llegeix com tres línies de text soltes. */
+  .scan-porta .icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; flex-shrink: 0;
+    border-radius: 10px; background: rgba(245,247,73,0.12);
+    transition: background 0.25s;
   }
-  .scan-agrupar:hover { border-color: var(--accent); background: var(--surface); }
-  .scan-agrupar .icon i { color: var(--accent); font-size: 1.15rem; display: block; }
-  .scan-agrupar strong { font-weight: 500; }
+  .scan-porta:hover .icon, .scan-porta.drag-over .icon { background: rgba(245,247,73,0.22); }
+  .scan-porta .icon i { color: var(--accent); font-size: 1.15rem; display: block; }
+  .scan-porta .txt { flex: 1; min-width: 0; }
+  .scan-porta strong { display: block; color: var(--text); font-weight: 500; font-size: 0.9rem; }
+  .scan-porta p { color: var(--text-muted); font-size: 0.78rem; line-height: 1.5; margin: 0.1rem 0 0; }
+  .scan-porta .fletxa { flex-shrink: 0; color: var(--accent2); font-size: 1rem; transition: color 0.25s; }
+  .scan-porta:hover .fletxa { color: var(--accent); }
 
   /* ── Captura múltiple de l'escàner ── */
   .camera-comptador {
@@ -822,28 +826,6 @@
   }
 
   /* Drop zone */
-  .drop-zone {
-    border: 2.5px dashed var(--border);
-    border-radius: 14px; padding: 2.5rem 1.5rem;
-    text-align: center; cursor: pointer;
-    transition: all 0.25s; background: var(--bg);
-    position: relative;
-  }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--accent); background: var(--surface2);
-  }
-  .drop-zone .icon { font-size: 2.4rem; margin-bottom: 0.7rem; display: block; }
-  .drop-zone p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
-  .drop-zone strong { color: var(--accent2); font-weight: 500; }
-  .drop-zone .tipus-acceptats {
-    display: flex; justify-content: center;
-    gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;
-  }
-  .chip {
-    background: var(--surface2); border: 1px solid var(--border-dim);
-    border-radius: 20px; padding: 0.2rem 0.65rem;
-    font-size: 0.72rem; color: var(--text-muted); font-weight: 500;
-  }
 
   /* Cua */
   .cua { display: flex; flex-direction: column; gap: 0.85rem; }
@@ -1492,8 +1474,6 @@
 
   #panell-scan .col-body { box-shadow: 0 2px 16px rgba(0,0,0,0.25); border: none; border-top: none; }
   #panell-scan .targeta { box-shadow: none; border-color: rgba(255,255,255,0.08); }
-  #panell-scan .chip { background: #163d4c; border-color: rgba(255,255,255,0.1); }
-  #panell-scan .drop-zone { background: rgba(22,61,76,0.6); }
 
   /* ══════════════════════════════════════
      PORTADA
@@ -2238,24 +2218,30 @@ function tancarNovetats() {
               </div>
             </div>
             <div class="scan-portes">
-              <div class="drop-zone scan-porta" id="dropZone">
-                <span class="icon">📂</span>
-                <p><strong>Fitxers de receptes diferents</strong></p>
-                <div class="tipus-acceptats">
-                  <span class="chip">📷 Imatge</span>
-                  <span class="chip">📕 PDF</span>
-                  <span class="chip">📘 Word</span>
+              <div class="scan-porta" id="dropZone">
+                <span class="icon"><i class="ti ti-file-upload" aria-hidden="true"></i></span>
+                <div class="txt">
+                  <strong>Puja fitxers</strong>
+                  <p>Cada fitxer, una recepta diferent · arrossega'ls aquí o clica · imatge, PDF o Word</p>
                 </div>
+                <i class="ti ti-chevron-right fletxa" aria-hidden="true"></i>
               </div>
-              <div class="scan-porta scan-porta-camera" id="btnCameraEscaner" onclick="obrirCameraEscaner()">
+              <div class="scan-porta" id="btnCameraEscaner" onclick="obrirCameraEscaner()">
                 <span class="icon"><i class="ti ti-camera" aria-hidden="true"></i></span>
-                <p><strong>Fes fotos</strong> amb la càmera</p>
-                <p style="margin-top:0.3rem;font-size:0.78rem;">Pots fer-ne diverses seguides per a una mateixa recepta</p>
+                <div class="txt">
+                  <strong>Fes fotos amb la càmera</strong>
+                  <p>Pots fer-ne diverses seguides per a una mateixa recepta</p>
+                </div>
+                <i class="ti ti-chevron-right fletxa" aria-hidden="true"></i>
               </div>
-            </div>
-            <div class="scan-agrupar" id="btnAgruparImatges" onclick="document.getElementById('fileInputGrup').click()">
-              <span class="icon"><i class="ti ti-stack-2" aria-hidden="true"></i></span>
-              <span><strong>Una recepta en diverses imatges</strong></span>
+              <div class="scan-porta" id="btnAgruparImatges" onclick="document.getElementById('fileInputGrup').click()">
+                <span class="icon"><i class="ti ti-stack-2" aria-hidden="true"></i></span>
+                <div class="txt">
+                  <strong>Una recepta en diverses imatges</strong>
+                  <p>Tries les fotos i es llegeixen totes juntes</p>
+                </div>
+                <i class="ti ti-chevron-right fletxa" aria-hidden="true"></i>
+              </div>
             </div>
             <input type="file" id="fileInput"
               accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -5592,10 +5578,6 @@ async function receptaImatgeLocal(file) {
   });
   const dades = await resp.json();
   if (!resp.ok) throw new Error(dades.error || 'Error desconegut');
-  // ⚠ TEMPORAL (v118) — diagnòstic de l'OCR: treure un cop resolt el repartiment d'ingredients.
-  window.__ocrCru = JSON.stringify(dades, null, 2);
-  console.log('%c[OCR servidor local] resposta sencera. Escriu  copy(__ocrCru)  per copiar-la:', 'color:#B03A2E;font-weight:bold');
-  console.log(dades);
   let fontFinal = dades.font || fontDef;
   if (/^\s*DE\s*$/i.test(fontFinal)) fontFinal = 'Deliciously Ella';
   return {
@@ -5622,10 +5604,6 @@ async function receptaImatgeDrive(file) {
   const dades = await resp.json();
   if (!dades.ok) throw new Error(dades.error || 'L\'OCR de Drive ha fallat');
   const text = (dades.text || '').trim();
-  // ⚠ TEMPORAL (v118) — diagnòstic de l'OCR: treure un cop resolt el repartiment d'ingredients.
-  window.__ocrCru = text;
-  console.log('%c[OCR Drive] text cru — ' + text.split('\n').length + ' línies. Escriu  copy(__ocrCru)  per copiar-lo:', 'color:#B03A2E;font-weight:bold');
-  console.log(text);
   if (!text) throw new Error('No s\'ha trobat text a la imatge');
   // Mateix camí que els PDF: extracció local del text
   const fontDefecte = document.getElementById('fontDefecte').value || '';
