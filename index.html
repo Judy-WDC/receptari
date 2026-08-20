@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  VERSIÓ 127 · 20-08-2026                                     ║
+  ╚══════════════════════════════════════════════════════════════╝
+  Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
+  El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
+  que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
+
+  Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
+  l'última és la 127 (index-receptes-Supabase-127.html) i la següent, la 137.
+  Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
+  ser la número 1, a la versió 125; la següent, la 2, toca a la versió 150.
+
+  Cap còpia es crea sense dir-ho abans a la Judy.
+
+  Nota: el "VERSIO_NOVETATS" que trobaràs més avall és una altra cosa —
+  la versió que es mostra a la finestra de novetats de l'app— i no té res
+  a veure amb aquest número.
+-->
 <html lang="ca">
 <head>
 <meta charset="UTF-8">
@@ -1390,6 +1409,210 @@
   }
 
   /* ══════════════════════════════════════
+     PLANIFICACIÓ: MENÚS
+  ══════════════════════════════════════ */
+  /* Commutador Menús / Llista de la compra */
+  .plan-tabs {
+    display: flex; gap: 6px;
+    background: var(--surface); padding: 4px;
+    border-radius: 12px; margin-bottom: 1.25rem;
+  }
+  .plan-tab {
+    flex: 1; padding: 0.6rem 0.5rem;
+    border: none; border-radius: 9px;
+    background: transparent; color: var(--text-muted);
+    font-family: 'Poppins', sans-serif; font-size: 0.85rem;
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .plan-tab.actiu { background: var(--accent); color: var(--bg); font-weight: 500; }
+
+  /* Selector de setmana */
+  .setmana-nav {
+    display: flex; align-items: center; justify-content: center; gap: 1rem;
+    margin-bottom: 0.4rem; color: var(--text-dim);
+  }
+  .setmana-nav button {
+    background: none; border: none; cursor: pointer; padding: 6px;
+    line-height: 1; border-radius: 8px; color: var(--text-muted);
+    transition: color 0.15s, background 0.15s;
+  }
+  .setmana-nav button:hover { color: var(--text); background: var(--surface); }
+  .setmana-nav i { font-size: 20px; }
+  .setmana-titol { font-size: 0.95rem; font-weight: 500; min-width: 12rem; text-align: center; }
+  .setmana-avui {
+    display: block; margin: 0 auto 1rem; background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-family: 'Poppins', sans-serif; font-size: 0.75rem;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .setmana-avui:hover { color: var(--text-dim); }
+
+  /* Dies de la setmana, plegats i desplegats */
+  .dia-card {
+    background: var(--surface); border-radius: 12px; margin-bottom: 8px;
+    border: 1.5px solid transparent; overflow: hidden;
+  }
+  .dia-card.obert { background: var(--surface2); border-color: rgba(245,247,73,0.25); }
+  .dia-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.8rem 1rem; cursor: pointer;
+  }
+  .dia-nom { font-size: 0.95rem; color: var(--text-dim); }
+  .dia-card.obert .dia-nom { color: var(--accent); font-weight: 500; }
+  .dia-head i { font-size: 16px; color: var(--text-muted); }
+  .dia-resum { font-size: 0.78rem; color: var(--text-dim); padding: 0 1rem 0.85rem; line-height: 1.6; }
+  .dia-resum .apat-etiq { color: var(--text-muted); margin-right: 7px; }
+  .dia-buit { color: var(--text-muted); }
+  .dia-cos { padding: 0 0.75rem 0.6rem; }
+
+  /* Capçalera de l'àpat: és la porta cap a la fitxa */
+  .apat-head {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: none; border: none; cursor: pointer; border-radius: 8px;
+    padding: 0.45rem 0.5rem; margin: 0.3rem 0 0.55rem;
+    font-family: 'Poppins', sans-serif; transition: background 0.15s;
+  }
+  .apat-head:hover { background: rgba(255,255,255,0.05); }
+  .apat-titol {
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .apat-obrir { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text-muted); }
+  .apat-obrir i { font-size: 14px; }
+
+  /* Fila de plat dins la graella (només informa) */
+  .plat-fila {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(11,32,39,0.55); border-radius: 8px;
+    padding: 0.55rem 0.75rem; margin-bottom: 6px;
+  }
+  .plat-nom {
+    font-size: 0.85rem; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .plat-nom.esborrada { color: var(--text-muted); font-style: italic; }
+  .plat-racions {
+    font-size: 0.72rem; font-weight: 500; color: var(--bg); background: var(--accent);
+    padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-afegir-plat {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; cursor: pointer; color: #8fd4a8;
+    font-family: 'Poppins', sans-serif; font-size: 0.8rem; padding: 0.4rem 0.5rem;
+  }
+  .btn-afegir-plat i { font-size: 15px; }
+
+  /* ── Fitxa d'àpat (pantalla completa) ── */
+  .apat-head-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
+  .apat-back { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; line-height: 1; }
+  .apat-back i { font-size: 22px; }
+  .apat-titol-gran { font-size: 1.15rem; font-weight: 500; color: var(--text); }
+  .apat-subtitol { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+  .avis-reordenar {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: rgba(245,247,73,0.10); border: 1.5px solid rgba(245,247,73,0.28);
+    border-radius: 12px; padding: 0.75rem 0.85rem; margin-bottom: 1rem;
+  }
+  .avis-reordenar > i { font-size: 20px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+  .avis-reordenar-cos { flex: 1; }
+  .avis-reordenar-titol { font-size: 0.82rem; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .avis-reordenar-text { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+  .avis-reordenar-ok {
+    margin-top: 0.6rem; background: var(--accent); color: var(--bg); border: none;
+    border-radius: 20px; padding: 0.35rem 1rem; cursor: pointer;
+    font-family: 'Poppins', sans-serif; font-size: 0.75rem; font-weight: 500;
+  }
+  .avis-reordenar-x { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; line-height: 1; }
+
+  .plat-card {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--surface); border: 1.5px solid transparent; border-radius: 12px;
+    padding: 0.7rem; margin-bottom: 8px;
+    transition: border-color 0.15s, transform 0.15s;
+    /* La pulsació llarga és nostra: ni selecció de text ni menú del navegador */
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .plat-card.movent { border-color: var(--accent); }
+  /* La targeta que portes al dit: sense transició, que ha de seguir-lo a l'instant */
+  .plat-card.arrossegant {
+    transition: border-color 0.15s;
+    position: relative; z-index: 5;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+  }
+  .plat-mini {
+    width: 50px; height: 50px; border-radius: 10px; flex-shrink: 0;
+    object-fit: cover; background: var(--surface2);
+  }
+  .plat-mini-buida { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+  .plat-mini-buida i { font-size: 22px; }
+  .plat-cos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .plat-linia { display: flex; align-items: center; gap: 10px; }
+  .plat-card .plat-nom { flex: 1; min-width: 0; font-size: 0.92rem; cursor: pointer; }
+  .btn-treure-plat {
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    padding: 4px 2px 4px 8px; line-height: 1; flex-shrink: 0; position: relative;
+  }
+  /* La creu es veu petita, però el dit té molt més marge del que sembla */
+  .btn-treure-plat::after { content: ''; position: absolute; top: -11px; right: -8px; bottom: -11px; left: -4px; }
+  .btn-treure-plat i { font-size: 16px; }
+  .btn-treure-plat:hover { color: var(--text-dim); }
+  .plat-linia-baixa { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .plat-cat {
+    font-size: 0.68rem; color: #a8d4e0; background: rgba(64,121,140,0.35);
+    padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 9.5rem;
+  }
+  .plat-rac { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .plat-rac button {
+    width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+    border: 1.5px solid var(--border-dim); background: none; color: var(--text-dim);
+    font-size: 16px; line-height: 1; cursor: pointer;
+  }
+  .plat-rac button:hover { border-color: var(--border); color: var(--text); }
+  .plat-rac-valor {
+    background: none; border: none; cursor: pointer; padding: 2px 4px;
+    font-family: 'Poppins', sans-serif; font-size: 0.92rem; font-weight: 500;
+    color: var(--accent); min-width: 2.6rem;
+  }
+  .plat-rac-valor small { color: var(--text-muted); font-size: 0.68rem; font-weight: 400; }
+
+  .btn-afegir-plat-gran {
+    width: 100%; border: 1.5px dashed rgba(143,212,168,0.5); border-radius: 12px;
+    padding: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: none; color: #8fd4a8; cursor: pointer;
+    font-family: 'Poppins', sans-serif; font-size: 0.88rem; margin-top: 0.25rem;
+  }
+  .btn-afegir-plat-gran i { font-size: 18px; }
+
+  /* Cercador de receptes per afegir un plat */
+  .plat-picker {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6);
+    display: none; align-items: flex-start; justify-content: center; padding: 3rem 1rem 1rem;
+  }
+  .plat-picker.visible { display: flex; }
+  .plat-picker-caixa {
+    width: 100%; max-width: 440px; background: var(--surface);
+    border: 1.5px solid var(--border); border-radius: 16px; padding: 1rem;
+  }
+  .plat-picker-cap { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
+  .plat-picker-titol { font-size: 0.95rem; font-weight: 500; color: var(--text); }
+  .plat-picker-llista { max-height: 55vh; overflow-y: auto; margin-top: 0.75rem; }
+
+  /* Missatge provisional de la llista de la compra */
+  .compra-aviat {
+    text-align: center; background: var(--surface); border-radius: 14px;
+    padding: 2.75rem 1.5rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.75;
+  }
+  .compra-aviat i { display: block; font-size: 34px; color: var(--text-muted); margin-bottom: 0.85rem; }
+
+  /* Amb quatre botons a la barra, les etiquetes no s'han de partir mai */
+  .bottom-nav-item span { white-space: nowrap; }
+  @media (max-width: 380px) {
+    .bottom-nav-item { font-size: 0.65rem; }
+    .bottom-nav-item i { font-size: 20px; }
+  }
+
+  /* ══════════════════════════════════════
      RESPONSIVE
   ══════════════════════════════════════ */
   @media (max-width: 600px) {
@@ -1632,6 +1855,33 @@
   }
   .benvinguda-punt.actiu { background: var(--accent); }
   .benvinguda-cos { min-height: 190px; }
+  /* Bloc d'instal·lació: botó "Instal·la-la" o avís de fet, a la primera pantalla */
+  .benvinguda-instal { margin-bottom: 16px; }
+  .benvinguda-clica { font-size: 15px; color: var(--text-dim); margin-bottom: 9px; }
+  /* Fila d'icones de la pantalla "Com hi afegeixes receptes": són decoratives,
+     hi són perquè la pantalla no quedi buida. Mateixa pastilla que a "Afegir". */
+  /* El títol ja aporta 6px per sota, o sigui que amb 12 aquí queda
+     el mateix aire a dalt i a baix de la fila (18px als dos costats). */
+  .benvinguda-icones { display: flex; gap: 10px; justify-content: center; margin: 12px 0 18px; }
+  .benvinguda-icones span {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(245,247,73,0.12);
+  }
+  .benvinguda-icones i { color: var(--accent); font-size: 1.15rem; }
+  .benvinguda-instal-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 11px 14px; border-radius: 10px;
+    background: var(--accent); color: var(--bg); border: none;
+    font-family: inherit; font-size: 14px; cursor: pointer; transition: opacity 0.2s;
+  }
+  .benvinguda-instal-btn:hover { opacity: 0.88; }
+  .benvinguda-instal-btn i { font-size: 17px; }
+  .benvinguda-fet {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; color: var(--accent); line-height: 1.4;
+  }
+  .benvinguda-fet i { font-size: 17px; flex-shrink: 0; }
 
   /* Botons del diàleg de recepta duplicada */
   .dup-btn {
@@ -1825,6 +2075,14 @@
         </button>
       </div>
 
+      <button class="compte-opcio" id="btn-instalar" onclick="mostrarInstalacio()">
+        <i class="ti ti-device-mobile" aria-hidden="true"></i>
+        <span>
+          <strong>Instal·la't l'app al mòbil</strong>
+          <em>Com afegir el receptari a la pantalla d'inici i tenir-lo com qualsevol altra app.</em>
+        </span>
+      </button>
+
       <button class="compte-opcio" id="btn-descarrega" onclick="descarregarReceptes()">
         <i class="ti ti-download" aria-hidden="true"></i>
         <span>
@@ -1881,8 +2139,9 @@
 ══════════════════════════════════════ -->
 <div class="novetats-overlay" id="benvinguda-overlay">
   <div class="novetats-modal">
-    <div class="novetats-badge">BENVINGUDA</div>
+    <div class="novetats-badge" id="benvinguda-badge">BENVINGUDA</div>
     <div class="novetats-titol" id="benvinguda-titol"></div>
+    <div class="benvinguda-instal" id="benvinguda-instal" style="display:none"></div>
     <div class="novetats-text benvinguda-cos" id="benvinguda-text"></div>
     <div class="benvinguda-punts" id="benvinguda-punts"></div>
     <div class="novetats-btn-wrap">
@@ -1902,6 +2161,13 @@
 // per separar paràgrafs i <strong>…</strong> per destacar una paraula.
 const BENVINGUDA = [
   {
+    // Aquesta pantalla canvia sola segons el mòbil de qui la llegeix
+    // (mira textInstalacio, aquí sota). Se salta si ja té l'app instal·lada.
+    id: 'instalacio',
+    titol: 'Com instal·lar l\'app al mòbil',
+    text: textInstalacio,
+  },
+  {
     titol: 'Hola, benvinguda!',
     text: 'Ja tens el teu receptari: un lloc per anar guardant tot el que cuines, o el que vols provar algun dia.'
         + '<br><br>Les receptes que tens repartides en diferents notes, el que trobes per internet o el que t\'inventes, '
@@ -1909,43 +2175,162 @@ const BENVINGUDA = [
   },
   {
     titol: 'Com hi afegeixes receptes',
-    text: 'A mà, escanejant una fotografia o captura de pantalla, important un document o enganxant l\'adreça '
-        + 'd\'una web de cuina. Ho trobaràs tot a la pestanya <strong>Afegir</strong>.'
-        + '<br><br>Les receptes i les fotos que hi desis són només teves. Cap altra usuària no hi pot entrar; '
-        + 'només la Clara, que és qui manté l\'aplicació i qui t\'ajudarà si alguna cosa falla.',
+    text: '<div class="benvinguda-icones">'
+        + '<span><i class="ti ti-file-upload" aria-hidden="true"></i></span>'
+        + '<span><i class="ti ti-link" aria-hidden="true"></i></span>'
+        + '<span><i class="ti ti-camera" aria-hidden="true"></i></span>'
+        + '<span><i class="ti ti-pencil" aria-hidden="true"></i></span>'
+        + '</div>'
+        + 'Important un document o imatge, enganxant una adreça web, fent una fotografia, '
+        + 'o teclejant-la a mà. Ho trobaràs tot a la pestanya <strong>Afegir</strong>.',
   },
   {
-    titol: 'Tingues-la sempre a mà',
-    text: 'Al mòbil, clica <strong>Afegeix a la pantalla d\'inici</strong> o <strong>Instal·la l\'aplicació</strong> '
-        + 'i la tindràs com qualsevol altra app. A l\'iPhone, des de Safari i el menú de compartir; '
-        + 'a l\'Android, a Chrome i el menú dels tres puntets.'
-        + '<br><br>Si tens qualsevol problema, avisa la Clara. Espero que t\'agradi i que la gaudeixis!',
+    titol: 'Les receptes són només teves',
+    text: 'Les receptes i les fotos que hi desis són només teves. Cap altra usuària no hi pot entrar; '
+        + 'només la Clara, que és qui manté l\'aplicació i qui t\'ajudarà si alguna cosa falla.'
+        + '<br><br>Si tens qualsevol problema, avisa-la. Espero que t\'agradi i que la gaudeixis!',
   },
 ];
 
+// ══════════════════════════════════════════════
+// INSTAL·LAR-LA COM UNA APP
+// Cap navegador deixa instal·lar-se tot sol: sempre ho ha de confirmar
+// qui fa servir l'app. El màxim que podem fer és, a l'Android i a
+// l'ordinador, ensenyar un botó que obre el diàleg d'instal·lació.
+// A l'iPhone no hi ha cap manera de fer-ho: només explicar-li els passos.
+// ══════════════════════════════════════════════
+const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+           || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const esAndroid = /Android/i.test(navigator.userAgent);
+const esMobil = esIOS || esAndroid;
+
+// Ja l'obre com una app? Llavors no cal explicar-li com instal·lar-la.
+function jaInstalada() {
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+
+// Chrome i Edge ens avisen quan l'app es pot instal·lar. Ens guardem l'avís
+// per poder ensenyar el botó, i el tornem a pintar si arriba tard.
+let promptInstalacio = null;
+let instalacioFeta = false;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  promptInstalacio = e;
+  if (benvingudaVisible()) pintarBenvinguda();
+});
+
+window.addEventListener('appinstalled', () => {
+  promptInstalacio = null;
+  instalacioFeta = true;
+  if (benvingudaVisible()) pintarBenvinguda();
+});
+
+// Text d'aquesta pantalla, a mida del mòbil de qui la llegeix.
+// A l'Android el botó va ABANS del text, i llavors les instruccions
+// manuals comencen amb un "o bé"; si no hi ha botó, comencen del dret.
+function textInstalacio() {
+  if (esIOS) {
+    return 'Obre aquesta pàgina amb <strong>Safari</strong>, toca el botó de compartir '
+         + '(el quadradet amb la fletxa cap amunt) i, a la llista que surt, '
+         + 'tria <strong>Afegeix a la pantalla d\'inici</strong>.';
+  }
+  if (esAndroid) {
+    return (promptInstalacio ? 'O bé fes-ho tu mateixa. Obre' : 'Obre')
+         + ' l\'enllaç de l\'app des del <strong>Chrome</strong>. Un cop allà, obre el menú dels '
+         + '<strong>tres puntets</strong> (a dalt a la dreta) i tria <strong>Instal·la l\'aplicació</strong>, '
+         + 'o bé <strong>Afegeix a la pantalla d\'inici</strong>.'
+         + '<br><br>Ha de ser amb el Chrome: amb altres navegadors, com el Firefox, no surt l\'opció.';
+  }
+  return 'A l\'ordinador la pots instal·lar des de la icona que surt a la barra d\'adreces del navegador.'
+       + (promptInstalacio ? ' O clica el botó de sobre.' : '')
+       + '<br><br>Però on et serà més útil és <strong>al mòbil</strong>: obre-hi aquesta mateixa adreça '
+       + 'i afegeix-la a la pantalla d\'inici, des del menú del navegador.';
+}
+
+// Obre el diàleg d'instal·lació del navegador (només Android i ordinador)
+async function instalarApp() {
+  if (!promptInstalacio) return;
+  promptInstalacio.prompt();
+  const { outcome } = await promptInstalacio.userChoice;
+  promptInstalacio = null;
+  if (outcome === 'accepted') instalacioFeta = true;
+  if (benvingudaVisible()) pintarBenvinguda();
+}
+
+// ══════════════════════════════════════════════
+// EL CARRUSEL DE LA BENVINGUDA
+// ══════════════════════════════════════════════
 let pantallaBenvinguda = 0;
+let pantalles = BENVINGUDA;   // les pantalles que toca ensenyar aquesta vegada
+
+function benvingudaVisible() {
+  const overlay = document.getElementById('benvinguda-overlay');
+  return !!overlay && overlay.classList.contains('visible');
+}
+
+// Pinta el botó d'instal·lar (o el "ja està fet") sota el text
+function pintarBlocInstalacio() {
+  const bloc = document.getElementById('benvinguda-instal');
+  const p = pantalles[pantallaBenvinguda];
+  let html = '';
+
+  if (p && p.id === 'instalacio') {
+    if (instalacioFeta) {
+      html = '<div class="benvinguda-fet"><i class="ti ti-circle-check" aria-hidden="true"></i>'
+           + '<span>Fet! Ja la tens a la pantalla d\'inici.</span></div>';
+    } else if (promptInstalacio) {
+      html = '<div class="benvinguda-clica">Clica aquí:</div>'
+           + '<button class="benvinguda-instal-btn" onclick="instalarApp()">'
+           + '<i class="ti ti-download" aria-hidden="true"></i>Instal·la-la ara</button>';
+    }
+  }
+
+  bloc.innerHTML = html;
+  bloc.style.display = html ? '' : 'none';
+}
 
 function pintarBenvinguda() {
-  const p = BENVINGUDA[pantallaBenvinguda];
+  const p = pantalles[pantallaBenvinguda];
+  document.getElementById('benvinguda-badge').textContent =
+    pantalles.length < 2 ? 'INSTAL·LACIÓ' : 'BENVINGUDA';
   document.getElementById('benvinguda-titol').textContent = p.titol;
-  document.getElementById('benvinguda-text').innerHTML = p.text;
-  document.getElementById('benvinguda-punts').innerHTML = BENVINGUDA
+  document.getElementById('benvinguda-text').innerHTML =
+    typeof p.text === 'function' ? p.text() : p.text;
+  // Els puntets només tenen sentit si hi ha més d'una pantalla
+  document.getElementById('benvinguda-punts').innerHTML = pantalles.length < 2 ? '' : pantalles
     .map((_, i) => `<span class="benvinguda-punt${i === pantallaBenvinguda ? ' actiu' : ''}"></span>`)
     .join('');
+  pintarBlocInstalacio();
   const btn = document.getElementById('benvinguda-btn');
-  const ultima = pantallaBenvinguda === BENVINGUDA.length - 1;
-  btn.textContent = ultima ? 'Comencem!' : 'Següent';
+  const ultima = pantallaBenvinguda === pantalles.length - 1;
+  btn.textContent = !ultima ? 'Següent' : (pantalles.length < 2 ? 'Entesos!' : 'Comencem!');
   btn.classList.toggle('novetats-btn-final', ultima);
 }
 
 function mostrarBenvinguda() {
+  // La pantalla d'instal·lació només surt al mòbil i si encara no la té
+  // instal·lada. Des de l'ordinador no li diem res: ja la hi explicarem
+  // quan obri el receptari amb el mòbil.
+  const saltar = !esMobil || jaInstalada();
+  pantalles = saltar ? BENVINGUDA.filter(p => p.id !== 'instalacio') : BENVINGUDA;
+  pantallaBenvinguda = 0;
+  pintarBenvinguda();
+  document.getElementById('benvinguda-overlay').classList.add('visible');
+}
+
+// Només les instruccions per instal·lar-la, des del menú del compte
+function mostrarInstalacio() {
+  tancarConfigUrl();
+  pantalles = BENVINGUDA.filter(p => p.id === 'instalacio');
   pantallaBenvinguda = 0;
   pintarBenvinguda();
   document.getElementById('benvinguda-overlay').classList.add('visible');
 }
 
 function avancarBenvinguda() {
-  if (pantallaBenvinguda < BENVINGUDA.length - 1) {
+  if (pantallaBenvinguda < pantalles.length - 1) {
     pantallaBenvinguda++;
     pintarBenvinguda();
   } else {
@@ -1973,10 +2358,21 @@ const NOVETATS = [
 // A partir de quantes obertures ensenyem les novetats a una usuària nova
 const OBERTURES_NOVETATS = 4;
 
+// ── Memòria local del navegador ──────────────────────────────────
+// Hi ha navegadors que la barren (galetes bloquejades) o la tenen plena, i
+// llavors llegir-hi o escriure-hi atura la funció que ho intenta. Amb aquestes
+// dues, si no es pot recordar res, l'app segueix funcionant igualment.
+function llegirLocal(clau) {
+  try { return localStorage.getItem(clau); } catch (e) { return null; }
+}
+function desarLocal(clau, valor) {
+  try { localStorage.setItem(clau, valor); } catch (e) { /* no es pot recordar: tant se val */ }
+}
+
 function clauNovetats() { return 'novetats_versio:' + (usuariaId || ''); }
 
 function mostrarNovetats() {
-  if (localStorage.getItem(clauNovetats()) === VERSIO_NOVETATS) return;
+  if (llegirLocal(clauNovetats()) === VERSIO_NOVETATS) return;
   const llista = document.getElementById('novetats-llista');
   llista.innerHTML = NOVETATS.map(n =>
     `<div class="novetats-item"><div class="novetats-dot"></div><div class="novetats-text"><strong>${n.titol}:</strong> ${n.desc}</div></div>`
@@ -1986,7 +2382,7 @@ function mostrarNovetats() {
 }
 
 function tancarNovetats() {
-  localStorage.setItem(clauNovetats(), VERSIO_NOVETATS);
+  desarLocal(clauNovetats(), VERSIO_NOVETATS);
   document.getElementById('novetats-overlay').classList.remove('visible');
 }
 </script>
@@ -2053,6 +2449,11 @@ function tancarNovetats() {
     <span>Receptari</span>
     <div class="nav-dot"></div>
   </button>
+  <button class="bottom-nav-item" id="nav-tab-planificacio" onclick="canviarPanell('planificacio', this)">
+    <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+    <span>Planificació</span>
+    <div class="nav-dot"></div>
+  </button>
   <button class="bottom-nav-item" id="nav-tab-idees" onclick="canviarPanell('idees', this)">
     <i class="ti ti-bulb" aria-hidden="true"></i>
     <span>Idees</span>
@@ -2105,7 +2506,7 @@ function tancarNovetats() {
     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:1.25rem;">
       <div class="etiquetes-wrap" id="filtres-etiquetes" style="margin-bottom:0; flex:1;"></div>
       <div class="vista-toggle" style="margin-bottom:0; flex-shrink:0;">
-        <button class="btn-vista actiu" id="btn-vista-llista" onclick="canviarVista('llista')" title="Vista llista" aria-label="Vista llista">
+        <button class="btn-vista" id="btn-vista-llista" onclick="canviarVista('llista')" title="Vista llista" aria-label="Vista llista">
           <i class="ti ti-list" aria-hidden="true"></i>
         </button>
         <button class="btn-vista" id="btn-vista-grid" onclick="canviarVista('grid')" title="Vista targetes" aria-label="Vista targetes">
@@ -2179,6 +2580,63 @@ function tancarNovetats() {
 
     <p class="comptador" id="comptador-idees"></p>
     <div id="llista-idees"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PANELL: PLANIFICACIÓ (menús i llista de la compra)
+══════════════════════════════════════ -->
+<div id="panell-planificacio" class="panell">
+  <header>
+    <h1>Planificació</h1>
+    <p id="subtitol-planificacio">Carregant...</p>
+  </header>
+
+  <div class="container">
+    <div class="plan-tabs">
+      <button class="plan-tab actiu" id="plan-tab-menus" onclick="canviarSubPestanya('menus')">Menús</button>
+      <button class="plan-tab" id="plan-tab-compra" onclick="canviarSubPestanya('compra')">Llista de la compra</button>
+    </div>
+
+    <div id="plan-menus">
+      <div class="setmana-nav">
+        <button onclick="canviarSetmana(-1)" aria-label="Setmana anterior"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+        <span class="setmana-titol" id="setmana-titol"></span>
+        <button onclick="canviarSetmana(1)" aria-label="Setmana següent"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <button class="setmana-avui" id="btn-setmana-avui" onclick="anarASetmanaActual()">Tornar a aquesta setmana</button>
+      <div id="menus-dies"></div>
+    </div>
+
+    <div id="plan-compra" style="display: none;">
+      <div class="compra-aviat">
+        <i class="ti ti-basket" aria-hidden="true"></i>
+        Aquí ben aviat hi haurà la llista de la compra, feta a partir dels teus menús. Una mica de paciència, que ja ve!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PANELL: FITXA D'ÀPAT
+══════════════════════════════════════ -->
+<div id="panell-apat" class="panell"></div>
+
+<!-- Cercador de receptes per afegir un plat a un àpat -->
+<div class="plat-picker" id="plat-picker" onclick="if (event.target === this) tancarCercadorPlat()">
+  <div class="plat-picker-caixa">
+    <div class="plat-picker-cap">
+      <span class="plat-picker-titol">Afegir plat</span>
+      <button class="avis-reordenar-x" onclick="tancarCercadorPlat()" aria-label="Tancar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="cerca-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="plat-cerca" autocomplete="off" placeholder="Comença a escriure el nom d'una recepta…"
+        oninput="pintarResultatsPlat(this.value)">
+    </div>
+    <div class="plat-picker-llista" id="plat-resultats"></div>
   </div>
 </div>
 
@@ -2666,8 +3124,8 @@ sb.auth.getSession().then(({ data, error }) => {
 // (així una usuària nova no rep totes dues coses de cop).
 function missatgesDInici() {
   const clau = 'obertures:' + usuariaId;
-  const n = (parseInt(localStorage.getItem(clau), 10) || 0) + 1;
-  localStorage.setItem(clau, String(n));
+  const n = (parseInt(llegirLocal(clau), 10) || 0) + 1;
+  desarLocal(clau, String(n));
   if (n === 1) { mostrarBenvinguda(); return; }
   if (n >= OBERTURES_NOVETATS) mostrarNovetats();
 }
@@ -2814,6 +3272,38 @@ async function dbEsborrarIdea(id) {
   const { error } = await sb.from('idees').delete().eq('id', id);
   if (error) { gestionarError(error, 'No s\'ha pogut eliminar la idea'); return false; }
   return true;
+}
+
+// ── Menús (una fila per plat) ──
+async function dbLlegirMenus(setmana) {
+  const { data, error } = await sb.from('menus')
+    .select('*').eq('setmana', setmana).order('ordre', { ascending: true });
+  if (error) { gestionarError(error, 'No s\'han pogut carregar els menús'); return null; }
+  return data;
+}
+async function dbAfegirPlat(fila) {
+  const { data, error } = await sb.from('menus').insert(fila).select().single();
+  if (error) { gestionarError(error, 'No s\'ha pogut afegir el plat'); return null; }
+  return data;
+}
+async function dbActualitzarPlat(id, dades) {
+  if (!id) return false;
+  const { error } = await sb.from('menus').update(dades).eq('id', id);
+  if (error) { gestionarError(error, 'No s\'han pogut desar els canvis'); return false; }
+  return true;
+}
+async function dbEsborrarPlat(id) {
+  if (!id) return false;
+  const { error } = await sb.from('menus').delete().eq('id', id);
+  if (error) { gestionarError(error, 'No s\'ha pogut treure el plat'); return false; }
+  return true;
+}
+// Quants plats dels menús apunten a una recepta (per avisar abans d'esborrar-la)
+async function dbComptarMenusDeRecepta(receptaId) {
+  const { count, error } = await sb.from('menus')
+    .select('id', { count: 'exact', head: true }).eq('recepta_id', receptaId);
+  if (error) { console.error(error); return 0; }
+  return count || 0;
 }
 
 // Categories — font única de veritat; afegir aquí per reflectir-ho a tot arreu
@@ -3499,6 +3989,7 @@ document.addEventListener('DOMContentLoaded', () => {
     opt.value = c; opt.textContent = c;
     sel.appendChild(opt);
   });
+  aplicarVista();
 });
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -3526,6 +4017,8 @@ function mostrarPanell(id) {
     if (id === 'cerca' && receptes.length) { barrejarReceptari(); aplicar(); }
     // Càrrega mandrosa de les idees el primer cop que s'obre la pestanya
     if (id === 'idees' && !ideesCarregades) carregarIdees();
+    // Els menús: es carreguen el primer cop i es repinten en tornar-hi
+    if (id === 'planificacio') { if (menusCarregats) pintarSetmana(); else carregarMenus(); }
   }
 }
 
@@ -3584,6 +4077,10 @@ window.addEventListener('popstate', function(e) {
   const estat = e.state;
   if (estat && estat.panell === 'detall' && estat.receptaNom) {
     obrirDetall(estat.receptaNom, true);
+  } else if (estat && estat.panell === 'apat' && estat.dia && estat.apat) {
+    apatObert = { dia: estat.dia, apat: estat.apat };
+    mostrarPanell('apat');
+    pintarApat();
   } else {
     mostrarPanell(estat && estat.panell ? estat.panell : 'portada');
   }
@@ -3803,7 +4300,9 @@ function obrirDetall(nom, desDePopstate) {
 function detallEditar(nomId, nom) {
   mostrarPanell('cerca');
   history.pushState({ panell: 'cerca' }, '', '');
-  if (vistaTipus === 'grid') canviarVista('llista');
+  // L'edició es desplega dins la fila: cal la vista llista, però això no és
+  // una tria de la usuària i no ha de canviar-li la preferència desada
+  if (vistaTipus === 'grid') canviarVista('llista', false);
   if (!oberts.has(nom)) { oberts.add(nom); aplicar(); }
   setTimeout(() => {
     obrirEdicio(nomId, nom);
@@ -3937,14 +4436,17 @@ function hoverColor(cat) {
   return mapa[cat] || '#F5F749';
 }
 
-let vistaTipus = 'llista'; // 'llista' | 'grid'
+// La vista del receptari es recorda en aquest dispositiu: el mòbil i
+// l'ordinador poden obrir-se cadascun com es va deixar. De sèrie, targetes.
+const CLAU_VISTA = 'vista_receptari';
+let vistaTipus = llegirLocal(CLAU_VISTA) === 'llista' ? 'llista' : 'grid'; // 'llista' | 'grid'
 
-function canviarVista(tipus) {
-  vistaTipus = tipus;
+// Posa la barra i la llista d'acord amb la vista, sense repintar les receptes
+function aplicarVista() {
   const llista = document.getElementById('llista');
   const btnL = document.getElementById('btn-vista-llista');
   const btnG = document.getElementById('btn-vista-grid');
-  if (tipus === 'grid') {
+  if (vistaTipus === 'grid') {
     llista.classList.add('vista-grid');
     btnG.classList.add('actiu');
     btnL.classList.remove('actiu');
@@ -3953,6 +4455,13 @@ function canviarVista(tipus) {
     btnL.classList.add('actiu');
     btnG.classList.remove('actiu');
   }
+}
+
+// recordar = false quan el canvi no surt d'una tria de la usuària (veure detallEditar)
+function canviarVista(tipus, recordar = true) {
+  vistaTipus = tipus;
+  if (recordar) desarLocal(CLAU_VISTA, tipus);
+  aplicarVista();
   aplicar();
 }
 
@@ -4820,9 +5329,21 @@ function tancarEdicio(nomId) {
 }
 
 async function eliminarRecepta(nomId, nomOriginal) {
-  if (!confirm(`Segur que vols eliminar "${nomOriginal}"? Aquesta acció no es pot desfer.`)) return;
+  const idRecepta = idDe(nomOriginal);
 
-  await dbEsborrarRecepta(idDe(nomOriginal));
+  // Si la recepta surt en algun menú, avisem abans: allà hi quedarà el nom, però ja no s'hi podrà entrar
+  let avisMenus = '';
+  if (idRecepta) {
+    const quants = await dbComptarMenusDeRecepta(idRecepta);
+    if (quants) {
+      avisMenus = `\n\nAtenció: surt en ${quants} ${quants === 1 ? 'plat' : 'plats'} dels teus menús. `
+                + `Hi quedarà el nom escrit, però ja no s'hi podrà entrar.`;
+    }
+  }
+
+  if (!confirm(`Segur que vols eliminar "${nomOriginal}"? Aquesta acció no es pot desfer.${avisMenus}`)) return;
+
+  await dbEsborrarRecepta(idRecepta);
 
   // Eliminem de la llista local i retirem la card del DOM amb animació
   const idx = receptes.findIndex(r => r['Nom de la recepta'] === nomOriginal);
@@ -7074,6 +7595,522 @@ function obrirReceptaPerNom(nom) {
     const card = document.getElementById('card-' + nomId);
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 140);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLANIFICACIÓ: MENÚS
+// ══════════════════════════════════════════════════════════════
+
+const DIES_SETMANA = ['dilluns','dimarts','dimecres','dijous','divendres','dissabte','diumenge'];
+const MESOS = ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
+// Només s'aplica si la recepta no diu quantes racions fa
+const RACIONS_PER_DEFECTE = 4;
+
+let setmanaActual  = dillunsDe(new Date());
+let menusSetmana   = [];     // files de la setmana que s'està mirant
+let diaObert       = null;   // 'dimecres' | null — només un dia desplegat a la vegada
+let apatObert      = null;   // { dia, apat } quan som a la fitxa
+let menusCarregats = false;
+let carregantMenus = false;
+let platMovent     = null;   // id del plat que s'està reordenant
+let destiPlatNou   = null;   // { dia, apat } cap on va el plat que s'està cercant
+let tempsPulsacio  = null;
+let arrossegant    = null;   // { id, card, germans, index, indexNou, ... } mentre es mou un plat
+let cancelarVigilant = null; // retira el vigilant que cancel·la la pulsació si el dit es mou
+let ignoraSeguentClic = false;
+let esperantMenus  = true;   // mentre arriben les dades de la setmana
+
+// ── Setmanes de calendari ──
+function dillunsDe(data) {
+  const d = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // getDay(): 0 = diumenge
+  return d;
+}
+function sumarDies(data, n) {
+  const d = new Date(data);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+// Data en format YYYY-MM-DD, feta a mà per no dependre del fus horari
+function isoData(d) {
+  return d.getFullYear() + '-'
+       + String(d.getMonth() + 1).padStart(2, '0') + '-'
+       + String(d.getDate()).padStart(2, '0');
+}
+function deMes(i) {
+  return /^[aeiou]/.test(MESOS[i]) ? "d'" + MESOS[i] : 'de ' + MESOS[i];
+}
+// "6 – 12 de gener", i amb els dos mesos quan la setmana en canvia
+function titolSetmana(dilluns) {
+  const diumenge = sumarDies(dilluns, 6);
+  if (dilluns.getMonth() === diumenge.getMonth()) {
+    return dilluns.getDate() + ' – ' + diumenge.getDate() + ' ' + deMes(dilluns.getMonth());
+  }
+  return dilluns.getDate() + ' ' + deMes(dilluns.getMonth())
+       + ' – ' + diumenge.getDate() + ' ' + deMes(diumenge.getMonth());
+}
+
+// ── Consultes sobre la setmana carregada ──
+function platsDe(dia, apat) {
+  return menusSetmana
+    .filter(p => p.dia === dia && p.apat === apat)
+    .sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+}
+function receptaDePlat(p) {
+  return p.recepta_id ? receptes.find(r => r['_id'] === p.recepta_id) : null;
+}
+// El nom viu de la recepta; si ja no hi és, el que vam desar el dia de planificar-lo
+function nomDePlat(p) {
+  const r = receptaDePlat(p);
+  return (r && r['Nom de la recepta']) || p.nom_recepta || '';
+}
+function receptaEsborrada(p) { return !receptaDePlat(p); }
+
+// ── Càrrega ──
+async function carregarMenus() {
+  if (carregantMenus) return;
+  carregantMenus = true;
+  const files = await dbLlegirMenus(isoData(setmanaActual));
+  carregantMenus = false;
+  esperantMenus  = false;
+  if (files === null) { pintarSetmana(); return; }
+  menusSetmana   = files;
+  menusCarregats = true;
+  pintarSetmana();
+}
+
+async function canviarSetmana(passos) {
+  setmanaActual = sumarDies(setmanaActual, passos * 7);
+  diaObert      = null;
+  menusSetmana  = [];
+  esperantMenus = true;
+  pintarSetmana();
+  await carregarMenus();
+}
+async function anarASetmanaActual() {
+  setmanaActual = dillunsDe(new Date());
+  diaObert      = null;
+  menusSetmana  = [];
+  esperantMenus = true;
+  pintarSetmana();
+  await carregarMenus();
+}
+
+function canviarSubPestanya(quina) {
+  const esMenus = quina === 'menus';
+  document.getElementById('plan-menus').style.display  = esMenus ? 'block' : 'none';
+  document.getElementById('plan-compra').style.display = esMenus ? 'none'  : 'block';
+  document.getElementById('plan-tab-menus').classList.toggle('actiu', esMenus);
+  document.getElementById('plan-tab-compra').classList.toggle('actiu', !esMenus);
+}
+
+// ── La graella setmanal ──
+function pintarSetmana() {
+  const titol = document.getElementById('setmana-titol');
+  if (titol) titol.textContent = titolSetmana(setmanaActual);
+
+  const btnAvui = document.getElementById('btn-setmana-avui');
+  if (btnAvui) {
+    const esAquesta = isoData(setmanaActual) === isoData(dillunsDe(new Date()));
+    btnAvui.style.display = esAquesta ? 'none' : 'block';
+  }
+
+  const cont = document.getElementById('menus-dies');
+  if (cont) cont.innerHTML = DIES_SETMANA.map(pintarDia).join('');
+
+  const sub = document.getElementById('subtitol-planificacio');
+  if (sub) {
+    const n = menusSetmana.length;
+    sub.textContent = esperantMenus ? 'Carregant...'
+                    : !n            ? 'Cap plat aquesta setmana encara'
+                    : n === 1       ? '1 plat aquesta setmana'
+                                    : n + ' plats aquesta setmana';
+  }
+}
+
+function pintarDia(dia) {
+  const nomDia = dia.charAt(0).toUpperCase() + dia.slice(1);
+  const dinar  = platsDe(dia, 'dinar');
+  const sopar  = platsDe(dia, 'sopar');
+
+  // Plegat: el resum en dues línies, una per àpat
+  if (diaObert !== dia) {
+    const resum = (!dinar.length && !sopar.length)
+      ? '<span class="dia-buit">Sense plats</span>'
+      : [['Dinar', dinar], ['Sopar', sopar]]
+          .filter(([, plats]) => plats.length)
+          .map(([etiqueta, plats]) =>
+            `<span class="apat-etiq">${etiqueta}</span>${escHTML(plats.map(nomDePlat).join(', '))}`)
+          .join('<br>');
+    return `<div class="dia-card">
+      <div class="dia-head" onclick="obrirDia('${dia}')">
+        <span class="dia-nom">${nomDia}</span>
+        <i class="ti ti-chevron-down" aria-hidden="true"></i>
+      </div>
+      <div class="dia-resum">${resum}</div>
+    </div>`;
+  }
+
+  // Desplegat: els dos àpats, amb la seva porta cap a la fitxa
+  return `<div class="dia-card obert">
+    <div class="dia-head" onclick="obrirDia(null)">
+      <span class="dia-nom">${nomDia}</span>
+      <i class="ti ti-chevron-up" aria-hidden="true"></i>
+    </div>
+    <div class="dia-cos">
+      ${blocApat(dia, 'dinar', dinar)}
+      ${blocApat(dia, 'sopar', sopar)}
+    </div>
+  </div>`;
+}
+
+function blocApat(dia, apat, plats) {
+  const files = plats.map(p => {
+    const fora = receptaEsborrada(p);
+    return `<div class="plat-fila">
+      <span class="plat-nom${fora ? ' esborrada' : ''}">${escHTML(nomDePlat(p))}${fora ? ' · recepta esborrada' : ''}</span>
+      <span class="plat-racions">${p.racions || '?'} rac.</span>
+    </div>`;
+  }).join('');
+
+  return `<button class="apat-head" onclick="obrirApat('${dia}','${apat}')">
+      <span class="apat-titol">${apat}</span>
+      <span class="apat-obrir">Obrir <i class="ti ti-chevron-right" aria-hidden="true"></i></span>
+    </button>
+    ${files}
+    <button class="btn-afegir-plat" onclick="obrirCercadorPlat('${dia}','${apat}')">
+      <i class="ti ti-plus" aria-hidden="true"></i> Afegir plat
+    </button>`;
+}
+
+function obrirDia(dia) {
+  diaObert = dia;
+  pintarSetmana();
+}
+
+// ── La fitxa d'àpat ──
+function obrirApat(dia, apat) {
+  apatObert  = { dia, apat };
+  platMovent = null;
+  mostrarPanell('apat');
+  history.pushState({ panell: 'apat', dia, apat }, '', '');
+  pintarApat();
+  window.scrollTo(0, 0);
+}
+
+function pintarApat() {
+  const cont = document.getElementById('panell-apat');
+  if (!cont || !apatObert) return;
+
+  const { dia, apat } = apatObert;
+  const plats   = platsDe(dia, apat);
+  const nomDia  = dia.charAt(0).toUpperCase() + dia.slice(1);
+  const nomApat = apat.charAt(0).toUpperCase() + apat.slice(1);
+  const racions = plats.reduce((suma, p) => suma + (parseInt(p.racions) || 0), 0);
+  const subtitol = plats.length
+    ? `${plats.length} ${plats.length === 1 ? 'plat' : 'plats'} · ${racions} racions`
+    : 'Encara no hi ha cap plat';
+
+  cont.innerHTML = `<div class="container">
+    <div class="apat-head-bar">
+      <button class="apat-back" onclick="history.back()" aria-label="Tornar"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <div>
+        <div class="apat-titol-gran">${nomDia} · ${nomApat}</div>
+        <div class="apat-subtitol">${subtitol}</div>
+      </div>
+    </div>
+    ${avisReordenarHTML()}
+    ${plats.map(p => targetaPlat(p)).join('')}
+    <button class="btn-afegir-plat-gran" onclick="obrirCercadorPlat('${dia}','${apat}')">
+      <i class="ti ti-plus" aria-hidden="true"></i> Afegir plat
+    </button>
+  </div>`;
+}
+
+function targetaPlat(p) {
+  const r    = receptaDePlat(p);
+  const fora = !r;
+  const nom  = nomDePlat(p);
+  const cat  = r ? (r['Categoria'] || '') : '';
+  const foto = r ? ((nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '')) : '';
+
+  const mini = foto
+    ? `<img class="plat-mini" src="${escHTML(foto)}" alt="">`
+    : `<div class="plat-mini plat-mini-buida"><i class="ti ti-photo" aria-hidden="true"></i></div>`;
+
+  // En mode moure, el control de racions deixa pas a les fletxes
+  const controls = platMovent === p.id ? controlsMoureHTML(p.id) : `<div class="plat-rac">
+         <button onclick="canviarRacions('${p.id}',-1)" aria-label="Menys racions">−</button>
+         <button class="plat-rac-valor" onclick="escriureRacions('${p.id}')">${p.racions || '?'}<small> rac.</small></button>
+         <button onclick="canviarRacions('${p.id}',1)" aria-label="Més racions">+</button>
+       </div>`;
+
+  return `<div class="plat-card${platMovent === p.id ? ' movent' : ''}"
+      onpointerdown="iniciarPulsacio(event,'${p.id}')"
+      onpointerup="finalitzarPulsacio()"
+      onpointercancel="finalitzarPulsacio()"
+      onpointerleave="finalitzarPulsacio()">
+    ${mini}
+    <div class="plat-cos">
+      <div class="plat-linia">
+        <span class="plat-nom${fora ? ' esborrada' : ''}" onclick="obrirReceptaDePlat('${p.id}')">${escHTML(nom)}${fora ? ' · recepta esborrada' : ''}</span>
+        <button class="btn-treure-plat" onclick="treurePlat('${p.id}')" aria-label="Treure el plat"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="plat-linia-baixa">
+        <span class="plat-cat">${escHTML(cat || '—')}</span>
+        ${controls}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── L'avís de reordenar, un sol cop per persona i dispositiu ──
+function clauReordenar() { return 'menus_reordenar:' + (usuariaId || ''); }
+
+function avisReordenarHTML() {
+  if (llegirLocal(clauReordenar()) === 'vist') return '';
+  return `<div class="avis-reordenar" id="avis-reordenar">
+    <i class="ti ti-hand-finger" aria-hidden="true"></i>
+    <div class="avis-reordenar-cos">
+      <div class="avis-reordenar-titol">Reordena els plats</div>
+      <div class="avis-reordenar-text">Pots mantenir premut un plat per a reordenar-lo.</div>
+      <button class="avis-reordenar-ok" onclick="tancarAvisReordenar()">Entesos</button>
+    </div>
+    <button class="avis-reordenar-x" onclick="tancarAvisReordenar()" aria-label="Tancar"><i class="ti ti-x" aria-hidden="true"></i></button>
+  </div>`;
+}
+function tancarAvisReordenar() {
+  desarLocal(clauReordenar(), 'vist');
+  document.getElementById('avis-reordenar')?.remove();
+}
+
+// ── Reordenar: mantenir premut i arrossegar ──
+
+function controlsMoureHTML(id) {
+  return `<div class="plat-rac">
+         <button onclick="mourePlat('${id}',-1)" aria-label="Moure amunt"><i class="ti ti-arrow-up" aria-hidden="true"></i></button>
+         <button onclick="mourePlat('${id}',1)" aria-label="Moure avall"><i class="ti ti-arrow-down" aria-hidden="true"></i></button>
+         <button onclick="acabarDeMoure()" aria-label="Fet"><i class="ti ti-check" aria-hidden="true"></i></button>
+       </div>`;
+}
+
+function iniciarPulsacio(ev, id) {
+  if (ev.target.closest('button')) return;   // els controls de la targeta fan la seva
+  const card = ev.currentTarget;
+  const yInicial = ev.clientY;
+  clearTimeout(tempsPulsacio);
+
+  // Si el dit es mou abans d'hora, és que volia fer scroll: deixem-ho estar.
+  // I si l'aixeca (encara que sigui fora de la targeta), tampoc no hi ha pulsació llarga.
+  const vigilant = e => { if (Math.abs(e.clientY - yInicial) > 10) finalitzarPulsacio(); };
+  const soltar   = () => finalitzarPulsacio();
+  document.addEventListener('pointermove', vigilant);
+  document.addEventListener('pointerup', soltar);
+  cancelarVigilant = () => {
+    document.removeEventListener('pointermove', vigilant);
+    document.removeEventListener('pointerup', soltar);
+  };
+
+  tempsPulsacio = setTimeout(() => {
+    cancelarVigilant();
+    entrarModeMoure(card, id, yInicial);
+    // La pulsació llarga acaba en un clic que obriria la recepta: aquest el descartem
+    ignoraSeguentClic = true;
+    setTimeout(() => { ignoraSeguentClic = false; }, 700);
+    if (navigator.vibrate) navigator.vibrate(15);
+  }, 550);
+}
+
+function finalitzarPulsacio() {
+  clearTimeout(tempsPulsacio);
+  if (cancelarVigilant) { cancelarVigilant(); cancelarVigilant = null; }
+}
+
+// Entrem en mode moure tocant només aquesta targeta: si repintéssim tota la
+// pantalla, el dit es quedaria arrossegant un element que ja no existeix
+function entrarModeMoure(card, id, yInicial) {
+  platMovent = id;
+  card.classList.add('movent', 'arrossegant');
+  const controls = card.querySelector('.plat-rac');
+  if (controls) controls.outerHTML = controlsMoureHTML(id);
+
+  const germans = [...document.querySelectorAll('#panell-apat .plat-card')];
+  const index   = germans.indexOf(card);
+  arrossegant = {
+    id, card, germans, index, indexNou: index, yInicial,
+    pas: card.getBoundingClientRect().height + 8,   // alçada + separació entre targetes
+  };
+
+  document.addEventListener('pointermove', arrossegarPlat);
+  document.addEventListener('pointerup', deixarAnarPlat);
+  document.addEventListener('pointercancel', deixarAnarPlat);
+}
+
+function arrossegarPlat(ev) {
+  if (!arrossegant) return;
+  const dy = ev.clientY - arrossegant.yInicial;
+  arrossegant.card.style.transform = `translateY(${dy}px)`;
+
+  const desti = Math.max(0, Math.min(arrossegant.germans.length - 1,
+                arrossegant.index + Math.round(dy / arrossegant.pas)));
+  if (desti !== arrossegant.indexNou) {
+    arrossegant.indexNou = desti;
+    apartarGermans();
+  }
+}
+
+// Les altres targetes es fan a un costat per ensenyar on caurà la que portes
+function apartarGermans() {
+  const { germans, index, indexNou, pas, card } = arrossegant;
+  germans.forEach((g, i) => {
+    if (g === card) return;
+    let desplacament = 0;
+    if (index < indexNou && i > index && i <= indexNou) desplacament = -pas;
+    if (index > indexNou && i >= indexNou && i < index) desplacament = pas;
+    g.style.transform = desplacament ? `translateY(${desplacament}px)` : '';
+  });
+}
+
+async function deixarAnarPlat() {
+  if (!arrossegant) return;
+  const { id, index, indexNou } = arrossegant;
+
+  document.removeEventListener('pointermove', arrossegarPlat);
+  document.removeEventListener('pointerup', deixarAnarPlat);
+  document.removeEventListener('pointercancel', deixarAnarPlat);
+  arrossegant = null;
+  platMovent  = null;
+
+  if (indexNou === index) { pintarApat(); return; }   // tornada al lloc, sense canvis
+  await recolocarPlat(id, indexNou);
+}
+
+// ── Reordenar amb les fletxes (xarxa per si l'arrossegar no va bé) ──
+async function mourePlat(id, direccio) {
+  if (!apatObert) return;
+  const plats = platsDe(apatObert.dia, apatObert.apat);
+  const desde = plats.findIndex(p => p.id === id);
+  if (desde < 0) return;
+  await recolocarPlat(id, desde + direccio);
+}
+
+// Porta un plat fins a una posició concreta de l'àpat i desa l'ordre nou
+async function recolocarPlat(id, posicio) {
+  if (!apatObert) return;
+  const plats = platsDe(apatObert.dia, apatObert.apat);
+  const desde = plats.findIndex(p => p.id === id);
+  if (desde < 0 || posicio < 0 || posicio >= plats.length || posicio === desde) { pintarApat(); return; }
+
+  plats.splice(posicio, 0, plats.splice(desde, 1)[0]);
+  plats.forEach((p, i) => { p.ordre = i; });   // renumerem tots per no deixar empats
+  pintarApat();
+  for (const p of plats) await dbActualitzarPlat(p.id, { ordre: p.ordre });
+}
+
+function acabarDeMoure() { platMovent = null; pintarApat(); }
+
+// Mentre s'arrossega un plat, el dit no ha de fer scroll de la pàgina.
+// L'escoltador ha d'existir des del principi: si el posàvem just abans
+// d'arrossegar, el mòbil ja hauria començat a desplaçar la pantalla.
+document.addEventListener('touchmove', ev => {
+  if (arrossegant) ev.preventDefault();
+}, { passive: false });
+
+// ── Racions ──
+async function canviarRacions(id, delta) {
+  const p = menusSetmana.find(x => x.id === id);
+  if (!p) return;
+  const noves = Math.max(1, (parseInt(p.racions) || 0) + delta);
+  p.racions = noves;
+  pintarApat();
+  await dbActualitzarPlat(id, { racions: noves });
+}
+async function escriureRacions(id) {
+  const p = menusSetmana.find(x => x.id === id);
+  if (!p) return;
+  const resposta = prompt('Quantes racions?', p.racions || '');
+  if (resposta === null) return;
+  const n = parseInt(resposta, 10);
+  if (isNaN(n) || n < 1) { mostrarToast('❌ Escriu un número més gran que zero'); return; }
+  p.racions = n;
+  pintarApat();
+  await dbActualitzarPlat(id, { racions: n });
+}
+
+// ── Treure un plat ──
+async function treurePlat(id) {
+  const p = menusSetmana.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Segur que vols treure "${nomDePlat(p)}" d'aquest àpat?`)) return;
+  if (!await dbEsborrarPlat(id)) return;
+  menusSetmana = menusSetmana.filter(x => x.id !== id);
+  if (platMovent === id) platMovent = null;
+  pintarApat();
+  mostrarToast('✅ Plat tret');
+}
+
+// ── Anar a la recepta des del menú ──
+function obrirReceptaDePlat(id) {
+  if (ignoraSeguentClic) { ignoraSeguentClic = false; return; }
+  const p = menusSetmana.find(x => x.id === id);
+  if (!p) return;
+  const r = receptaDePlat(p);
+  if (!r) { mostrarToast('Aquesta recepta ja no és al receptari'); return; }
+  obrirDetall(r['Nom de la recepta']);
+}
+
+// ── Afegir un plat: cercador contra el receptari ──
+function obrirCercadorPlat(dia, apat) {
+  destiPlatNou = { dia, apat };
+  document.getElementById('plat-picker').classList.add('visible');
+  const camp = document.getElementById('plat-cerca');
+  camp.value = '';
+  pintarResultatsPlat('');
+  setTimeout(() => camp.focus(), 60);
+}
+function tancarCercadorPlat() {
+  document.getElementById('plat-picker').classList.remove('visible');
+  destiPlatNou = null;
+}
+function pintarResultatsPlat(text) {
+  const cont = document.getElementById('plat-resultats');
+  if (!cont) return;
+  const q = (text || '').trim().toLowerCase();
+  const trobades = receptes
+    .filter(r => !q || (r['Nom de la recepta'] || '').toLowerCase().includes(q))
+    .slice(0, 40);
+
+  cont.innerHTML = trobades.length
+    ? trobades.map(r =>
+        `<div class="autocomplete-item" onclick="afegirPlat('${r['_id']}')">${escHTML(r['Nom de la recepta'])}</div>`
+      ).join('')
+    : '<div class="autocomplete-buit">Cap recepta coincideix</div>';
+}
+
+async function afegirPlat(receptaId) {
+  if (!destiPlatNou) return;
+  const r = receptes.find(x => x['_id'] === receptaId);
+  if (!r) return;
+  const { dia, apat } = destiPlatNou;
+
+  const fila = {
+    setmana:     isoData(setmanaActual),
+    dia:         dia,
+    apat:        apat,
+    recepta_id:  receptaId,
+    nom_recepta: r['Nom de la recepta'] || '',
+    racions:     parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
+    ordre:       platsDe(dia, apat).length,
+  };
+
+  const desat = await dbAfegirPlat(fila);
+  if (!desat) return;
+  menusSetmana.push(desat);
+  tancarCercadorPlat();
+
+  if (apatObert && apatObert.dia === dia && apatObert.apat === apat) pintarApat();
+  else pintarSetmana();
+  mostrarToast('✅ Plat afegit');
 }
 </script>
 
