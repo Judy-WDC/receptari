@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 127 · 20-08-2026                                     ║
+  ║  VERSIÓ 133 · 23-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -1562,19 +1562,30 @@
     padding: 3px 9px; border-radius: 20px; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; max-width: 9.5rem;
   }
-  .plat-rac { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .plat-rac button {
+  /* Els tres botons s'alineen per dalt: així el "rac." pot penjar sota la
+     xifra sense desplaçar el − i el + */
+  .plat-rac { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+  /* Només els botons directes (− i +, o les fletxes de moure): el de la xifra
+     viu dins el seu camp i té estil propi */
+  .plat-rac > button {
     width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
     border: 1.5px solid var(--border-dim); background: none; color: var(--text-dim);
     font-size: 16px; line-height: 1; cursor: pointer;
   }
-  .plat-rac button:hover { border-color: var(--border); color: var(--text); }
+  .plat-rac > button:hover { border-color: var(--border); color: var(--text); }
+  /* La xifra i la seva unitat, en columna */
+  .plat-rac-camp { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
   .plat-rac-valor {
-    background: none; border: none; cursor: pointer; padding: 2px 4px;
+    height: 26px; min-width: 2.6rem; padding: 0 6px; border-radius: 7px;
+    border: 1.5px solid var(--border-dim); background: none; cursor: pointer;
     font-family: 'Poppins', sans-serif; font-size: 0.92rem; font-weight: 500;
-    color: var(--accent); min-width: 2.6rem;
+    line-height: 1; color: var(--accent);
   }
-  .plat-rac-valor small { color: var(--text-muted); font-size: 0.68rem; font-weight: 400; }
+  .plat-rac-valor:hover { border-color: var(--border); }
+  .plat-rac-unitat {
+    margin-top: 5px; font-size: 0.68rem; font-weight: 400;
+    line-height: 1; color: var(--text-muted);
+  }
 
   .btn-afegir-plat-gran {
     width: 100%; border: 1.5px dashed rgba(143,212,168,0.5); border-radius: 12px;
@@ -2104,17 +2115,14 @@
 </div>
 
 <!-- ══════════════════════════════════════
-     AVÍS: L'APP FA LA MIGDIADA
+     AVÍS QUAN NO HI HA CONNEXIÓ
+     El mateix modal serveix per als tres casos (sense xarxa, sense resposta
+     i servidor adormit): el títol i el text els posa mostrarAvisConnexio()
 ══════════════════════════════════════ -->
-<div class="config-url-overlay" id="adormida-overlay">
+<div class="config-url-overlay" id="avis-connexio-overlay">
   <div class="config-url-modal">
-    <h3>😴 L'app fa una migdiada</h3>
-    <p style="margin-bottom:18px">
-      Fa dies que ningú no obre el receptari i el servidor s'ha adormit per estalviar energia.
-      No s'ha perdut absolutament res: les teves receptes i fotos hi són totes.<br><br>
-      Avisa la persona que administra l'app perquè el desperti (són dos clics)
-      i torna-ho a provar d'aquí una estoneta.
-    </p>
+    <h3 id="avis-connexio-titol"></h3>
+    <p style="margin-bottom:18px" id="avis-connexio-text"></p>
     <button class="config-user-btn" style="width:100%" onclick="location.reload()">Tornar a provar</button>
   </div>
 </div>
@@ -2863,23 +2871,102 @@ let usuariaActiva = '';   // correu de la usuària (serveix de clau per a la cac
 let usuariaId     = null; // identificador intern, etiqueta de propietat de cada recepta
 let modeRegistre  = false;
 
-// ── Detecció del projecte adormit (pla gratuït: es pausa per inactivitat) ──
-function esAdormida(error) {
+// ══════════════════════════════════════════════
+// QUAN NO HI HA CONNEXIÓ AMB SUPABASE
+// Un error de xarxa pot voler dir tres coses molt diferents, i abans les
+// dèiem totes igual ("l'app fa una migdiada"), que només és certa una de
+// cada tres vegades. Ara les separem i, sobretot, no ens rendim a la primera.
+// ══════════════════════════════════════════════
+
+// El servidor RESPON dient que està pausat: això sí que és inequívoc
+function esPausat(error) {
   if (!error) return false;
   const m = (error.message || '').toLowerCase();
-  // a) El servidor no respon gens (cada navegador ho diu a la seva manera)
-  const senseResposta = m.includes('failed to fetch') || m.includes('networkerror')
-                     || m.includes('load failed')     || m.includes('network request failed');
-  // b) El servidor respon dient que està pausat o no disponible
-  const pausat = m.includes('paus') || [503, 540, 544].includes(Number(error.status));
-  return senseResposta || pausat;
+  return m.includes('paus') || [503, 540, 544].includes(Number(error.status));
 }
-function mostrarAdormida() {
-  document.getElementById('adormida-overlay').classList.add('visible');
+
+// El servidor no respon gens. Cada navegador ho diu a la seva manera, i el
+// missatge és EL MATEIX tant si dorm com si el mòbil ha perdut la cobertura o
+// si la petició s'ha avortat en tornar a obrir l'app: no en podem concloure res.
+function esSenseResposta(error) {
+  if (!error) return false;
+  const m = (error.message || '').toLowerCase();
+  return m.includes('failed to fetch') || m.includes('networkerror')
+      || m.includes('load failed')     || m.includes('network request failed');
 }
-// Retorna true si l'error ja s'ha gestionat com a "app adormida"
+
+const AVISOS_CONNEXIO = {
+  sensexarxa: {
+    titol: '📴 Sembla que no tens connexió',
+    text: 'El teu dispositiu no troba la xarxa ara mateix.<br><br>'
+        + 'No s\'ha perdut res: les teves receptes i fotos hi són totes. '
+        + 'Torna-ho a provar quan tinguis cobertura.',
+  },
+  senseresposta: {
+    titol: '🤔 No hi hem pogut connectar',
+    text: 'Pot ser cosa de la teva connexió, o del servidor, que a vegades triga a respondre.<br><br>'
+        + 'No s\'ha perdut res: les teves receptes i fotos hi són totes. '
+        + 'Prova-ho d\'aquí un momentet i, si continua igual, avisa la persona que administra l\'app.',
+  },
+  adormida: {
+    titol: '😴 L\'app fa una migdiada',
+    text: 'Fa dies que ningú no obre el receptari i el servidor s\'ha adormit per estalviar energia.<br><br>'
+        + 'No s\'ha perdut absolutament res: les teves receptes i fotos hi són totes.<br><br>'
+        + 'Avisa la persona que administra l\'app perquè el desperti (són dos clics) '
+        + 'i torna-ho a provar d\'aquí una estoneta.',
+  },
+};
+
+function mostrarAvisConnexio(tipus) {
+  const avis = AVISOS_CONNEXIO[tipus] || AVISOS_CONNEXIO.senseresposta;
+  document.getElementById('avis-connexio-titol').textContent = avis.titol;
+  document.getElementById('avis-connexio-text').innerHTML = avis.text;
+  document.getElementById('avis-connexio-overlay').classList.add('visible');
+}
+
+// Una trucada mínima a la porta de Supabase, sense passar per la sessió
+// ni carregar cap dada: només per saber si hi ha algú a dins.
+async function trucarLaPorta() {
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/', { method: 'HEAD', headers: { apikey: SB_KEY } });
+    return [503, 540, 544].includes(r.status) ? 'pausat' : 'respon';
+  } catch (e) {
+    return 'muda';
+  }
+}
+
+// Abans d'alarmar ningú, demanem una segona opinió: mirem si el dispositiu té
+// xarxa, esperem un moment i tornem a trucar. Les fallades passatgeres (tornar
+// a obrir l'app, canviar de wifi) es resolen soles en aquesta estona.
+let comprovantConnexio = false;
+
+async function comprovarConnexio(siPassatgera) {
+  if (comprovantConnexio) return;
+  comprovantConnexio = true;
+  try {
+    if (navigator.onLine === false) { mostrarAvisConnexio('sensexarxa'); return; }
+    await new Promise(r => setTimeout(r, 1500));
+    if (navigator.onLine === false) { mostrarAvisConnexio('sensexarxa'); return; }
+    const estat = await trucarLaPorta();
+    // Si el servidor respon, allò era passatger: cada lloc de l'app decideix
+    // com ho diu (un toast, un missatge al formulari...) sense treure el modal
+    if (estat === 'respon') { if (siPassatgera) siPassatgera(); return; }
+    mostrarAvisConnexio(estat === 'pausat' ? 'adormida' : 'senseresposta');
+  } finally {
+    comprovantConnexio = false;
+  }
+}
+
+// Retorna true si l'error és de connexió i ja ens n'hem fet càrrec
+function gestionarConnexio(error, siPassatgera) {
+  if (esPausat(error)) { mostrarAvisConnexio('adormida'); return true; }
+  if (esSenseResposta(error)) { comprovarConnexio(siPassatgera); return true; }
+  return false;
+}
+
+// Retorna true si l'error ja s'ha gestionat com a problema de connexió
 function gestionarError(error, missatge) {
-  if (esAdormida(error)) { mostrarAdormida(); return true; }
+  if (gestionarConnexio(error, () => { if (missatge) mostrarToast('❌ ' + missatge); })) return true;
   console.error(error);
   if (missatge) mostrarToast('❌ ' + missatge);
   return false;
@@ -2951,7 +3038,8 @@ async function enviarAuth() {
       : await sb.auth.signInWithPassword({ email: correu, password: contrasenya });
 
     if (error) {
-      if (esAdormida(error)) { mostrarAdormida(); return; }
+      if (gestionarConnexio(error, () =>
+        missatgeAuth('No hi ha hagut manera de connectar. Torna-ho a provar.', 'error'))) return;
       const m = (error.message || '').toLowerCase();
       if (m.includes('invalid login')) missatgeAuth('El correu o la contrasenya no són correctes.', 'error');
       else if (m.includes('already registered')) missatgeAuth('Aquest correu ja té compte. Prova d\'entrar-hi.', 'error');
@@ -3111,12 +3199,21 @@ sb.auth.onAuthStateChange((event, session) => {
   }
 });
 
+// Obre el diàleg d'inici de sessió quan la pàgina estigui llesta. Si ja ho
+// està, DOMContentLoaded no tornarà a passar mai i cal obrir-lo directament.
+function obrirSessioQuanEsPugui() {
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => setTimeout(obrirConfigUrl, 400));
+  } else {
+    setTimeout(obrirConfigUrl, 400);
+  }
+}
+
 // Comprova si ja hi ha sessió oberta en carregar la pàgina
 sb.auth.getSession().then(({ data, error }) => {
-  if (error && esAdormida(error)) { mostrarAdormida(); return; }
-  if (!data || !data.session) {
-    window.addEventListener('DOMContentLoaded', () => setTimeout(obrirConfigUrl, 400));
-  }
+  const senseSessio = !data || !data.session;
+  if (error && gestionarConnexio(error, () => { if (senseSessio) obrirSessioQuanEsPugui(); })) return;
+  if (senseSessio) obrirSessioQuanEsPugui();
 });
 
 // Compta quantes vegades ha obert l'app aquesta usuària i decideix què li ensenyem:
@@ -3136,6 +3233,8 @@ function engegarReceptari() {
   receptes = []; oberts.clear();
   cacheMostrada = false;
   ideesCarregades = false;
+  // Abans de pintar res: el que hagués quedat a mig cuinar torna al seu lloc
+  restaurarCookState();
   if (carregarDesDeCache()) {
     document.getElementById('subtitol').textContent += ' · actualitzant…';
   } else {
@@ -4013,8 +4112,6 @@ function mostrarPanell(id) {
     document.getElementById('nav-principal').classList.add('visible');
     const tab = document.getElementById('nav-tab-' + id);
     if (tab) tab.classList.add('actiu');
-    // Cada cop que s'entra al receptari, un ordre aleatori nou
-    if (id === 'cerca' && receptes.length) { barrejarReceptari(); aplicar(); }
     // Càrrega mandrosa de les idees el primer cop que s'obre la pestanya
     if (id === 'idees' && !ideesCarregades) carregarIdees();
     // Els menús: es carreguen el primer cop i es repinten en tornar-hi
@@ -4022,16 +4119,37 @@ function mostrarPanell(id) {
   }
 }
 
-// Navega a un panell afegint entrada a l'historial
-function anarA(id) {
-  mostrarPanell(id);
-  history.pushState({ panell: id }, '', '');
+// El receptari s'estrena amb un ordre nou quan s'hi entra a posta: la pestanya
+// de sota o la portada. Tornar-hi amb el botó d'enrere NO compta: allà s'hi
+// torna per recuperar el lloc on eres, i trobar-t'ho tot canviat de puesto
+// desorienta. Per això això no viu dins de mostrarPanell(), que és per on
+// passa també l'historial.
+function estrenarOrdreReceptari() {
+  if (!receptes.length) return;
+  barrejarReceptari();
+  aplicar();
 }
 
-// Canvia de tab (navegació inferior) afegint entrada a l'historial
-function canviarPanell(id, btn) {
+// Ja hi som, en aquest panell? Serveix per no apuntar a l'historial una
+// navegació que no mou res: si no, tocar cinc cops la mateixa pestanya deixava
+// cinc entrades i calia prémer enrere cinc vegades per sortir de l'app.
+function esPanellActiu(id) {
+  const panell = document.getElementById('panell-' + id);
+  return !!panell && panell.classList.contains('actiu');
+}
+
+// Navega a un panell. Només apunta a l'historial si realment canviem de lloc.
+function anarA(id) {
+  const jaHiSom = esPanellActiu(id);
   mostrarPanell(id);
-  history.pushState({ panell: id }, '', '');
+  if (id === 'cerca') estrenarOrdreReceptari();
+  if (!jaHiSom) history.pushState({ panell: id }, '', '');
+}
+
+// Canvia de tab (navegació inferior). Fa el mateix que anarA: es manté el nom
+// perquè és el que criden els botons de la barra de sota.
+function canviarPanell(id, btn) {
+  anarA(id);
 }
 
 function tornarInici() {
@@ -4041,21 +4159,63 @@ function tornarInici() {
 // ── Recepta del dia ──
 let receptaDiaNom = '';
 
-function actualitzarReceptaDia() {
-  if (!receptes.length) return;
+// Quina recepta li ha tocat, avui, a aquesta usuària. Es queda apuntada tot el
+// dia: si no, com que abans es triava per la POSICIÓ dins la llista, n'hi havia
+// prou d'afegir o esborrar una recepta perquè la del dia canviés a mitja tarda.
+function clauReceptaDia() { return 'receptadia:' + (usuariaId || ''); }
+
+function triarReceptaDia() {
+  if (!receptes.length) return null;
   const avui = new Date().toDateString();
-  let hash = 0;
-  for (let i = 0; i < avui.length; i++) hash = ((hash << 5) - hash) + avui.charCodeAt(i);
-  const idx = Math.abs(hash) % receptes.length;
-  const r = receptes[idx];
+
+  // Si ja n'hi ha una d'apuntada per avui i encara existeix, aquella
+  try {
+    const desada = JSON.parse(llegirLocal(clauReceptaDia()) || 'null');
+    if (desada && desada.dia === avui) {
+      const r = receptes.find(x => x['_id'] === desada.id);
+      if (r) return r;
+    }
+  } catch (e) { /* apunt fet malbé: en triem una de nova */ }
+
+  // Cap de vàlida: en triem una amb el dia com a llavor. Es fa a partir de
+  // l'identificador de cada recepta i no de la seva posició, així la tria no
+  // depèn de quantes n'hi ha ni de l'ordre en què arriben.
+  const puntuacio = id => {
+    let h = 0;
+    const text = avui + '·' + id;
+    for (let i = 0; i < text.length; i++) h = (((h << 5) - h) + text.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  };
+  const tria = receptes.reduce((millor, r) =>
+    puntuacio(r['_id']) < puntuacio(millor['_id']) ? r : millor, receptes[0]);
+
+  desarLocal(clauReceptaDia(), JSON.stringify({ dia: avui, id: tria['_id'] }));
+  return tria;
+}
+
+function actualitzarReceptaDia() {
+  const loading = document.getElementById('portada-receptadia-loading');
+  const nomEl   = document.getElementById('portada-receptadia-nom');
+  const metaEl  = document.getElementById('portada-receptadia-meta');
+  const r = triarReceptaDia();
+
+  // Encara no hi ha cap recepta: la targeta ho diu i convida a afegir-ne, en
+  // comptes de quedar-se dient "Connectant amb el receptari…" per sempre
+  if (!r) {
+    receptaDiaNom = '';
+    if (!usuariaId) return;   // abans d'iniciar la sessió, es queda com estava
+    nomEl.textContent = 'Encara no tens cap recepta';
+    metaEl.textContent = 'Comença per aquí';
+    if (loading) loading.style.display = 'none';
+    nomEl.style.display = '';
+    metaEl.style.display = '';
+    return;
+  }
+
   receptaDiaNom = r['Nom de la recepta'] || '';
   const cat = r['Categoria'] || '';
   const val = parseInt(r['Valoracio']) || 0;
   const stars = '★'.repeat(val) + '☆'.repeat(5 - val);
-
-  const loading = document.getElementById('portada-receptadia-loading');
-  const nomEl = document.getElementById('portada-receptadia-nom');
-  const metaEl = document.getElementById('portada-receptadia-meta');
 
   nomEl.textContent = receptaDiaNom;
   metaEl.innerHTML =
@@ -4067,7 +4227,9 @@ function actualitzarReceptaDia() {
 }
 
 function obrirReceptaDia() {
+  // Si encara no n'hi ha cap, la targeta porta on toca: a afegir-ne
   if (receptaDiaNom) obrirDetall(receptaDiaNom);
+  else if (usuariaId) anarA('scan');
 }
 
 // Inicialitzem l'estat base (portada) a l'historial
@@ -4347,6 +4509,7 @@ const cookState = {};
 let wakeLock = null;
 const cuinantActius = new Set(); // noms de receptes amb mode cuinar actiu
 let carregant = false; // guard per evitar crides simultànies
+let darreraCarrega = 0; // quan vam demanar les dades per última vegada
 
 // ── Persistència del mode cuinar: sobreviu a recàrregues de la pàgina ──
 // (clau per usuària, com la cache de receptes)
@@ -4365,23 +4528,30 @@ function desarCookState() {
   } catch (e) { /* localStorage ple o no disponible: no passa res */ }
 }
 
+// La crida a aquesta funció NO pot anar aquí, solta: la clau porta el correu de
+// la usuària i, en carregar-se el fitxer, encara no sabem qui és. Es crida des
+// d'engegarReceptari(), que és el moment en què ja ho sabem.
 function restaurarCookState() {
+  // Si abans hi havia una altra sessió oberta, el que cuinava no ha de sobreviure
+  for (const nom in cookState) delete cookState[nom];
+  cuinantActius.clear();
   try {
     const raw = localStorage.getItem(COOK_KEY());
-    if (!raw) return;
-    const pla = JSON.parse(raw);
-    for (const nom in pla) {
-      cookState[nom] = {
-        actiu: true,
-        marcats: new Set(pla[nom].marcats || []),
-        marcatsInstr: new Set(pla[nom].marcatsInstr || []),
-      };
-      cuinantActius.add(nom);
+    if (raw) {
+      const pla = JSON.parse(raw);
+      for (const nom in pla) {
+        cookState[nom] = {
+          actiu: true,
+          marcats: new Set(pla[nom].marcats || []),
+          marcatsInstr: new Set(pla[nom].marcatsInstr || []),
+        };
+        cuinantActius.add(nom);
+      }
     }
-    if (cuinantActius.size) gestionarWakeLock();
   } catch (e) { /* dades corruptes: les ignorem */ }
+  // Manté la pantalla encesa si hi ha res a mig cuinar, i l'apaga si no en queda
+  gestionarWakeLock();
 }
-restaurarCookState();
 
 const CAT_COLORS = {
   'Barretes':             { bg:'#52050A', color:'#F6F5AE' },
@@ -4536,19 +4706,24 @@ async function carregar() {
     if (netejat) { gestionarWakeLock(); desarCookState(); }
     desarCacheReceptes(); // còpia local per obrir a l'instant la propera vegada
   } catch (e) {
-    // Si el projecte de Supabase està adormit, ho expliquem amb bones paraules
-    if (esAdormida(e)) { mostrarAdormida(); return; }
     // Si ja mostrem receptes de la cache, no espantem l'usuària amb l'error gros
-    if (cacheMostrada) {
-      mostrarToast('⚠️ No s\'ha pogut actualitzar — mostrant la darrera còpia desada');
-      return;
-    }
-    const errorBox = document.getElementById('errorBox');
-    errorBox.style.display = 'block';
-    errorBox.innerHTML = '<strong>No s\'han pogut carregar les receptes</strong>Comprova que tens connexió a internet i torna-ho a provar.';
-    document.getElementById('subtitol').textContent = 'Error de connexió';
+    const explicarFallada = () => {
+      if (cacheMostrada) {
+        mostrarToast('⚠️ No s\'ha pogut actualitzar — mostrant la darrera còpia desada');
+        return;
+      }
+      const errorBox = document.getElementById('errorBox');
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<strong>No s\'han pogut carregar les receptes</strong>Comprova que tens connexió a internet i torna-ho a provar.';
+      document.getElementById('subtitol').textContent = 'Error de connexió';
+    };
+    // Un problema de connexió té el seu propi avís, i si resulta ser passatger
+    // ensenyem la fallada de sempre
+    if (gestionarConnexio(e, explicarFallada)) return;
+    explicarFallada();
   } finally {
     carregant = false; // allibera el guard sempre
+    darreraCarrega = Date.now();
   }
 }
 
@@ -4940,12 +5115,13 @@ async function desarRacionsInline(nomId, nom) {
   const val = parseInt(input?.value);
   if (!val || val < 1) { mostrarToast('⚠️ Indica un número vàlid de racions'); return; }
 
-  // Actualitza localment
+  // Desem primer: si la base de dades no ho accepta, aquí no ha passat res.
+  // (dbActualitzarRecepta ja ensenya el seu propi avís si falla)
+  if (!await dbActualitzarRecepta(idDe(nom), { racions: numOnull(val) })) return;
+
+  // Un cop desat de debò, ho reflectim a la còpia local
   const idx = receptes.findIndex(x => x['Nom de la recepta'] === nom);
   if (idx !== -1) receptes[idx]['Racions'] = String(val);
-
-  // Desa a Supabase
-  await dbActualitzarRecepta(idDe(nom), { racions: numOnull(val) });
 
   mostrarToast(`✅ Racions definides: ${val}`);
 
@@ -5343,7 +5519,10 @@ async function eliminarRecepta(nomId, nomOriginal) {
 
   if (!confirm(`Segur que vols eliminar "${nomOriginal}"? Aquesta acció no es pot desfer.${avisMenus}`)) return;
 
-  await dbEsborrarRecepta(idRecepta);
+  // Si no la trobem o l'esborrat falla, la recepta es queda on és i s'avisa:
+  // fer desaparèixer la targeta d'una recepta que encara hi és seria pitjor
+  if (!idRecepta) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
+  if (!await dbEsborrarRecepta(idRecepta)) return;
 
   // Eliminem de la llista local i retirem la card del DOM amb animació
   const idx = receptes.findIndex(r => r['Nom de la recepta'] === nomOriginal);
@@ -5424,7 +5603,7 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
   const idRecepta = idDe(nomOriginal);
 
   try {
-    await dbActualitzarRecepta(idRecepta, {
+    const desat = await dbActualitzarRecepta(idRecepta, {
       nom:          nomNou,
       categoria:    cat,
       ingredients:  ingJSON || '[]',
@@ -5436,6 +5615,14 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
       comentaris:   comentaris,
       racions:      numOnull(racions),
     });
+    // Si no s'ha pogut desar, deixem el formulari obert i tal com estava:
+    // així els canvis no es perden i es pot tornar a provar. L'avís del què ha
+    // fallat el dona dbActualitzarRecepta.
+    if (!desat) {
+      btn.disabled = false;
+      btn.textContent = 'Desar canvis';
+      return;
+    }
     mostrarToast(`✅ "${nomNou}" actualitzada al receptari`);
 
     btn.disabled = false;
@@ -5491,22 +5678,31 @@ async function valorar(nom, nova) {
   const actual = parseInt(receptes[idx]['Valoracio']) || 0;
   const valoracio = nova === actual ? 0 : nova;
 
+  // Les estrelles han de respondre al dit a l'instant, sense esperar la xarxa.
+  // Per això es pinten primer i, si el desat falla, tornen on eren.
+  const pintarEstrelles = v => {
+    const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
+    const starsEl = document.querySelector(`#card-${nomId} .card-stars`);
+    if (starsEl) {
+      starsEl.innerHTML = starsInteractiusHTML(nom, v);
+      starsEl.setAttribute('aria-label', `Valoració: ${v} de 5`);
+    }
+    // Si el panell de detall mostra aquesta recepta, sincronitzem també les seves estrelles
+    const detallStarsEl = document.getElementById('detall-stars');
+    if (detallStarsEl && detallStarsEl.dataset.nom === nom) {
+      detallStarsEl.innerHTML = starsInteractiusHTML(nom, v);
+      detallStarsEl.setAttribute('aria-label', `Valoració: ${v} de 5`);
+    }
+  };
+
   receptes[idx]['Valoracio'] = String(valoracio);
+  pintarEstrelles(valoracio);
 
-  const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
-  const starsEl = document.querySelector(`#card-${nomId} .card-stars`);
-  if (starsEl) {
-    starsEl.innerHTML = starsInteractiusHTML(nom, valoracio);
-    starsEl.setAttribute('aria-label', `Valoració: ${valoracio} de 5`);
+  if (!await dbActualitzarRecepta(idDe(nom), { valoracio: valoracio })) {
+    receptes[idx]['Valoracio'] = String(actual);
+    pintarEstrelles(actual);
+    return;
   }
-  // Si el panell de detall mostra aquesta recepta, sincronitzem també les seves estrelles
-  const detallStarsEl = document.getElementById('detall-stars');
-  if (detallStarsEl && detallStarsEl.dataset.nom === nom) {
-    detallStarsEl.innerHTML = starsInteractiusHTML(nom, valoracio);
-    detallStarsEl.setAttribute('aria-label', `Valoració: ${valoracio} de 5`);
-  }
-
-  await dbActualitzarRecepta(idDe(nom), { valoracio: valoracio });
   const estrella = valoracio > 0 ? ' ' + '★'.repeat(valoracio) : '';
   mostrarToast('Valoració desada' + estrella);
 }
@@ -5732,6 +5928,17 @@ async function pujarFotoRecepta(nomId, nom, input) {
 async function treureFotoRecepta(nomId, nom) {
   if (!confirm('Vols treure la foto d\'aquesta recepta?')) return;
   const estat = document.getElementById('foto-estat-' + nomId);
+
+  // Aquí no cal fer veure que ja està fet: treiem la foto de debò primer i,
+  // si no es pot, la imatge es queda on és i no hi ha res a desfer
+  if (estat) estat.textContent = 'Traient la foto…';
+  const tret = await dbTreureFoto(idDe(nom)).catch(() => false);
+  if (!tret) {
+    if (estat) estat.textContent = '❌ No s\'ha pogut treure la foto';
+    mostrarToast('❌ No s\'ha pogut treure la foto');
+    return;
+  }
+
   fotosLocals[nom] = '';
   const idx = receptes.findIndex(r => r['Nom de la recepta'] === nom);
   if (idx !== -1) receptes[idx]['Foto'] = '';
@@ -5745,22 +5952,34 @@ async function treureFotoRecepta(nomId, nom) {
   if (cardThumb) cardThumb.remove();
   const cardFloat = document.querySelector('#card-' + nomId + ' .card-foto-float');
   if (cardFloat) cardFloat.remove();
-  if (estat) estat.textContent = 'Traient la foto…';
-  await dbTreureFoto(idDe(nom));
   if (estat) estat.textContent = 'Foto treta';
   mostrarToast('Foto treta');
 }
 
 // La càrrega inicial la dispara la sessió: quan sabem qui ets, engegarReceptari()
 // mostra primer la còpia local (instantània) i després demana les dades fresques.
-// Aquí només programem el refresc automàtic cada 30s, evitant molestar
-// si hi ha cards obertes o formularis a mig editar.
-setInterval(() => {
-  if (!usuariaId) return;
-  const hiHaObertes = oberts.size > 0;
-  const hiHaEdicions = document.querySelector('.card-edit-form.visible') !== null;
-  if (!hiHaObertes && !hiHaEdicions) carregar();
-}, 30000);
+// Aquí només programem el refresc automàtic, evitant molestar si hi ha cards
+// obertes o formularis a mig editar.
+const INTERVAL_REFRESC = 30000;
+
+// Toca demanar dades fresques? Sobretot: NO si l'app no és a la vista. Amb el
+// mòbil a la butxaca o l'app en segon pla, refrescar cada mig minut és gastar
+// dades i bateria per ensenyar-ho a ningú.
+function tocaRefrescar() {
+  if (!usuariaId) return false;
+  if (document.visibilityState !== 'visible') return false;
+  if (oberts.size > 0) return false;                                   // hi ha receptes desplegades
+  if (document.querySelector('.card-edit-form.visible')) return false; // hi ha una edició a mitges
+  return Date.now() - darreraCarrega >= INTERVAL_REFRESC;
+}
+
+setInterval(() => { if (tocaRefrescar()) carregar(); }, INTERVAL_REFRESC);
+
+// I en tornar a l'app, una ullada de seguida: mentre no es veia no hem refrescat
+// res, i el que hi ha a la pantalla pot fer estona que és allà.
+document.addEventListener('visibilitychange', () => {
+  if (tocaRefrescar()) carregar();
+});
 
 // ══════════════════════════════════════════════
 // ESCÀNER — lògica
@@ -5784,12 +6003,15 @@ async function comprovarServidor() {
   return false;
 }
 
-// L'avís només surt si no hi ha CAP manera de llegir fotografies
-async function comprovarOcrDisponible() {
-  const local = AJUDANT_URL ? false : await comprovarServidor();
-  avisServidor.classList.toggle('visible', !AJUDANT_URL && !local);
+// L'avís de "no es poden escanejar fotografies" no es pot decidir en obrir
+// l'app: per saber si l'ajudant del núvol respon caldria trucar-hi, i això és
+// lent i, si triga (que sovint triga, la primera vegada del dia), donaria un
+// avís fals a una app que funciona perfectament. Per això l'avís és una
+// conseqüència d'un intent real: apareix quan un escaneig falla per tots
+// els camins, i marxa tot sol quan un altre se'n surt.
+function marcarOcrDisponible(potLlegir) {
+  avisServidor.classList.toggle('visible', !potLlegir);
 }
-comprovarOcrDisponible();
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -6071,15 +6293,22 @@ async function receptaDesDeImatge(file, idx) {
   // 1r intent: el núvol, que és el camí habitual
   if (AJUDANT_URL) {
     try {
-      return await receptaImatgeDrive(file);
+      const recepta = await receptaImatgeDrive(file);
+      marcarOcrDisponible(true);   // si abans hi havia l'avís, ja no cal
+      return recepta;
     } catch (e) {
       console.warn('OCR al núvol fallit, provem el servidor local:', e.message);
       setEstat(idx, 'L\'OCR al núvol ha fallat, provant el servidor local…');
     }
   }
   // 2n intent: el servidor Python d'aquest ordinador
-  if (await comprovarServidor()) return await receptaImatgeLocal(file);
-  avisServidor.classList.add('visible');
+  if (await comprovarServidor()) {
+    const recepta = await receptaImatgeLocal(file);
+    marcarOcrDisponible(true);
+    return recepta;
+  }
+  // Cap dels dos camins: ara sí que toca avisar-ne
+  marcarOcrDisponible(false);
   throw new Error('No s\'ha pogut llegir la fotografia (ni al núvol ni en local)');
 }
 
@@ -6656,6 +6885,17 @@ async function desarRecepta(idx) {
     nomCamp.value = nomAmbDistintiu(nomIntent); // 'distintiu' → seguim amb el nom nou
   }
 
+  // Racions: llegim del camp editable (opcional, però ha de ser vàlid si té valor).
+  // Es comprova ABANS de bloquejar el botó: si no, sortir per aquí el deixava
+  // apagat i dient «Desant…» per sempre.
+  const racionsEl = document.getElementById(`racions-${idx}`);
+  const racionsScan = (racionsEl?.value || '').trim();
+  if (racionsScan && (!parseInt(racionsScan) || parseInt(racionsScan) < 1)) {
+    mostrarToast('❌ El número de racions no és vàlid');
+    racionsEl.focus();
+    return;
+  }
+
   const btn = document.getElementById(`btn-desar-${idx}`);
   btn.disabled = true; btn.textContent = 'Desant…';
 
@@ -6664,15 +6904,6 @@ async function desarRecepta(idx) {
   const ingRawScan = document.getElementById(`ing-${idx}`).value.trim();
   const ingParsedScan = parseAllIngredients(ingRawScan);
   const ingJSONScan = ingParsedScan.length ? serializeIngredients(ingParsedScan) : ingRawScan;
-
-  // Racions: llegim del camp editable (opcional, però ha de ser vàlid si té valor)
-  const racionsEl = document.getElementById(`racions-${idx}`);
-  const racionsScan = (racionsEl?.value || '').trim();
-  if (racionsScan && (!parseInt(racionsScan) || parseInt(racionsScan) < 1)) {
-    mostrarToast('El número de racions no és vàlid');
-    racionsEl.focus();
-    return;
-  }
 
   const recepta = {
     nom:          document.getElementById(`nom-${idx}`).value.trim(),
@@ -7425,8 +7656,13 @@ async function desarIdea() {
 
   const nova = await dbCrearIdea({ titol, etiquetes, comentari, recepta });
 
+  // Sense idea desada no hi ha identificador, i una idea sense identificador no
+  // es podria ni editar ni esborrar després. Deixem el formulari tal com estava
+  // perquè es pugui tornar a provar sense reescriure-ho tot.
+  if (!nova) { btn.disabled = false; btn.textContent = 'Desar idea'; return; }
+
   // Actualització local
-  idees.push({ '_id': nova ? nova.id : null, 'Títol': titol,
+  idees.push({ '_id': nova.id, 'Títol': titol,
                'Etiquetes': etiquetes, 'Comentari': comentari, 'Recepta': recepta });
 
   btn.disabled = false; btn.textContent = 'Desar idea';
@@ -7462,7 +7698,11 @@ async function desarEdicioIdea(titolId, titolOriginal) {
 
   if (!titol) { mostrarToast('⚠️ El títol no pot quedar buit'); btn.disabled = false; btn.textContent = 'Desar canvis'; return; }
 
-  await dbActualitzarIdea(idIdea(titolOriginal), { titol, etiquetes, comentari, recepta });
+  // Si el desat falla, el formulari es queda obert i amb el que hi havia escrit
+  if (!await dbActualitzarIdea(idIdea(titolOriginal), { titol, etiquetes, comentari, recepta })) {
+    btn.disabled = false; btn.textContent = 'Desar canvis';
+    return;
+  }
 
   const idx = idees.findIndex(it => (it['Títol'] || '') === titolOriginal);
   if (idx !== -1) {
@@ -7486,7 +7726,10 @@ async function desarEdicioIdea(titolId, titolOriginal) {
 async function eliminarIdea(titolId, titolOriginal) {
   if (!confirm(`Segur que vols eliminar la idea "${titolOriginal}"? Aquesta acció no es pot desfer.`)) return;
 
-  await dbEsborrarIdea(idIdea(titolOriginal));
+  // Si no la trobem o l'esborrat falla, la idea es queda a la llista i s'avisa
+  const idIdeaEsborrar = idIdea(titolOriginal);
+  if (!idIdeaEsborrar) { mostrarToast('❌ No s\'ha trobat la idea'); return; }
+  if (!await dbEsborrarIdea(idIdeaEsborrar)) return;
 
   const idx = idees.findIndex(it => (it['Títol'] || '') === titolOriginal);
   if (idx !== -1) idees.splice(idx, 1);
@@ -7840,9 +8083,13 @@ function targetaPlat(p) {
 
   // En mode moure, el control de racions deixa pas a les fletxes
   const controls = platMovent === p.id ? controlsMoureHTML(p.id) : `<div class="plat-rac">
-         <button onclick="canviarRacions('${p.id}',-1)" aria-label="Menys racions">−</button>
-         <button class="plat-rac-valor" onclick="escriureRacions('${p.id}')">${p.racions || '?'}<small> rac.</small></button>
-         <button onclick="canviarRacions('${p.id}',1)" aria-label="Més racions">+</button>
+         <button onclick="canviarRacionsPlat('${p.id}',-1)" aria-label="Menys racions">−</button>
+         <div class="plat-rac-camp">
+           <button class="plat-rac-valor" onclick="escriureRacionsPlat('${p.id}')"
+                   aria-label="Racions">${p.racions || '?'}</button>
+           <span class="plat-rac-unitat" aria-hidden="true">rac.</span>
+         </div>
+         <button onclick="canviarRacionsPlat('${p.id}',1)" aria-label="Més racions">+</button>
        </div>`;
 
   return `<div class="plat-card${platMovent === p.id ? ' movent' : ''}"
@@ -8017,7 +8264,7 @@ document.addEventListener('touchmove', ev => {
 }, { passive: false });
 
 // ── Racions ──
-async function canviarRacions(id, delta) {
+async function canviarRacionsPlat(id, delta) {
   const p = menusSetmana.find(x => x.id === id);
   if (!p) return;
   const noves = Math.max(1, (parseInt(p.racions) || 0) + delta);
@@ -8025,7 +8272,7 @@ async function canviarRacions(id, delta) {
   pintarApat();
   await dbActualitzarPlat(id, { racions: noves });
 }
-async function escriureRacions(id) {
+async function escriureRacionsPlat(id) {
   const p = menusSetmana.find(x => x.id === id);
   if (!p) return;
   const resposta = prompt('Quantes racions?', p.racions || '');
