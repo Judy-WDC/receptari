@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 133 · 23-08-2026                                     ║
+  ║  VERSIÓ 134 · 23-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -33,7 +33,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Les millors receptes">
-<link rel="apple-touch-icon" href="icon-192.png">
+<!-- L'iPhone no fa cas de la transparència: les zones buides les pinta de negre.
+     Per això aquesta icona és a part, amb el fons ple i sense cantonades transparents. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
