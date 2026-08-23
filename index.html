@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 134 · 23-08-2026                                     ║
+  ║  VERSIÓ 135 · 23-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -2850,11 +2850,36 @@ function tancarNovetats() {
 
 <script>
 // ══════════════════════════════════════════════
+// PRIMER DE TOT: hi són, les peces que vénen de fora?
+// L'app baixa el Supabase (i altres) d'internet. Si no hi arriben — sense
+// connexió el primer cop, o el servei que les serveix que no respon — la línia
+// que crea el client peta i s'atura TOT el codi que ve al darrere: quedava una
+// pantalla morta i muda, sense ni la finestra d'inici de sessió. Val més dir-ho.
+// ══════════════════════════════════════════════
+if (!window.supabase) {
+  document.getElementById('avis-connexio-titol').textContent = '📴 Encara no es pot obrir';
+  document.getElementById('avis-connexio-text').innerHTML =
+      'A l\'app li falten peces que ha de baixar d\'internet, i ara mateix no les troba.<br><br>'
+    + 'No s\'ha perdut res: les teves receptes i fotos hi són totes. '
+    + 'Torna-ho a provar quan tinguis connexió.';
+  document.getElementById('avis-connexio-overlay').classList.add('visible');
+  throw new Error('No hi ha el Supabase: no es pot engegar el receptari');
+}
+
+// ══════════════════════════════════════════════
 // CONFIGURACIÓ GLOBAL
 // ══════════════════════════════════════════════
 
 // URLs — ajusta-les si canvien
 const API_PYTHON = 'http://localhost:5000'; // servidor local d'OCR (opcional)
+
+// El servidor de Python viu a l'ordinador de qui desenvolupa l'app, i només s'hi
+// pot arribar des d'aquell mateix ordinador. Des del mòbil d'una usuària, o des
+// de l'app publicada, "localhost" és el seu propi aparell, on no hi ha res: cada
+// trucada és una petició que fracassa i una espera per no res. Per això només
+// s'hi truca si l'app s'està servint des del mateix ordinador.
+const ES_ORDINADOR_DE_DESENVOLUPAMENT =
+  ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
 // ── Ajudant d'Apps Script ──
 // NO guarda cap dada: només fa dues feines que el navegador no pot fer sol,
@@ -4093,8 +4118,12 @@ document.addEventListener('DOMContentLoaded', () => {
   aplicarVista();
 });
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// El pdf.js només fa falta per importar PDFs. Si no ha arribat, l'app ha de
+// seguir funcionant per a tota la resta, no aturar-se aquí.
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 // ══════════════════════════════════════════════
 // NAVEGACIÓ ENTRE PANELLS
@@ -5998,6 +6027,7 @@ let items = [];
 
 // Hi ha el servidor Python en aquest ordinador? (ara és el pla B de l'OCR)
 async function comprovarServidor() {
+  if (!ES_ORDINADOR_DE_DESENVOLUPAMENT) return false;
   try {
     const r = await fetch(`${API_PYTHON}/ping`, { signal: AbortSignal.timeout(2000) });
     if (r.ok) return true;
@@ -6920,8 +6950,9 @@ async function desarRecepta(idx) {
   };
   items[idx].recepta = recepta;
 
-  // Si és imatge, intentem també desar al servidor Python
-  if (items[idx].tipus === 'imatge') {
+  // Si és imatge, intentem també desar al servidor Python (només a l'ordinador
+  // on corre: des de fora, aquesta trucada no pot arribar enlloc)
+  if (items[idx].tipus === 'imatge' && ES_ORDINADOR_DE_DESENVOLUPAMENT) {
     try {
       const resp = await fetch(`${API_PYTHON}/desar`, {
         method: 'POST',
@@ -7856,7 +7887,7 @@ let menusSetmana   = [];     // files de la setmana que s'està mirant
 let diaObert       = null;   // 'dimecres' | null — només un dia desplegat a la vegada
 let apatObert      = null;   // { dia, apat } quan som a la fitxa
 let menusCarregats = false;
-let carregantMenus = false;
+let carregantMenus = null;  // quina setmana estem demanant ara mateix (null = cap)
 let platMovent     = null;   // id del plat que s'està reordenant
 let destiPlatNou   = null;   // { dia, apat } cap on va el plat que s'està cercant
 let tempsPulsacio  = null;
@@ -7912,11 +7943,18 @@ function nomDePlat(p) {
 function receptaEsborrada(p) { return !receptaDePlat(p); }
 
 // ── Càrrega ──
+// Cada petició sap de quina setmana és. Si mentre esperem la resposta se n'ha
+// triat una altra, la que arriba tard ja no serveix i es deixa caure: si no,
+// et pintava els plats de la setmana anterior sobre la que estàs mirant.
 async function carregarMenus() {
-  if (carregantMenus) return;
-  carregantMenus = true;
-  const files = await dbLlegirMenus(isoData(setmanaActual));
-  carregantMenus = false;
+  const setmanaDemanada = isoData(setmanaActual);
+  if (carregantMenus === setmanaDemanada) return;   // aquesta ja l'estem demanant
+  carregantMenus = setmanaDemanada;
+
+  const files = await dbLlegirMenus(setmanaDemanada);
+
+  if (setmanaDemanada !== isoData(setmanaActual)) return;  // arriba tard: ja no toca
+  carregantMenus = null;
   esperantMenus  = false;
   if (files === null) { pintarSetmana(); return; }
   menusSetmana   = files;
