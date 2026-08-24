@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 142 · 24-08-2026                                     ║
+  ║  VERSIÓ 145 · 24-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -2510,12 +2510,12 @@ function tancarBenvinguda() {
 // Canvia VERSIO_NOVETATS i la llista per mostrar
 // el modal la pròxima vegada que l'usuària obri l'app.
 // ══════════════════════════════════════════════
-const VERSIO_NOVETATS = '2.5';
+const VERSIO_NOVETATS = '2.6';
 const NOVETATS = [
-  { titol: 'Panell de novetats', desc: 'ja el tenim, per ensenyar-vos les noves meravelles de l\'aplicació! Hehehe!' },
-  { titol: 'Cerca multiidioma', desc: 'ara pots buscar ingredients en català, castellà o anglès.' },
-  { titol: 'Mode cuinar millorat', desc: 'la pantalla ja no s\'apaga mentre cuines.' },
-  { titol: 'Importar des d\'un enllaç', desc: 'enganxa l\'adreça d\'una web de cuina i la recepta s\'importa sola. La trobaràs a la pestanya "Afegir".' },
+  { titol: 'Panell de novetats', desc: 'ja el tenim, per ensenyar-te les noves meravelles de l\'aplicació!' },
+  { titol: 'Menús de la setmana', desc: 'a la pestanya "Planificació" ja pots muntar el dinar i el sopar de cada dia, amb tants plats com vulguis a cada àpat. I des de qualsevol recepta, el botó del calendari te la porta al dia que triïs.' },
+  { titol: 'Cerca pel que sigui', desc: 'busca per títol de recepta o per ingredient, en català, castellà o anglès.' },
+  { titol: 'Mode cuinar', desc: 'quan l\'activis, podràs marcar els ingredients i els passos a mesura que avancis, i la pantalla no s\'apagarà mentre estigui el mode activat.' },
 ];
 
 // A partir de quantes obertures ensenyem les novetats a una usuària nova
@@ -2530,6 +2530,9 @@ function llegirLocal(clau) {
 }
 function desarLocal(clau, valor) {
   try { localStorage.setItem(clau, valor); } catch (e) { /* no es pot recordar: tant se val */ }
+}
+function esborrarLocal(clau) {
+  try { localStorage.removeItem(clau); } catch (e) { /* no es pot oblidar: tant se val */ }
 }
 
 function clauNovetats() { return 'novetats_versio:' + (usuariaId || ''); }
@@ -4085,7 +4088,11 @@ function formatQuantity(num) {
 
   if (bestFrac.val === 0) return String(enters);
   if (enters === 0) return bestFrac.txt;
-  return enters + '+' + bestFrac.txt;
+  // Separats per un espai, no per un «+». No és cosmètica: aquest text va a parar
+  // al camp d'ingredients quan edites una recepta, i d'allà torna al parser. El
+  // parser entén "1 1/2" (→ 1,5) i no entén "1+1/2": s'hi quedava l'1 i el "+1/2"
+  // acabava enganxat al nom de l'ingredient, unitat inclosa.
+  return enters + ' ' + bestFrac.txt;
 }
 
 function escHTML(s) {
@@ -4724,16 +4731,14 @@ let darreraCarrega = 0; // quan vam demanar les dades per última vegada
 const COOK_KEY = () => 'cookstate_' + (usuariaActiva || 'anonima');
 
 function desarCookState() {
-  try {
-    const pla = {};
-    for (const nom in cookState) {
-      const e = cookState[nom];
-      if (!e.actiu) continue; // només guardem receptes amb el mode cuinar actiu
-      pla[nom] = { marcats: [...e.marcats], marcatsInstr: [...(e.marcatsInstr || new Set())] };
-    }
-    if (Object.keys(pla).length) localStorage.setItem(COOK_KEY(), JSON.stringify(pla));
-    else localStorage.removeItem(COOK_KEY());
-  } catch (e) { /* localStorage ple o no disponible: no passa res */ }
+  const pla = {};
+  for (const nom in cookState) {
+    const e = cookState[nom];
+    if (!e.actiu) continue; // només guardem receptes amb el mode cuinar actiu
+    pla[nom] = { marcats: [...e.marcats], marcatsInstr: [...(e.marcatsInstr || new Set())] };
+  }
+  if (Object.keys(pla).length) desarLocal(COOK_KEY(), JSON.stringify(pla));
+  else esborrarLocal(COOK_KEY());
 }
 
 // La crida a aquesta funció NO pot anar aquí, solta: la clau porta el correu de
@@ -4743,9 +4748,10 @@ function restaurarCookState() {
   // Si abans hi havia una altra sessió oberta, el que cuinava no ha de sobreviure
   for (const nom in cookState) delete cookState[nom];
   cuinantActius.clear();
-  try {
-    const raw = localStorage.getItem(COOK_KEY());
-    if (raw) {
+  const raw = llegirLocal(COOK_KEY());
+  if (raw) {
+    // Aquí el try ja només és per si el que hi ha desat està malmès
+    try {
       const pla = JSON.parse(raw);
       for (const nom in pla) {
         cookState[nom] = {
@@ -4755,8 +4761,8 @@ function restaurarCookState() {
         };
         cuinantActius.add(nom);
       }
-    }
-  } catch (e) { /* dades corruptes: les ignorem */ }
+    } catch (e) { /* dades corruptes: les ignorem */ }
+  }
   // Manté la pantalla encesa si hi ha res a mig cuinar, i l'apaga si no en queda
   gestionarWakeLock();
 }
@@ -4842,31 +4848,45 @@ const CACHE_KEY = () => 'cache_receptes_' + (usuariaActiva || 'anonima');
 let cacheMostrada = false;
 
 function desarCacheReceptes() {
-  try {
-    localStorage.setItem(CACHE_KEY(), JSON.stringify({
-      receptes, categories: CAT_OPCIONS, t: Date.now()
-    }));
-  } catch (e) { /* localStorage ple o no disponible: no passa res */ }
+  desarLocal(CACHE_KEY(), JSON.stringify({
+    receptes, categories: CAT_OPCIONS, t: Date.now()
+  }));
 }
 
 function carregarDesDeCache() {
+  const raw = llegirLocal(CACHE_KEY());
+  if (!raw) return false;
+
+  // Llegir les dades desades i pintar-les són dues feines diferents, i abans
+  // compartien el mateix try: si petava el repintat, l'app deia «no hi havia
+  // cache» i se n'anava a demanar-ho tot a internet, sense deixar cap rastre.
+  // Es veia com una app lenta i sense motiu.
+  let cache;
+  try { cache = JSON.parse(raw); }
+  catch (e) { return false; }          // dades malmeses: com si no n'hi hagués
+  if (!cache || !cache.receptes || !cache.receptes.length) return false;
+
+  receptes = cache.receptes;
+  (cache.categories || []).forEach(nom => {
+    if (!CAT_OPCIONS.includes(nom)) CAT_OPCIONS.push(nom);
+  });
+
+  // El repintat té el seu propi try, i deixa dit què ha passat. Segueix tornant
+  // false perquè l'app tiri per internet i arrenqui igualment, però ara el
+  // problema es pot veure en comptes de desaparèixer.
   try {
-    const raw = localStorage.getItem(CACHE_KEY());
-    if (!raw) return false;
-    const cache = JSON.parse(raw);
-    if (!cache.receptes || !cache.receptes.length) return false;
-    receptes = cache.receptes;
-    (cache.categories || []).forEach(nom => {
-      if (!CAT_OPCIONS.includes(nom)) CAT_OPCIONS.push(nom);
-    });
     document.getElementById('subtitol').textContent =
       `Actualment hi ha ${receptes.length} receptes al teu receptari`;
     construirFiltres();
     aplicar();
     actualitzarReceptaDia();
-    cacheMostrada = true;
-    return true;
-  } catch (e) { return false; }
+  } catch (e) {
+    console.error('El receptari no s\'ha pogut pintar des de la còpia local:', e);
+    return false;
+  }
+
+  cacheMostrada = true;
+  return true;
 }
 
 async function carregar() {
@@ -5346,12 +5366,19 @@ function aplicar() {
   resetSorpren(); // quan s'invoca aplicar des de cerca/filtre, sortim del mode sorpresa
   refrescarLlibresSuggeriments();
   const q = (document.getElementById('cerca').value || '').toLowerCase();
-  const qExpansio = expandirCerca(q);
+  // El nom i els ingredients es tracten igual: tots dos sense accents i tots dos
+  // amb els sinònims dels tres idiomes. Abans el nom es comparava en cru, i per
+  // això «meló» no sortia escrivint «melo» ni «Crema de carbassa» buscant «calabaza».
+  const qNorm = _senseAccents(q);
+  // Els sinònims i troncs surten del diccionari amb accents: els normalitzem
+  // igual que el text on els anirem a buscar
+  const qExpansio = expandirCerca(q).map(t => _senseAccents(t.toLowerCase()));
   const resultat = receptes.filter(r => {
     const catOk  = catActiva === 'totes' || r['Categoria'] === catActiva;
-    const nomOk  = r['Nom de la recepta']?.toLowerCase().includes(q);
-    const ingText = r['Ingredients']?.toLowerCase() || '';
-    const ingOk  = ingText.includes(q) || qExpansio.some(t => ingText.includes(t));
+    const nomText = _senseAccents((r['Nom de la recepta'] || '').toLowerCase());
+    const nomOk  = nomText.includes(qNorm) || qExpansio.some(t => nomText.includes(t));
+    const ingText = _senseAccents((r['Ingredients'] || '').toLowerCase());
+    const ingOk  = ingText.includes(qNorm) || qExpansio.some(t => ingText.includes(t));
     const fontOk = !fontActiva || r['Font'] === fontActiva;
     const etOk  = etiquetaActiva.size === 0 ||
       (() => {
@@ -7881,7 +7908,10 @@ async function desarIdea() {
 
   const etiquetes = normalitzarEtiquetes(document.getElementById('idea-etiquetes').value);
   const comentari = document.getElementById('idea-comentari').value.trim();
-  const recepta   = document.getElementById('idea-recepta-valor').value.trim();
+
+  const camp = receptaDelCampIdea('');
+  const recepta = camp.recepta;
+  if (camp.senseEnllac) mostrarToast(`⚠️ "${camp.senseEnllac}" no és cap recepta del receptari: la idea es desa sense enllaç`);
 
   const btn = document.getElementById('idea-desar-btn');
   btn.disabled = true; btn.textContent = 'Desant…';
@@ -7939,7 +7969,10 @@ async function desarEdicioIdea(titolId, titolOriginal) {
 
   const etiquetes = normalitzarEtiquetes(document.getElementById('idea-edit-etiquetes-' + titolId).value);
   const comentari = document.getElementById('idea-edit-comentari-' + titolId).value.trim();
-  const recepta   = document.getElementById('idea-recepta-valor-' + titolId).value.trim();
+
+  const camp = receptaDelCampIdea('-' + titolId);
+  const recepta = camp.recepta;
+  if (camp.senseEnllac) mostrarToast(`⚠️ "${camp.senseEnllac}" no és cap recepta del receptari: la idea es desa sense enllaç`);
 
   // Si el desat falla, el formulari es queda obert i amb el que hi havia escrit
   if (!await dbActualitzarIdea(idIdea(titolOriginal), { titol, etiquetes, comentari, recepta })) {
@@ -8001,6 +8034,17 @@ function autocompleteRecepta(suffix) {
     return;
   }
 
+  // Si el text escrit ja no és el de la recepta enllaçada, l'enllaç deixa de
+  // valer i el treiem de seguida. Abans es quedava el vell: el camp deia una cosa
+  // i la idea n'apuntava una altra, sense dir-ho enlloc.
+  const valorActual = document.getElementById('idea-recepta-valor' + suffix);
+  if (valorActual && valorActual.value
+      && nomNormalitzat(valorActual.value) !== nomNormalitzat(input.value)) {
+    valorActual.value = '';
+    const clearActual = document.getElementById('idea-recepta-clear' + suffix);
+    if (clearActual) clearActual.style.display = 'none';
+  }
+
   const matches = receptes
     .map(r => r['Nom de la recepta'] || '')
     .filter(n => n.toLowerCase().includes(q))
@@ -8027,6 +8071,24 @@ function triarReceptaIdea(suffix, nom) {
   if (valor) valor.value = nom;
   if (clear) clear.style.display = 'flex';
   if (cont) { cont.innerHTML = ''; cont.classList.remove('obert'); }
+}
+
+// Què val de veritat el camp de recepta d'una idea. Si hi ha text escrit a mà
+// que no s'ha triat de la llista, mirem si és exactament una recepta del
+// receptari; si no ho és, tornem l'avís perquè qui desa ho pugui dir en veu alta
+// en comptes de desar en silenci un enllaç que no és el que es veu.
+function receptaDelCampIdea(suffix) {
+  const input  = document.getElementById('idea-recepta-cerca' + suffix);
+  const valor  = document.getElementById('idea-recepta-valor' + suffix);
+  const escrit = (input && input.value || '').trim();
+  const triat  = (valor && valor.value || '').trim();
+
+  if (triat)   return { recepta: triat };
+  if (!escrit) return { recepta: '' };
+
+  const r = receptes.find(x => nomNormalitzat(x['Nom de la recepta']) === nomNormalitzat(escrit));
+  if (r) return { recepta: r['Nom de la recepta'] };   // escrit sencer i bé: val igual
+  return { recepta: '', senseEnllac: escrit };
 }
 
 function netejarReceptaIdea(suffix) {
