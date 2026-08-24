@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 135 · 23-08-2026                                     ║
+  ║  VERSIÓ 137 · 24-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 127 (index-receptes-Supabase-127.html) i la següent, la 137.
+  l'última és la 127 (index-receptes-Supabase-127.html). La 137 toca ARA i està
+  pendent: es fa quan la Judy hagi revisat els canvis d'aquesta versió.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 1, a la versió 125; la següent, la 2, toca a la versió 150.
 
@@ -251,41 +252,52 @@
     cursor: pointer;
     transition: border-color 0.15s;
   }
-  /* Colors per categoria via data-cat — sense JS inline */
-  .filtre[data-cat="Barretes"]             { background:#52050A; color:#F6F5AE; --filtre-hover-color:#8B0010; }
-  .filtre[data-cat="Boletes energètiques"] { background:#7A3018; color:#F6F5AE; --filtre-hover-color:#C8582A; }
-  .filtre[data-cat="Cremes"]               { background:#1E5E3A; color:#F6F5AE; --filtre-hover-color:#3DB870; }
-  .filtre[data-cat="Currys"]               { background:#5C3A1E; color:#F6F5AE; --filtre-hover-color:#C97D4A; }
-  .filtre[data-cat="Untables"]             { background:#FE7F2D; color:#0B2027; --filtre-hover-color:#C85A0A; }
-  .filtre[data-cat="Untables dolços"]      { background:#6B4A8A; color:#F6F5AE; --filtre-hover-color:#C09AE8; }
-  .filtre[data-cat="Altres"]               { background:#2A3A4A; color:#F6F5AE; --filtre-hover-color:#7A9AB0; }
-  .filtre[data-cat="totes"]                { --filtre-hover-color:#F5F749; }
+  /* ── Colors per categoria via data-cat — sense JS inline ──
+     Cada categoria porta tres coses:
+       background + color  → com es veu en repòs
+       --filtre-viu        → el color encès: la voreta del ratolí i el fons quan està triada
+       --filtre-viu-lletra → quin dels dos grocs va damunt del color encès
+
+     El tercer és el que abans faltava. El color encès és clar en gairebé totes, i el groc
+     pàl·lid a sobre no s'hi llegia; ara cada categoria diu quina lletra li toca, igual que
+     ja fa en repòs. Si algun dia n'afegeixes una, mira que la parella arribi a 4.5 de
+     contrast: per sota d'això, a la cuina i amb la pantalla abaixada, no es llegeix. */
+  .filtre[data-cat="Barretes"]             { background:#52050A; color:#F6F5AE; --filtre-viu:#8B0010; --filtre-viu-lletra:#F6F5AE; }
+  .filtre[data-cat="Boletes energètiques"] { background:#7A3018; color:#F6F5AE; --filtre-viu:#D87045; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="Cremes"]               { background:#1E5E3A; color:#F6F5AE; --filtre-viu:#3DB870; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="Currys"]               { background:#554C1B; color:#F6F5AE; --filtre-viu:#D8C564; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="Untables"]             { background:#FE7F2D; color:#0B2027; --filtre-viu:#FEA46A; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="Untables dolços"]      { background:#6B4A8A; color:#F6F5AE; --filtre-viu:#C09AE8; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="Altres"]               { background:#2A3A4A; color:#F6F5AE; --filtre-viu:#7A9AB0; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat="totes"]                { --filtre-viu:#F5F749; --filtre-viu-lletra:#0B2027; }
   /* Paleta per a categories noves — assignació automàtica per JS */
-  .filtre[data-cat-auto="0"] { background:#4A2060; color:#F6F5AE; --filtre-hover-color:#9B59D9; }
-  .filtre[data-cat-auto="1"] { background:#1A4A5C; color:#F6F5AE; --filtre-hover-color:#3BB8D9; }
-  .filtre[data-cat-auto="2"] { background:#5C2A40; color:#F6F5AE; --filtre-hover-color:#D45A80; }
-  .filtre[data-cat-auto="3"] { background:#2A4A20; color:#F6F5AE; --filtre-hover-color:#7AC43A; }
-  .filtre[data-cat-auto="4"] { background:#1A3A4A; color:#F6F5AE; --filtre-hover-color:#3B9E8C; }
-  .filtre[data-cat-auto="5"] { background:#7A3A6A; color:#F6F5AE; --filtre-hover-color:#D470B8; }
-  .filtre[data-cat-auto="6"] { background:#5C3010; color:#F6F5AE; --filtre-hover-color:#E8742A; }
-  .filtre[data-cat-auto="7"] { background:#1A2A5C; color:#F6F5AE; --filtre-hover-color:#3A5CBF; }
-  .filtre[data-cat-auto="8"] { background:#4A4A8A; color:#F6F5AE; --filtre-hover-color:#9A9AE8; }
-  .filtre[data-cat-auto="9"] { background:#2A4A1A; color:#F6F5AE; --filtre-hover-color:#6BBF3A; }
+  .filtre[data-cat-auto="0"] { background:#4A2060; color:#F6F5AE; --filtre-viu:#AB74DF; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="1"] { background:#1A4A5C; color:#F6F5AE; --filtre-viu:#3BB8D9; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="2"] { background:#5C2A40; color:#F6F5AE; --filtre-viu:#D8698B; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="3"] { background:#2A4A20; color:#F6F5AE; --filtre-viu:#7AC43A; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="4"] { background:#1A3A4A; color:#F6F5AE; --filtre-viu:#3B9E8C; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="5"] { background:#7A3A6A; color:#F6F5AE; --filtre-viu:#D470B8; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="6"] { background:#5C3010; color:#F6F5AE; --filtre-viu:#E8742A; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="7"] { background:#1A2A5C; color:#F6F5AE; --filtre-viu:#3A5CBF; --filtre-viu-lletra:#F6F5AE; }
+  .filtre[data-cat-auto="8"] { background:#4A4A8A; color:#F6F5AE; --filtre-viu:#9A9AE8; --filtre-viu-lletra:#0B2027; }
+  .filtre[data-cat-auto="9"] { background:#2A4A1A; color:#F6F5AE; --filtre-viu:#6BBF3A; --filtre-viu-lletra:#0B2027; }
   /* Hover i actiu — han d'anar DESPRÉS dels data-cat per guanyar en especificitat */
   .filtre:not(.actiu):hover {
-    border-color: var(--filtre-hover-color, #F5F749);
+    border-color: var(--filtre-viu, #F5F749);
   }
   /* Actiu genèric — per a "totes" i qualsevol filtre sense color propi */
   .filtre.actiu {
     background: var(--accent) !important; border-color: var(--accent) !important;
     color: var(--bg) !important; font-weight: 500;
   }
-  /* Actiu per a categories amb color propi — fixes i noves automàtiques */
+  /* Actiu per a categories amb color propi — fixes i noves automàtiques.
+     La lletra la diu la categoria: heretar-la de l'app (color: inherit) hi deixava
+     sempre el groc pàl·lid, també damunt dels fons clars, on no s'hi veia. */
   .filtre[data-cat]:not([data-cat="totes"]).actiu,
   .filtre[data-cat-auto].actiu {
-    background: var(--filtre-hover-color) !important;
+    background: var(--filtre-viu) !important;
     border-color: rgba(255,255,255,0.7) !important;
-    color: inherit !important;
+    color: var(--filtre-viu-lletra, #0B2027) !important;
     font-weight: 500;
   }
 
@@ -1448,23 +1460,53 @@
   }
   .setmana-avui:hover { color: var(--text-dim); }
 
-  /* Dies de la setmana, plegats i desplegats */
+  /* Dies de la setmana, plegats i desplegats.
+     El fons i la vora diuen «soc una pastilla»; abans la pastilla i el fons de
+     l'app eren tan a prop que el dia no es llegia com un objecte. El pas és curt
+     a posta: qui hi posa el pes de debò són les miniatures. */
   .dia-card {
-    background: var(--surface); border-radius: 12px; margin-bottom: 8px;
-    border: 1.5px solid transparent; overflow: hidden;
+    background: #16303a; border-radius: 12px; margin-bottom: 8px;
+    border: 1.5px solid #244b5b; overflow: hidden;
   }
-  .dia-card.obert { background: var(--surface2); border-color: rgba(245,247,73,0.25); }
+  /* El dia obert puja un graó més: si es quedava a --surface2 es confonia amb
+     la pastilla nova. Aquest és l'últim graó de l'escala, i per això la pastilla
+     de base no el pot ocupar. */
+  .dia-card.obert { background: #1d3b46; border-color: rgba(245,247,73,0.25); }
+  /* Dia sense plats: no té menys fons, té menys tinta */
+  .dia-card.buida .dia-nom { color: var(--text-muted); }
+  .dia-card.buida .dia-head i { color: #4d6b78; }
   .dia-head {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.8rem 1rem; cursor: pointer;
   }
+  .dia-nom-fila { display: flex; align-items: center; min-width: 0; }
   .dia-nom { font-size: 0.95rem; color: var(--text-dim); }
   .dia-card.obert .dia-nom { color: var(--accent); font-weight: 500; }
   .dia-head i { font-size: 16px; color: var(--text-muted); }
+  /* Avui. Va a part del nom del dia perquè el groc del nom ja vol dir «obert»:
+     si avui també fos groc, els dos senyals es confondrien. */
+  .avui-punt {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    margin-right: 8px; flex-shrink: 0;
+  }
   .dia-resum { font-size: 0.78rem; color: var(--text-dim); padding: 0 1rem 0.85rem; line-height: 1.6; }
   .dia-resum .apat-etiq { color: var(--text-muted); margin-right: 7px; }
   .dia-buit { color: var(--text-muted); }
   .dia-cos { padding: 0 0.75rem 0.6rem; }
+
+  /* La tira del dia plegat: una fila per àpat, rodones de 23 px.
+     Rodona i no quadrada a posta: aquí la miniatura és un senyal per al cop
+     d'ull, no una imatge per mirar. */
+  .dia-resum.tires { display: flex; flex-direction: column; gap: 8px; }
+  .resum-tira { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .resum-tira .apat-etiq { margin-right: 1px; }
+  .tira-mini {
+    width: 23px; height: 23px; border-radius: 50%; flex-shrink: 0;
+    object-fit: cover; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  /* Es talla a 4 per àpat: amb més, la pastilla es fa alta i perds la setmana */
+  .tira-mes { font-size: 0.68rem; color: var(--text-muted); margin-left: 2px; white-space: nowrap; }
 
   /* Capçalera de l'àpat: és la porta cap a la fitxa */
   .apat-head {
@@ -1487,6 +1529,16 @@
     background: rgba(11,32,39,0.55); border-radius: 8px;
     padding: 0.55rem 0.75rem; margin-bottom: 6px;
   }
+  /* Amb miniatura: 36 px, quadrada de cantonades toves. Més petita que la de la
+     fitxa d'àpat (50 px) a posta: aquí és una vista prèvia, no la pantalla on
+     treballes, i si fossin iguals el botó «Obrir» es quedaria sense promesa. */
+  .plat-fila.amb-mini { padding: 0.45rem 0.75rem 0.45rem 0.45rem; gap: 9px; }
+  .fila-mini {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    object-fit: cover; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .plat-fila.amb-mini .plat-nom { flex: 1; min-width: 0; }
   .plat-nom {
     font-size: 0.85rem; color: var(--text-dim);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1544,9 +1596,27 @@
   .plat-mini {
     width: 50px; height: 50px; border-radius: 10px; flex-shrink: 0;
     object-fit: cover; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
-  .plat-mini-buida { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
-  .plat-mini-buida i { font-size: 22px; }
+
+  /* ── El plat sense foto, igual a les tres mides ──
+     La inicial del nom sobre el color de la seva categoria: la mateixa paleta
+     dels filtres del receptari (CAT_COLORS), que la posa badgeStyle() des del JS.
+     Abans hi havia un quadre gris amb una icona de càmera, i el que feia era
+     assenyalar el forat en comptes de tapar-lo. */
+  .mini-lletra {
+    font-family: 'Syne', sans-serif; font-weight: 400; line-height: 1;
+    user-select: none;
+  }
+  .tira-mini.mini-lletra { font-size: 0.7rem; }
+  .fila-mini.mini-lletra { font-size: 1.05rem; }
+  .plat-mini.mini-lletra { font-size: 1.5rem; }
+  /* Recepta esborrada: no en desem la categoria, així que no li podem donar
+     color sense inventar-nos-el. Gris i apagada, que és el que és. */
+  .mini-esborrada {
+    background: rgba(11,32,39,0.7) !important; color: var(--text-muted) !important;
+    opacity: 0.6;
+  }
   .plat-cos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
   .plat-linia { display: flex; align-items: center; gap: 10px; }
   .plat-card .plat-nom { flex: 1; min-width: 0; font-size: 0.92rem; cursor: pointer; }
@@ -4588,7 +4658,7 @@ const CAT_COLORS = {
   'Barretes':             { bg:'#52050A', color:'#F6F5AE' },
   'Boletes energètiques': { bg:'#7A3018', color:'#F6F5AE' },
   'Cremes':               { bg:'#1E5E3A', color:'#F6F5AE' },
-  'Currys':               { bg:'#5C3A1E', color:'#F6F5AE' },
+  'Currys':               { bg:'#554C1B', color:'#F6F5AE' },
   'Untables':             { bg:'#FE7F2D', color:'#0B2027' },
   'Untables dolços':      { bg:'#6B4A8A', color:'#F6F5AE' },
   'Altres':               { bg:'#2A3A4A', color:'#F6F5AE' },
@@ -4619,23 +4689,14 @@ function badgeStyle(cat) {
   return 'background:#2A3A4A;color:#F6F5AE';
 }
 
-function icona(cat) {
-  const mapa = {
-    'Barretes': '🍫', 'Boletes energètiques': '⚡',
-    'Cremes': '🥣', 'Currys': '🍛', 'Untables': '🥕', 'Untables dolços': '🍯',
-    'Altres': '🫙',
-  };
-  return mapa[cat] || '🍽️';
-}
+// (Aquí hi havia icona(), un emoji per categoria per als filtres del receptari.
+//  Quan vam decidir deixar els filtres només amb el nom, l'emoji va desaparèixer
+//  de la pantalla però la funció es va quedar: construirFiltres() encara la
+//  cridava per omplir una variable que ningú llegia.)
 
-function hoverColor(cat) {
-  const mapa = {
-    'Barretes': '#8B0010', 'Boletes energètiques': '#A85A3A',
-    'Cremes': '#52C49A', 'Currys': '#C97D4A', 'Untables': '#FFD580', 'Untables dolços': '#D4C8E2',
-    'Altres': '#7A9AB0',
-  };
-  return mapa[cat] || '#F5F749';
-}
+// (Aquí hi havia hoverColor(), que repetia aquests mateixos colors i no la cridava
+//  ningú: els colors encesos els diu el CSS, amb --filtre-viu. Tenir-los en dos
+//  llocs només servia perquè un dels dos es quedés endarrerit, que és el que passava.)
 
 // La vista del receptari es recorda en aquest dispositiu: el mòbil i
 // l'ordinador poden obrir-se cadascun com es va deixar. De sèrie, targetes.
@@ -4771,7 +4832,6 @@ function construirFiltres() {
   Object.keys(catAutoIdx).forEach(k => delete catAutoIdx[k]);
   cont.innerHTML = cats.map(cat => {
     const label = cat === 'totes' ? 'Totes' : cat;
-    const ico   = cat === 'totes' ? '📋' : icona(cat);
     const actiu = cat === catActiva;
     let autoAttr = '';
     if (!CATS_FIXES.has(cat)) {
@@ -7942,6 +8002,53 @@ function nomDePlat(p) {
 }
 function receptaEsborrada(p) { return !receptaDePlat(p); }
 
+// ── La cara visual d'un plat ──
+// La mateixa peça a les tres mides: la tira del dia plegat (23 px), la fila del
+// dia desplegat (36 px) i la targeta de la fitxa d'àpat (50 px). Si el plat té
+// foto, la foto; si no, la inicial del nom sobre el color de la seva categoria.
+// Passa per aquí tothom: si un dia canvia el criteri, canvia en un sol lloc.
+function inicialPlat(nom) {
+  const lletra = (nom || '').trim().charAt(0);
+  return lletra ? lletra.toUpperCase() : '?';
+}
+function miniPlat(p, classe) {
+  const r    = receptaDePlat(p);
+  const nom  = nomDePlat(p);
+  const foto = r ? ((nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '')) : '';
+
+  if (foto) return `<img class="${classe}" src="${escHTML(foto)}" alt="">`;
+
+  // Recepta esborrada: en conservem el nom, però no la categoria. Donar-li un
+  // color seria inventar-nos de quina mena de plat era.
+  if (!r) {
+    return `<span class="${classe} mini-lletra mini-esborrada"
+                  aria-hidden="true">${escHTML(inicialPlat(nom))}</span>`;
+  }
+  return `<span class="${classe} mini-lletra" style="${badgeStyle(r['Categoria'] || '')}"
+                aria-hidden="true">${escHTML(inicialPlat(nom))}</span>`;
+}
+
+// La tira d'un àpat al dia plegat. Es talla a 4 i la resta es compta: amb més,
+// la pastilla creix i el cop d'ull setmanal, que és per a què serveix, es perd.
+const MINIS_PER_APAT = 4;
+function tiraMinis(etiqueta, plats) {
+  const visibles = plats.slice(0, MINIS_PER_APAT);
+  const resta    = plats.length - visibles.length;
+  return `<div class="resum-tira">
+      <span class="apat-etiq">${etiqueta}</span>
+      ${visibles.map(p => miniPlat(p, 'tira-mini')).join('')}
+      ${resta > 0 ? `<span class="tira-mes">+${resta}</span>` : ''}
+    </div>`;
+}
+
+// Avui només es marca si la setmana que estàs mirant és aquesta: si no, el punt
+// et diria «ets aquí» en una setmana on no hi ets.
+function esAvui(dia) {
+  const ara = new Date();
+  return isoData(dillunsDe(ara)) === isoData(setmanaActual)
+      && DIES_SETMANA[(ara.getDay() + 6) % 7] === dia;
+}
+
 // ── Càrrega ──
 // Cada petició sap de quina setmana és. Si mentre esperem la resposta se n'ha
 // triat una altra, la que arriba tard ja no serveix i es deixa caure: si no,
@@ -8015,29 +8122,39 @@ function pintarDia(dia) {
   const nomDia = dia.charAt(0).toUpperCase() + dia.slice(1);
   const dinar  = platsDe(dia, 'dinar');
   const sopar  = platsDe(dia, 'sopar');
+  const buit   = !dinar.length && !sopar.length;
 
-  // Plegat: el resum en dues línies, una per àpat
+  // El nom del dia, amb el punt d'avui al davant si toca
+  const capsalera = `<span class="dia-nom-fila">
+      ${esAvui(dia) ? '<span class="avui-punt" aria-hidden="true"></span>' : ''}
+      <span class="dia-nom">${nomDia}</span>
+    </span>`;
+
+  // Plegat: una tira de miniatures per àpat. Els noms dels plats no hi caben i
+  // tampoc són el que necessites d'un cop d'ull setmanal: el que vols saber és
+  // si el dia està pensat i quant hi ha. Els noms tornen en obrir el dia.
   if (diaObert !== dia) {
-    const resum = (!dinar.length && !sopar.length)
-      ? '<span class="dia-buit">Sense plats</span>'
-      : [['Dinar', dinar], ['Sopar', sopar]]
-          .filter(([, plats]) => plats.length)
-          .map(([etiqueta, plats]) =>
-            `<span class="apat-etiq">${etiqueta}</span>${escHTML(plats.map(nomDePlat).join(', '))}`)
-          .join('<br>');
-    return `<div class="dia-card">
+    const resum = buit
+      ? '<div class="dia-resum"><span class="dia-buit">Sense plats</span></div>'
+      : `<div class="dia-resum tires">${
+          [['Dinar', dinar], ['Sopar', sopar]]
+            .filter(([, plats]) => plats.length)
+            .map(([etiqueta, plats]) => tiraMinis(etiqueta, plats))
+            .join('')
+        }</div>`;
+    return `<div class="dia-card${buit ? ' buida' : ''}">
       <div class="dia-head" onclick="obrirDia('${dia}')">
-        <span class="dia-nom">${nomDia}</span>
+        ${capsalera}
         <i class="ti ti-chevron-down" aria-hidden="true"></i>
       </div>
-      <div class="dia-resum">${resum}</div>
+      ${resum}
     </div>`;
   }
 
   // Desplegat: els dos àpats, amb la seva porta cap a la fitxa
   return `<div class="dia-card obert">
     <div class="dia-head" onclick="obrirDia(null)">
-      <span class="dia-nom">${nomDia}</span>
+      ${capsalera}
       <i class="ti ti-chevron-up" aria-hidden="true"></i>
     </div>
     <div class="dia-cos">
@@ -8050,7 +8167,8 @@ function pintarDia(dia) {
 function blocApat(dia, apat, plats) {
   const files = plats.map(p => {
     const fora = receptaEsborrada(p);
-    return `<div class="plat-fila">
+    return `<div class="plat-fila amb-mini">
+      ${miniPlat(p, 'fila-mini')}
       <span class="plat-nom${fora ? ' esborrada' : ''}">${escHTML(nomDePlat(p))}${fora ? ' · recepta esborrada' : ''}</span>
       <span class="plat-racions">${p.racions || '?'} rac.</span>
     </div>`;
@@ -8115,11 +8233,7 @@ function targetaPlat(p) {
   const fora = !r;
   const nom  = nomDePlat(p);
   const cat  = r ? (r['Categoria'] || '') : '';
-  const foto = r ? ((nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '')) : '';
-
-  const mini = foto
-    ? `<img class="plat-mini" src="${escHTML(foto)}" alt="">`
-    : `<div class="plat-mini plat-mini-buida"><i class="ti ti-photo" aria-hidden="true"></i></div>`;
+  const mini = miniPlat(p, 'plat-mini');
 
   // En mode moure, el control de racions deixa pas a les fletxes
   const controls = platMovent === p.id ? controlsMoureHTML(p.id) : `<div class="plat-rac">
