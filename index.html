@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 138 · 24-08-2026                                     ║
+  ║  VERSIÓ 142 · 24-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -165,9 +165,16 @@
     transform: translateY(-50%);
     color: var(--text-muted); pointer-events: none;
   }
-  .cerca-wrap input {
+  /* IMPORTANT: el [type=text] no és decoració. Més avall hi ha una regla general
+     per a tots els camps de text (input[type=text], input[type=number]…) que té la
+     mateixa força que .cerca-wrap input i, per ser posterior, se la menjava sencera:
+     els cercadors es veien com un camp de configuració qualsevol. Amb el [type=text]
+     aquesta regla pesa més i mana. Si algun dia s'hi posa un cercador que no sigui
+     de tipus text, se li haurà d'afegir el selector aquí. */
+  .cerca-wrap input[type=text] {
     width: 100%;
-    padding: 0.75rem 1rem;
+    /* El coixí esquerre deixa lloc a la lupa que posa el propi .cerca-wrap */
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
     border: 1.5px solid var(--border);
     border-radius: 12px;
     font-family: 'Poppins', sans-serif;
@@ -176,9 +183,13 @@
     color: var(--text);
     transition: border-color 0.2s;
   }
-  .cerca-wrap input:focus { outline: none; border-color: var(--accent); }
-  .cerca-wrap input::placeholder { color: var(--text-muted); }
-  #cerca, #cerca-idees { padding-left: 2.75rem; padding-right: 3rem; }
+  .cerca-wrap input[type=text]:focus { outline: none; border-color: var(--accent); }
+  .cerca-wrap input[type=text]::placeholder { color: var(--text-muted); }
+  /* El coixí dret és només per als que tenen botó d'esborrar la cerca */
+  #cerca, #cerca-idees { padding-right: 3rem; }
+  /* Aquest no seu sobre el fons de la pàgina sinó dins una caixa que ja és --surface:
+     amb el fons dels altres es fondria amb el seu propi requadre */
+  #plat-cerca { background: var(--surface2); }
   .btn-clear-cerca {
     position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
     background: none; border: none; cursor: pointer;
@@ -1273,15 +1284,20 @@
     display: flex; align-items: center; gap: 10px;
     flex-wrap: wrap; margin-bottom: 1.25rem;
   }
-  .btn-cuinar-detall-meta {
-    margin-left: auto;
+  .btn-cuinar-detall-meta,
+  .btn-enviar-menus-meta {
     background: none; border: none; cursor: pointer;
     color: var(--text-muted); padding: 4px;
     border-radius: 6px; transition: color 0.2s, background 0.2s;
     display: flex; align-items: center; justify-content: center;
   }
+  /* El primer dels dos porta el marge automàtic: empeny la parella cap al final
+     de la fila d'etiquetes i els deixa junts */
+  .btn-cuinar-detall-meta { margin-left: auto; }
   .btn-cuinar-detall-meta svg { width: 20px; height: 20px; display: block; }
-  .btn-cuinar-detall-meta:hover { color: var(--accent); background: rgba(245,247,73,0.08); }
+  .btn-enviar-menus-meta i { font-size: 20px; display: block; }
+  .btn-cuinar-detall-meta:hover,
+  .btn-enviar-menus-meta:hover { color: var(--accent); background: rgba(245,247,73,0.08); }
   .btn-cuinar-detall-meta.actiu { background: var(--accent); color: var(--bg); }
   .detall-seccio { margin-bottom: 1.25rem; }
   .detall-seccio-label {
@@ -1693,6 +1709,60 @@
     flex: 1; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+
+  /* ── Enviar una recepta als menús, des de la seva fitxa ──
+     És el gest invers del cercador d'«Afegir plat» i comparteix la seva caixa a
+     posta. Allà el destí ja se sap i tries la recepta; aquí la recepta ja se sap
+     i el que falta són tres dades: setmana, dia i àpat. Per això no pregunta per
+     passos: ensenya la setmana sencera i es resol amb un sol toc. */
+  .apat-picker-sub {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 0.78rem; color: var(--text-muted);
+    margin: -0.5rem 0 0.9rem;
+  }
+  .apat-picker-sub span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .apat-carregant { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-bottom: 0.6rem; }
+  /* Mentre no hi són tots els plats no es pot triar: el número d'ordre del plat
+     nou surt de comptar els que ja hi ha, i comptar-los a mitges els desendreça */
+  .apat-graella.esperant { opacity: 0.45; pointer-events: none; }
+
+  .apat-graella { display: grid; grid-template-columns: 4.6rem 1fr 1fr; gap: 6px; }
+  .apat-cap-col {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); text-align: center; padding-bottom: 2px;
+  }
+  .apat-dia-etiq {
+    display: flex; align-items: center; font-size: 0.8rem; color: var(--text-dim);
+    padding-right: 4px; min-width: 0;
+  }
+  .apat-casella {
+    background: rgba(11,32,39,0.55);
+    border: 1px solid #244b5b; border-radius: 8px;
+    min-height: 42px; padding: 5px 6px 5px 7px; cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    display: flex; align-items: center; justify-content: space-between; gap: 5px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .apat-casella:hover { border-color: var(--accent); background: rgba(245,247,73,0.06); }
+  .apat-casella:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Casella buida: el que canvia és la ratlla, no el «+». El «+» hi és a totes
+     catorze i sempre al mateix lloc, perquè si només sortís a les buides voldria
+     dir «aquí es pot afegir» i deixaria les plenes fora del gest. */
+  .apat-casella.buida { border-style: dashed; border-color: var(--border-dim); }
+  /* Aquesta recepta ja és en aquesta casella. No ho impedeix —a vegades es
+     repeteix a posta— però que no passi per badada. */
+  .apat-casella.ja-hi-es { border-color: var(--accent); }
+  .apat-casella-tira { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
+  /* La creueta de sumar va dins un requadre propi: solta al costat de les
+     miniatures es llegia com una miniatura més, i a sobre es confonia amb el
+     «+N» dels plats que no hi caben. */
+  .apat-casella-mes {
+    width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+    border: 1px solid var(--border-dim);
+    display: flex; align-items: center; justify-content: center;
+    color: #4d6b78; font-size: 13px;
+  }
+  .apat-casella:hover .apat-casella-mes { color: var(--accent); border-color: rgba(245,247,73,0.4); }
 
   /* Missatge provisional de la llista de la compra */
   .compra-aviat {
@@ -2730,6 +2800,24 @@ function tancarNovetats() {
         oninput="pintarResultatsPlat(this.value)">
     </div>
     <div class="plat-picker-llista" id="plat-resultats"></div>
+  </div>
+</div>
+
+<!-- Enviar una recepta als menús: la setmana sencera, per triar la casella d'un toc.
+     Reaprofita la caixa del cercador de plats: és el mateix gest al revés. -->
+<div class="plat-picker" id="apat-picker" onclick="if (event.target === this) tancarSelectorApat()">
+  <div class="plat-picker-caixa">
+    <div class="plat-picker-cap">
+      <span class="plat-picker-titol">A quin àpat?</span>
+      <button class="avis-reordenar-x" onclick="tancarSelectorApat()" aria-label="Tancar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="apat-picker-sub" id="apat-picker-sub"></div>
+    <div class="setmana-nav">
+      <button onclick="setmanaSelectorApat(-1)" aria-label="Setmana anterior"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+      <span class="setmana-titol" id="apat-picker-setmana"></span>
+      <button onclick="setmanaSelectorApat(1)" aria-label="Setmana següent"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+    </div>
+    <div id="apat-picker-cos"></div>
   </div>
 </div>
 
@@ -4531,11 +4619,17 @@ function obrirDetall(nom, desDePopstate) {
             <button class="btn-cuinar-detall-meta js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
             </button>
+            <button class="btn-enviar-menus-meta" onclick="obrirSelectorApat('${nomEsc}')" title="Enviar als menús" aria-label="Enviar als menús">
+              <i class="ti ti-calendar-plus" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
         <div class="detall-title-actions">
           <button class="js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
+          </button>
+          <button onclick="obrirSelectorApat('${nomEsc}')" title="Enviar als menús" aria-label="Enviar als menús">
+            <i class="ti ti-calendar-plus" aria-hidden="true"></i>
           </button>
           <button onclick="detallEditar('${nomId}','${nomEsc}')" title="Editar recepta" aria-label="Editar recepta">
             <i class="ti ti-edit" aria-hidden="true"></i>
@@ -6950,23 +7044,45 @@ function nomAmbDistintiu(nom) {
   return candidat;
 }
 
+// Les idees es comporten igual: també s'identifiquen pel títol, i dos títols
+// iguals fan que les targetes i les edicions es confonguin entre elles.
+function existeixIdea(titol, excloure) {
+  const t = nomNormalitzat(titol);
+  if (!t) return false;
+  const exc = excloure !== undefined ? nomNormalitzat(excloure) : null;
+  return idees.some(it => {
+    const tn = nomNormalitzat(it['Títol']);
+    return tn === t && tn !== exc;
+  });
+}
+
+function titolAmbDistintiu(titol) {
+  const base = titol.replace(/\s*\(\d+\)\s*$/, '').trim() || titol.trim();
+  let i = 2;
+  let candidat = `${base} (${i})`;
+  while (existeixIdea(candidat)) { i++; candidat = `${base} (${i})`; }
+  return candidat;
+}
+
 // Diàleg de duplicat. Retorna una promesa amb la decisió de l'usuària:
-// 'distintiu' (desar amb sufix), 'canviar' (tornar al camp del nom) o 'cancelar'
-function mostrarDialegDuplicat(nom) {
+// 'distintiu' (desar amb sufix), 'canviar' (tornar al camp del nom) o 'cancelar'.
+// El mateix diàleg serveix per a receptes i per a idees: només canvien les paraules.
+function mostrarDialegDuplicat(nom, tipus = 'recepta') {
   return new Promise(resolve => {
     document.getElementById('dialegDuplicat')?.remove(); // per si en quedava un
-    const suggerit = nomAmbDistintiu(nom);
+    const esIdea   = tipus === 'idea';
+    const suggerit = esIdea ? titolAmbDistintiu(nom) : nomAmbDistintiu(nom);
     const overlay = document.createElement('div');
     overlay.className = 'novetats-overlay visible';
     overlay.id = 'dialegDuplicat';
     overlay.innerHTML = `
       <div class="novetats-modal">
-        <div class="novetats-badge">RECEPTA DUPLICADA</div>
-        <h2 class="novetats-titol">Ja tens una recepta amb aquest nom</h2>
-        <p class="novetats-versio" style="margin-bottom:16px">«${escHTML(nom)}» ja és al teu receptari. Què vols fer?</p>
+        <div class="novetats-badge">${esIdea ? 'IDEA DUPLICADA' : 'RECEPTA DUPLICADA'}</div>
+        <h2 class="novetats-titol">${esIdea ? 'Ja tens una idea amb aquest títol' : 'Ja tens una recepta amb aquest nom'}</h2>
+        <p class="novetats-versio" style="margin-bottom:16px">«${escHTML(nom)}» ja és ${esIdea ? 'a les teves idees' : 'al teu receptari'}. Què vols fer?</p>
         <div style="display:flex;flex-direction:column;gap:9px">
           <button class="dup-btn dup-btn-primari" data-accio="distintiu">Desar-la com a «${escHTML(suggerit)}»</button>
-          <button class="dup-btn" data-accio="canviar">Canviar-li jo el nom</button>
+          <button class="dup-btn" data-accio="canviar">Canviar-li jo ${esIdea ? 'el títol' : 'el nom'}</button>
           <button class="dup-btn dup-btn-cancel" data-accio="cancelar">Cancel·lar</button>
         </div>
       </div>`;
@@ -7750,8 +7866,18 @@ function tancarFormIdea() {
 }
 
 async function desarIdea() {
-  const titol = document.getElementById('idea-titol').value.trim();
+  const titolCamp = document.getElementById('idea-titol');
+  let titol = titolCamp.value.trim();
   if (!titol) { mostrarToast('⚠️ Posa un títol a la idea'); return; }
+
+  // Comprovació de duplicats abans de començar, igual que a les receptes
+  if (existeixIdea(titol)) {
+    const decisio = await mostrarDialegDuplicat(titol, 'idea');
+    if (decisio === 'cancelar') return;
+    if (decisio === 'canviar') { titolCamp.focus(); titolCamp.select?.(); return; }
+    titol = titolAmbDistintiu(titol);   // 'distintiu' → seguim amb el títol nou
+    titolCamp.value = titol;            // per si el desat falla i el formulari es queda obert
+  }
 
   const etiquetes = normalitzarEtiquetes(document.getElementById('idea-etiquetes').value);
   const comentari = document.getElementById('idea-comentari').value.trim();
@@ -7794,15 +7920,26 @@ function tancarEdicioIdea(titolId) {
 }
 
 async function desarEdicioIdea(titolId, titolOriginal) {
-  const btn = document.getElementById('idea-edit-btn-' + titolId);
+  const btn       = document.getElementById('idea-edit-btn-' + titolId);
+  const titolCamp = document.getElementById('idea-edit-titol-' + titolId);
+  let   titol     = titolCamp.value.trim();
+
+  if (!titol) { mostrarToast('⚠️ El títol no pot quedar buit'); return; }
+
+  // Comprovació de duplicats abans de començar; el títol d'ara mateix no compta
+  if (existeixIdea(titol, titolOriginal)) {
+    const decisio = await mostrarDialegDuplicat(titol, 'idea');
+    if (decisio === 'cancelar') return;
+    if (decisio === 'canviar') { titolCamp.focus(); titolCamp.select?.(); return; }
+    titol = titolAmbDistintiu(titol);   // 'distintiu' → seguim amb el títol nou
+    titolCamp.value = titol;            // per si el desat falla i el formulari es queda obert
+  }
+
   btn.disabled = true; btn.textContent = 'Desant…';
 
-  const titol     = document.getElementById('idea-edit-titol-' + titolId).value.trim();
   const etiquetes = normalitzarEtiquetes(document.getElementById('idea-edit-etiquetes-' + titolId).value);
   const comentari = document.getElementById('idea-edit-comentari-' + titolId).value.trim();
   const recepta   = document.getElementById('idea-recepta-valor-' + titolId).value.trim();
-
-  if (!titol) { mostrarToast('⚠️ El títol no pot quedar buit'); btn.disabled = false; btn.textContent = 'Desar canvis'; return; }
 
   // Si el desat falla, el formulari es queda obert i amb el que hi havia escrit
   if (!await dbActualitzarIdea(idIdea(titolOriginal), { titol, etiquetes, comentari, recepta })) {
@@ -8046,16 +8183,27 @@ function miniPlat(p, classe) {
   return miniRecepta(receptaDePlat(p), nomDePlat(p), classe);
 }
 
+// Una tira de miniatures amb els que no hi caben comptats al final. El màxim el
+// posa qui la demana, perquè depèn de l'amplada que tingui: aquí es decideix una
+// sola vegada com es construeix, no quantes n'hi caben.
+function minisTallades(plats, max) {
+  const visibles = plats.slice(0, max);
+  const resta    = plats.length - visibles.length;
+  return visibles.map(p => miniPlat(p, 'tira-mini')).join('')
+       + (resta > 0 ? `<span class="tira-mes">+${resta}</span>` : '');
+}
+
 // La tira d'un àpat al dia plegat. Es talla a 4 i la resta es compta: amb més,
 // la pastilla creix i el cop d'ull setmanal, que és per a què serveix, es perd.
 const MINIS_PER_APAT = 4;
+// A la casella del selector d'àpat n'hi caben menys: fa la meitat d'ampla que
+// una fila del dia plegat i, amb el «+» a la dreta, a la quarta ja no hi cabria.
+const MINIS_PER_CASELLA = 2;
+
 function tiraMinis(etiqueta, plats) {
-  const visibles = plats.slice(0, MINIS_PER_APAT);
-  const resta    = plats.length - visibles.length;
   return `<div class="resum-tira">
       <span class="apat-etiq">${etiqueta}</span>
-      ${visibles.map(p => miniPlat(p, 'tira-mini')).join('')}
-      ${resta > 0 ? `<span class="tira-mes">+${resta}</span>` : ''}
+      ${minisTallades(plats, MINIS_PER_APAT)}
     </div>`;
 }
 
@@ -8510,10 +8658,14 @@ function pintarResultatsPlat(text) {
     : '<div class="autocomplete-buit">Cap recepta coincideix</div>';
 }
 
-async function afegirPlat(receptaId) {
-  if (!destiPlatNou) return;
+// L'única porta per afegir un plat a un menú. Hi entren els dos camins: el
+// cercador de «Afegir plat» (el destí ja se sap) i el selector d'àpat des d'una
+// recepta (la recepta ja se sap). Les opcions són per al segon i no canvien res
+// per al primer.
+async function afegirPlat(receptaId, opcions = {}) {
+  if (!destiPlatNou) return false;
   const r = receptes.find(x => x['_id'] === receptaId);
-  if (!r) return;
+  if (!r) return false;
   const { dia, apat } = destiPlatNou;
 
   const fila = {
@@ -8522,18 +8674,129 @@ async function afegirPlat(receptaId) {
     apat:        apat,
     recepta_id:  receptaId,
     nom_recepta: r['Nom de la recepta'] || '',
-    racions:     parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
+    racions:     opcions.racions || parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
     ordre:       platsDe(dia, apat).length,
   };
 
   const desat = await dbAfegirPlat(fila);
-  if (!desat) return;
+  if (!desat) return false;
   menusSetmana.push(desat);
   tancarCercadorPlat();
 
   if (apatObert && apatObert.dia === dia && apatObert.apat === apat) pintarApat();
   else pintarSetmana();
-  mostrarToast('✅ Plat afegit');
+  mostrarToast(opcions.missatge || '✅ Plat afegit');
+  return true;
+}
+
+// ══════════════════════════════════════════════
+// ENVIAR UNA RECEPTA ALS MENÚS
+// El gest invers del cercador de plats. Des de la fitxa d'una recepta falten
+// tres dades —setmana, dia i àpat— i preguntar-les per passos seria més feina
+// que anar a Planificació a mà. Per això ensenyem la setmana sencera i es
+// resol amb un sol toc.
+// ══════════════════════════════════════════════
+
+let receptaAEnviar = null;   // { id, nom, racions } mentre el selector és obert
+
+async function obrirSelectorApat(nom) {
+  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+  if (!r) return;
+
+  // Des del receptari no hi ha context de setmana: agafem la que hi hagi oberta
+  // a Planificació, que és l'única idea que té l'app de «la setmana que estic
+  // pensant». Però si ha quedat enrere, tornem a la d'ara: ningú planifica al passat.
+  if (isoData(setmanaActual) < isoData(dillunsDe(new Date()))) {
+    setmanaActual = dillunsDe(new Date());
+    menusSetmana  = [];
+    esperantMenus = true;
+  }
+
+  // Les racions que hi van són les que estàs veient, no les que té la recepta
+  // de sèrie: si l'has escalada a 6 perquè vénen convidats, va amb 6.
+  receptaAEnviar = {
+    id:      r['_id'],
+    nom:     nom,
+    racions: getRacionsActual(nom) || parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
+  };
+
+  document.getElementById('apat-picker').classList.add('visible');
+  pintarSelectorApat();
+  if (esperantMenus) { await carregarMenus(); pintarSelectorApat(); }
+}
+
+function tancarSelectorApat() {
+  document.getElementById('apat-picker').classList.remove('visible');
+  receptaAEnviar = null;
+}
+
+// Canviar de setmana des d'aquí mou també la pantalla de Planificació, a posta:
+// l'app té una sola idea de quina setmana s'està pensant, i han d'anar juntes.
+async function setmanaSelectorApat(passos) {
+  const feina = canviarSetmana(passos);   // ja deixa la setmana nova posada
+  pintarSelectorApat();                   // ...i així el títol canvia de seguida
+  await feina;
+  pintarSelectorApat();
+}
+
+function pintarSelectorApat() {
+  if (!receptaAEnviar) return;
+
+  const sub = document.getElementById('apat-picker-sub');
+  if (sub) {
+    const r = receptes.find(x => x['_id'] === receptaAEnviar.id);
+    const rac = receptaAEnviar.racions;
+    sub.innerHTML = `${miniRecepta(r, receptaAEnviar.nom, 'tira-mini')}
+      <span>${escHTML(receptaAEnviar.nom)} · ${rac} ${rac === 1 ? 'ració' : 'racions'}</span>`;
+  }
+
+  const titol = document.getElementById('apat-picker-setmana');
+  if (titol) titol.textContent = titolSetmana(setmanaActual);
+
+  const cos = document.getElementById('apat-picker-cos');
+  if (!cos) return;
+  cos.innerHTML = `
+    ${esperantMenus ? '<div class="apat-carregant">Carregant la setmana…</div>' : ''}
+    <div class="apat-graella${esperantMenus ? ' esperant' : ''}">
+      <div></div>
+      <div class="apat-cap-col">Dinar</div>
+      <div class="apat-cap-col">Sopar</div>
+      ${DIES_SETMANA.map(filaSelectorApat).join('')}
+    </div>`;
+}
+
+function filaSelectorApat(dia) {
+  const nomDia = dia.charAt(0).toUpperCase() + dia.slice(1);
+  return `<div class="apat-dia-etiq">
+      ${esAvui(dia) ? '<span class="avui-punt" aria-hidden="true"></span>' : ''}
+      <span>${nomDia}</span>
+    </div>
+    ${casellaSelectorApat(dia, 'dinar', nomDia)}
+    ${casellaSelectorApat(dia, 'sopar', nomDia)}`;
+}
+
+function casellaSelectorApat(dia, apat, nomDia) {
+  const plats  = platsDe(dia, apat);
+  const jaHiEs = plats.some(p => p.recepta_id === receptaAEnviar.id);
+  return `<button class="apat-casella${plats.length ? '' : ' buida'}${jaHiEs ? ' ja-hi-es' : ''}"
+      onclick="enviarAApat('${dia}','${apat}')"
+      aria-label="Enviar a ${nomDia}, ${apat}${jaHiEs ? ' (ja hi és)' : ''}">
+      <span class="apat-casella-tira">${minisTallades(plats, MINIS_PER_CASELLA)}</span>
+      <span class="apat-casella-mes" aria-hidden="true"><i class="ti ti-plus"></i></span>
+    </button>`;
+}
+
+async function enviarAApat(dia, apat) {
+  if (!receptaAEnviar) return;
+  const nomDia = dia.charAt(0).toUpperCase() + dia.slice(1);
+
+  destiPlatNou = { dia, apat };
+  const fet = await afegirPlat(receptaAEnviar.id, {
+    racions:  receptaAEnviar.racions,
+    missatge: `✅ Afegit a ${nomDia.toLowerCase()} · ${apat}`,
+  });
+  destiPlatNou = null;
+  if (fet) tancarSelectorApat();
 }
 </script>
 
