@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 137 · 24-08-2026                                     ║
+  ║  VERSIÓ 138 · 24-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 127 (index-receptes-Supabase-127.html). La 137 toca ARA i està
-  pendent: es fa quan la Judy hagi revisat els canvis d'aquesta versió.
+  l'última és la 137 (index-receptes-Supabase-137.html) i la següent, la 147.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 1, a la versió 125; la següent, la 2, toca a la versió 150.
 
@@ -1679,7 +1678,21 @@
   }
   .plat-picker-cap { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
   .plat-picker-titol { font-size: 0.95rem; font-weight: 500; color: var(--text); }
-  .plat-picker-llista { max-height: 55vh; overflow-y: auto; margin-top: 0.75rem; }
+  /* Amb les miniatures cada fila és més alta, així que la llista s'allarga per
+     compensar-ho i que no se'n vegin menys que abans. */
+  .plat-picker-llista { max-height: 65vh; overflow-y: auto; margin-top: 0.75rem; }
+  /* L'opció amb miniatura de 36 px, la mateixa peça que les files del dia
+     desplegat. La classe base .autocomplete-item la comparteix amb
+     l'autocompletar de les Idees: per això el canvi va en un modificador i no
+     a la base, que si no el tocaríem sense voler. */
+  .autocomplete-item.amb-mini {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  }
+  .plat-opcio-nom {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   /* Missatge provisional de la llista de la compra */
   .compra-aviat {
@@ -8011,9 +8024,10 @@ function inicialPlat(nom) {
   const lletra = (nom || '').trim().charAt(0);
   return lletra ? lletra.toUpperCase() : '?';
 }
-function miniPlat(p, classe) {
-  const r    = receptaDePlat(p);
-  const nom  = nomDePlat(p);
+// El cor: treballa amb una recepta. Serveix tant per als plats d'un menú com per
+// al cercador de «Afegir plat», que ensenya receptes que encara no són enlloc.
+// La recepta pot ser null: és el cas d'un plat la recepta del qual s'ha esborrat.
+function miniRecepta(r, nom, classe) {
   const foto = r ? ((nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '')) : '';
 
   if (foto) return `<img class="${classe}" src="${escHTML(foto)}" alt="">`;
@@ -8026,6 +8040,10 @@ function miniPlat(p, classe) {
   }
   return `<span class="${classe} mini-lletra" style="${badgeStyle(r['Categoria'] || '')}"
                 aria-hidden="true">${escHTML(inicialPlat(nom))}</span>`;
+}
+// I la porta d'entrada per als plats d'un menú, que és qui sap trobar-ne la recepta
+function miniPlat(p, classe) {
+  return miniRecepta(receptaDePlat(p), nomDePlat(p), classe);
 }
 
 // La tira d'un àpat al dia plegat. Es talla a 4 i la resta es compta: amb més,
@@ -8482,9 +8500,13 @@ function pintarResultatsPlat(text) {
     .slice(0, 40);
 
   cont.innerHTML = trobades.length
-    ? trobades.map(r =>
-        `<div class="autocomplete-item" onclick="afegirPlat('${r['_id']}')">${escHTML(r['Nom de la recepta'])}</div>`
-      ).join('')
+    ? trobades.map(r => {
+        const nom = r['Nom de la recepta'] || '';
+        return `<div class="autocomplete-item amb-mini" onclick="afegirPlat('${r['_id']}')">
+            ${miniRecepta(r, nom, 'fila-mini')}
+            <span class="plat-opcio-nom">${escHTML(nom)}</span>
+          </div>`;
+      }).join('')
     : '<div class="autocomplete-buit">Cap recepta coincideix</div>';
 }
 
