@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 145 · 24-08-2026                                     ║
+  ║  VERSIÓ 147 · 25-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 137 (index-receptes-Supabase-137.html) i la següent, la 147.
+  l'última és la 147 (index-receptes-Supabase-147.html) i la següent, la 157.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 1, a la versió 125; la següent, la 2, toca a la versió 150.
 
@@ -1520,7 +1520,7 @@
     object-fit: cover; background: var(--surface2);
     display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
-  /* Es talla a 4 per àpat: amb més, la pastilla es fa alta i perds la setmana */
+  /* Es talla a 6 per àpat: amb més, la pastilla es fa alta i perds la setmana */
   .tira-mes { font-size: 0.68rem; color: var(--text-muted); margin-left: 2px; white-space: nowrap; }
 
   /* Capçalera de l'àpat: és la porta cap a la fitxa */
@@ -4692,11 +4692,13 @@ function detallEditar(nomId, nom) {
 // UTILITATS COMPARTIDES
 // ══════════════════════════════════════════════
 
-function mostrarToast(msg) {
+// La durada es pot allargar per als avisos que diuen alguna cosa més que
+// «fet»: tres segons són justos per a una frase que has de llegir sencera.
+function mostrarToast(msg, ms = 3000) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('visible');
-  setTimeout(() => t.classList.remove('visible'), 3000);
+  setTimeout(() => t.classList.remove('visible'), ms);
 }
 
 // ══════════════════════════════════════════════
@@ -8160,7 +8162,6 @@ let diaObert       = null;   // 'dimecres' | null — només un dia desplegat a 
 let apatObert      = null;   // { dia, apat } quan som a la fitxa
 let menusCarregats = false;
 let carregantMenus = null;  // quina setmana estem demanant ara mateix (null = cap)
-let platMovent     = null;   // id del plat que s'està reordenant
 let destiPlatNou   = null;   // { dia, apat } cap on va el plat que s'està cercant
 let tempsPulsacio  = null;
 let arrossegant    = null;   // { id, card, germans, index, indexNou, ... } mentre es mou un plat
@@ -8255,9 +8256,10 @@ function minisTallades(plats, max) {
        + (resta > 0 ? `<span class="tira-mes">+${resta}</span>` : '');
 }
 
-// La tira d'un àpat al dia plegat. Es talla a 4 i la resta es compta: amb més,
-// la pastilla creix i el cop d'ull setmanal, que és per a què serveix, es perd.
-const MINIS_PER_APAT = 4;
+// La tira d'un àpat al dia plegat. Es talla a 6 i la resta es compta. Sis és el
+// que cap en una sola fila en un mòbil estret; si no hi cabessin, el `flex-wrap`
+// les baixaria i la pastilla creixeria, que és justament el que no volem.
+const MINIS_PER_APAT = 6;
 // A la casella del selector d'àpat n'hi caben menys: fa la meitat d'ampla que
 // una fila del dia plegat i, amb el «+» a la dreta, a la quarta ja no hi cabria.
 const MINIS_PER_CASELLA = 2;
@@ -8420,7 +8422,6 @@ function obrirDia(dia) {
 // ── La fitxa d'àpat ──
 function obrirApat(dia, apat) {
   apatObert  = { dia, apat };
-  platMovent = null;
   mostrarPanell('apat');
   history.pushState({ panell: 'apat', dia, apat }, '', '');
   pintarApat();
@@ -8463,8 +8464,7 @@ function targetaPlat(p) {
   const cat  = r ? (r['Categoria'] || '') : '';
   const mini = miniPlat(p, 'plat-mini');
 
-  // En mode moure, el control de racions deixa pas a les fletxes
-  const controls = platMovent === p.id ? controlsMoureHTML(p.id) : `<div class="plat-rac">
+  const controls = `<div class="plat-rac">
          <button onclick="canviarRacionsPlat('${p.id}',-1)" aria-label="Menys racions">−</button>
          <div class="plat-rac-camp">
            <button class="plat-rac-valor" onclick="escriureRacionsPlat('${p.id}')"
@@ -8474,7 +8474,7 @@ function targetaPlat(p) {
          <button onclick="canviarRacionsPlat('${p.id}',1)" aria-label="Més racions">+</button>
        </div>`;
 
-  return `<div class="plat-card${platMovent === p.id ? ' movent' : ''}"
+  return `<div class="plat-card"
       onpointerdown="iniciarPulsacio(event,'${p.id}')"
       onpointerup="finalitzarPulsacio()"
       onpointercancel="finalitzarPulsacio()"
@@ -8515,14 +8515,6 @@ function tancarAvisReordenar() {
 
 // ── Reordenar: mantenir premut i arrossegar ──
 
-function controlsMoureHTML(id) {
-  return `<div class="plat-rac">
-         <button onclick="mourePlat('${id}',-1)" aria-label="Moure amunt"><i class="ti ti-arrow-up" aria-hidden="true"></i></button>
-         <button onclick="mourePlat('${id}',1)" aria-label="Moure avall"><i class="ti ti-arrow-down" aria-hidden="true"></i></button>
-         <button onclick="acabarDeMoure()" aria-label="Fet"><i class="ti ti-check" aria-hidden="true"></i></button>
-       </div>`;
-}
-
 function iniciarPulsacio(ev, id) {
   if (ev.target.closest('button')) return;   // els controls de la targeta fan la seva
   const card = ev.currentTarget;
@@ -8558,10 +8550,7 @@ function finalitzarPulsacio() {
 // Entrem en mode moure tocant només aquesta targeta: si repintéssim tota la
 // pantalla, el dit es quedaria arrossegant un element que ja no existeix
 function entrarModeMoure(card, id, yInicial) {
-  platMovent = id;
   card.classList.add('movent', 'arrossegant');
-  const controls = card.querySelector('.plat-rac');
-  if (controls) controls.outerHTML = controlsMoureHTML(id);
 
   const germans = [...document.querySelectorAll('#panell-apat .plat-card')];
   const index   = germans.indexOf(card);
@@ -8608,19 +8597,9 @@ async function deixarAnarPlat() {
   document.removeEventListener('pointerup', deixarAnarPlat);
   document.removeEventListener('pointercancel', deixarAnarPlat);
   arrossegant = null;
-  platMovent  = null;
 
   if (indexNou === index) { pintarApat(); return; }   // tornada al lloc, sense canvis
   await recolocarPlat(id, indexNou);
-}
-
-// ── Reordenar amb les fletxes (xarxa per si l'arrossegar no va bé) ──
-async function mourePlat(id, direccio) {
-  if (!apatObert) return;
-  const plats = platsDe(apatObert.dia, apatObert.apat);
-  const desde = plats.findIndex(p => p.id === id);
-  if (desde < 0) return;
-  await recolocarPlat(id, desde + direccio);
 }
 
 // Porta un plat fins a una posició concreta de l'àpat i desa l'ordre nou
@@ -8635,8 +8614,6 @@ async function recolocarPlat(id, posicio) {
   pintarApat();
   for (const p of plats) await dbActualitzarPlat(p.id, { ordre: p.ordre });
 }
-
-function acabarDeMoure() { platMovent = null; pintarApat(); }
 
 // Mentre s'arrossega un plat, el dit no ha de fer scroll de la pàgina.
 // L'escoltador ha d'existir des del principi: si el posàvem just abans
@@ -8673,7 +8650,6 @@ async function treurePlat(id) {
   if (!confirm(`Segur que vols treure "${nomDePlat(p)}" d'aquest àpat?`)) return;
   if (!await dbEsborrarPlat(id)) return;
   menusSetmana = menusSetmana.filter(x => x.id !== id);
-  if (platMovent === id) platMovent = null;
   pintarApat();
   mostrarToast('✅ Plat tret');
 }
@@ -8705,9 +8681,16 @@ function pintarResultatsPlat(text) {
   const cont = document.getElementById('plat-resultats');
   if (!cont) return;
   const q = (text || '').trim().toLowerCase();
-  const trobades = receptes
-    .filter(r => !q || (r['Nom de la recepta'] || '').toLowerCase().includes(q))
-    .slice(0, 40);
+  const coincideixen = receptes
+    .filter(r => !q || (r['Nom de la recepta'] || '').toLowerCase().includes(q));
+
+  // Les que ja són en aquest àpat no s'ofereixen: per aquesta porta, un plat no
+  // hi va dues vegades. Si hi acaba anant és des de la fitxa de la recepta, i
+  // allà l'avís surt un cop afegit.
+  const jaHiSon = destiPlatNou
+    ? new Set(platsDe(destiPlatNou.dia, destiPlatNou.apat).map(p => p.recepta_id))
+    : new Set();
+  const trobades = coincideixen.filter(r => !jaHiSon.has(r['_id'])).slice(0, 40);
 
   cont.innerHTML = trobades.length
     ? trobades.map(r => {
@@ -8717,7 +8700,9 @@ function pintarResultatsPlat(text) {
             <span class="plat-opcio-nom">${escHTML(nom)}</span>
           </div>`;
       }).join('')
-    : '<div class="autocomplete-buit">Cap recepta coincideix</div>';
+    : coincideixen.length
+      ? '<div class="autocomplete-buit">Totes les que coincideixen ja són en aquest àpat</div>'
+      : '<div class="autocomplete-buit">Cap recepta coincideix</div>';
 }
 
 // L'única porta per afegir un plat a un menú. Hi entren els dos camins: el
@@ -8747,7 +8732,17 @@ async function afegirPlat(receptaId, opcions = {}) {
 
   if (apatObert && apatObert.dia === dia && apatObert.apat === apat) pintarApat();
   else pintarSetmana();
-  mostrarToast(opcions.missatge || '✅ Plat afegit');
+
+  // El repàs es fa un cop desat: no impedim res, però tampoc no deixem que la
+  // repetició passi per badada. Aquest avís es menja el de «fet», que ja no
+  // caldria: la frase mateixa diu que el plat s'ha afegit.
+  const repetit = platsDe(dia, apat).filter(p => p.recepta_id === receptaId).length;
+  if (repetit > 1) {
+    const vegades = { 2: 'dues', 3: 'tres', 4: 'quatre' }[repetit] || repetit;
+    mostrarToast(`Has afegit una recepta que ja era a aquest àpat. Ara hi és ${vegades} vegades`, 4500);
+  } else {
+    mostrarToast(opcions.missatge || '✅ Plat afegit');
+  }
   return true;
 }
 
