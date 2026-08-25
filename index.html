@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 147 · 25-08-2026                                     ║
+  ║  VERSIÓ 148 · 25-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -825,7 +825,10 @@
   input[type=text]:focus, input[type=number]:focus, input[type=url]:focus, select:focus {
     outline: none; border-color: var(--accent);
   }
-  input[type=text]::placeholder, input[type=number]::placeholder, input[type=url]::placeholder { color: var(--text-muted); }
+  /* El correu i la contrasenya hi són des del 25-08-2026: sense ells, el text de
+     dins d'aquells camps buits el pintava el navegador, i no ho fan tots igual. */
+  input[type=text]::placeholder, input[type=number]::placeholder, input[type=url]::placeholder,
+  input[type=email]::placeholder, input[type=password]::placeholder { color: var(--text-muted); }
   .select-wrap { position: relative; }
   .cat-nova-wrap { display: flex; flex-direction: column; gap: 6px; }
   .cat-nova-input {
@@ -1924,6 +1927,20 @@
     font-family: inherit;
   }
   .auth-camp:focus { outline: none; border-color: var(--accent); }
+  /* El camp que no quadra amb l'altre: el missatge de sota diu què passa, i la
+     vora diu a quin dels dos camps es refereix. */
+  .auth-camp.malament { border-color: #ff8f7a; }
+  /* L'ullet viu dins del camp, com la creueta d'esborrar del cercador. Només
+     surt quan et registres: en entrar, si t'equivoques ja t'ho diu el servidor. */
+  .auth-camp-wrap { position: relative; }
+  .auth-camp-wrap .auth-camp { padding-right: 42px; }
+  .auth-ullet {
+    position: absolute; top: 12px; right: 10px;
+    background: none; border: none; padding: 4px; line-height: 1;
+    color: var(--text-muted); cursor: pointer; font-size: 17px;
+  }
+  /* Groc mentre la contrasenya es veu: has de saber que l'estàs ensenyant */
+  .auth-ullet.actiu { color: var(--accent); }
   .auth-principal {
     width: 100%; padding: 13px; border-radius: 10px; border: none;
     background: var(--accent); color: var(--bg); cursor: pointer;
@@ -2219,9 +2236,22 @@
       <input class="auth-camp" type="email" id="auth-correu" placeholder="El teu correu"
              autocomplete="email" inputmode="email"
              onkeydown="if(event.key==='Enter')enviarAuth()">
-      <input class="auth-camp" type="password" id="auth-contrasenya" placeholder="Contrasenya"
-             autocomplete="current-password"
-             onkeydown="if(event.key==='Enter')enviarAuth()">
+      <div class="auth-camp-wrap">
+        <input class="auth-camp" type="password" id="auth-contrasenya" placeholder="Contrasenya"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')enviarAuth()">
+        <button class="auth-ullet" id="auth-ullet" style="display:none"
+                onclick="alternarUllet('auth-contrasenya', this)"
+                aria-label="Mostrar la contrasenya"><i class="ti ti-eye" aria-hidden="true"></i></button>
+      </div>
+      <div class="auth-camp-wrap" id="auth-repeteix-wrap" style="display:none">
+        <input class="auth-camp" type="password" id="auth-repeteix" placeholder="Repeteix la contrasenya"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter')enviarAuth()">
+        <button class="auth-ullet" id="auth-ullet-repeteix"
+                onclick="alternarUllet('auth-repeteix', this)"
+                aria-label="Mostrar la contrasenya"><i class="ti ti-eye" aria-hidden="true"></i></button>
+      </div>
       <button class="auth-principal" id="auth-btn" onclick="enviarAuth()">Entrar</button>
       <p class="auth-missatge" id="auth-missatge"></p>
       <button class="auth-secundari" id="auth-canvi" onclick="canviarModeAuth()">
@@ -3205,6 +3235,35 @@ function missatgeAuth(text, tipus) {
   el.className = 'auth-missatge' + (tipus ? ' ' + tipus : '');
 }
 
+// Ensenya o amaga la contrasenya d'un camp. Cada camp té el seu ullet: el que
+// vols comprovar és un dels dos, i destapar-los tots dos alhora et faria fer a
+// tu la comparació que ha de fer l'app.
+function alternarUllet(idCamp, boto) {
+  const camp = document.getElementById(idCamp);
+  if (!camp) return;
+  const mostrar = camp.type === 'password';
+  camp.type = mostrar ? 'text' : 'password';
+  boto.classList.toggle('actiu', mostrar);
+  boto.querySelector('i').className = mostrar ? 'ti ti-eye-off' : 'ti ti-eye';
+  boto.setAttribute('aria-label', mostrar ? 'Amagar la contrasenya' : 'Mostrar la contrasenya');
+}
+
+// Deixa els dos camps tapats altra vegada. Es crida en canviar de mode i quan
+// el compte es crea: una contrasenya no s'ha de quedar a la vista de ningú.
+function taparContrasenyes() {
+  ['auth-contrasenya', 'auth-repeteix'].forEach(id => {
+    const camp = document.getElementById(id);
+    if (camp) { camp.type = 'password'; camp.classList.remove('malament'); }
+  });
+  ['auth-ullet', 'auth-ullet-repeteix'].forEach(id => {
+    const boto = document.getElementById(id);
+    if (!boto) return;
+    boto.classList.remove('actiu');
+    boto.querySelector('i').className = 'ti ti-eye';
+    boto.setAttribute('aria-label', 'Mostrar la contrasenya');
+  });
+}
+
 function canviarModeAuth() {
   modeRegistre = !modeRegistre;
   document.getElementById('auth-titol').textContent =
@@ -3217,15 +3276,34 @@ function canviarModeAuth() {
     modeRegistre ? 'Ja tens compte? Entra-hi' : "Encara no tens compte? Registra't";
   document.getElementById('auth-contrasenya').setAttribute(
     'autocomplete', modeRegistre ? 'new-password' : 'current-password');
+
+  // El camp repetit i els ullets són cosa del registre. En entrar no hi pinten
+  // res: repetir-la no evitaria res, perquè el servidor ja et diu si falla.
+  document.getElementById('auth-repeteix-wrap').style.display = modeRegistre ? '' : 'none';
+  document.getElementById('auth-ullet').style.display = modeRegistre ? '' : 'none';
+  document.getElementById('auth-repeteix').value = '';
+  taparContrasenyes();
   missatgeAuth('');
 }
 
 async function enviarAuth() {
-  const correu     = document.getElementById('auth-correu').value.trim();
+  const correu      = document.getElementById('auth-correu').value.trim();
   const contrasenya = document.getElementById('auth-contrasenya').value;
+  const repeteix    = document.getElementById('auth-repeteix');
+  repeteix.classList.remove('malament');
+
   if (!correu || !contrasenya) { missatgeAuth('Cal el correu i la contrasenya.', 'error'); return; }
   if (modeRegistre && contrasenya.length < 6) {
     missatgeAuth('La contrasenya ha de tenir 6 caràcters com a mínim.', 'error'); return;
+  }
+  // Va després de la mida a posta: si la contrasenya és massa curta, queixar-se
+  // que no coincideixen la faria repetir la feina dues vegades. I va abans de
+  // trucar al servidor, perquè una errada aquí no ha de crear cap compte.
+  if (modeRegistre && repeteix.value !== contrasenya) {
+    missatgeAuth('Les dues contrasenyes no coincideixen', 'error');
+    repeteix.classList.add('malament');
+    repeteix.focus();
+    return;
   }
 
   const btn = document.getElementById('auth-btn');
@@ -3248,8 +3326,17 @@ async function enviarAuth() {
       else missatgeAuth(error.message, 'error');
       return;
     }
-    if (!data.session) { missatgeAuth('Compte creat! Ja hi pots entrar.', 'ok'); modeRegistre = false; canviarModeAuth(); return; }
+    if (!data.session) {
+      // Primer el canvi de mode i després el missatge: `canviarModeAuth` inverteix
+      // el mode i acaba netejant el requadre dels avisos, i si el posàvem abans
+      // se l'enduia. I com que inverteix, només s'ha de cridar si encara hi som.
+      if (modeRegistre) canviarModeAuth();
+      missatgeAuth('Compte creat! Ja hi pots entrar.', 'ok');
+      return;
+    }
     document.getElementById('auth-contrasenya').value = '';
+    repeteix.value = '';
+    taparContrasenyes();
     tancarConfigUrl();
     // La resta la fa onAuthStateChange
   } finally {
