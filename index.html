@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 148 · 25-08-2026                                     ║
+  ║  VERSIÓ 154 · 25-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -10,7 +10,7 @@
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
   l'última és la 147 (index-receptes-Supabase-147.html) i la següent, la 157.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
-  ser la número 1, a la versió 125; la següent, la 2, toca a la versió 150.
+  ser la número 2, a la versió 150; la següent, la 3, toca a la versió 175.
 
   Cap còpia es crea sense dir-ho abans a la Judy.
 
@@ -3996,8 +3996,8 @@ function expandirCerca(q) {
 
 const UNIT_MAP = {
   // Pes
-  'g':'g','gr':'g','gram':'g','grams':'g','gramo':'g','gramos':'g',
-  'kg':'kg','quilo':'kg','quilos':'kg','kilo':'kg','kilos':'kg','kilogramo':'kg','kilogramos':'kg',
+  'g':'g','gr':'g','grs':'g','gram':'g','grams':'g','gramo':'g','gramos':'g',
+  'kg':'kg','kgs':'kg','quilo':'kg','quilos':'kg','kilo':'kg','kilos':'kg','kilogramo':'kg','kilogramos':'kg',
   // Volum
   'ml':'ml','mililitre':'ml','mililitres':'ml','mililitro':'ml','mililitros':'ml',
   'l':'l','litre':'l','litres':'l','litro':'l','litros':'l','liter':'l','liters':'l',
@@ -4029,11 +4029,28 @@ function parseFractionStr(s) {
   // "1/2", "3/4", etc.
   const fracMatch = s.match(/^(\d+)\s*\/\s*(\d+)$/);
   if (fracMatch) return parseInt(fracMatch[1]) / parseInt(fracMatch[2]);
-  // "1 1/2" mixed fraction
-  const mixedMatch = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  // Mixta: "1 1/2" i també "1 + 1/2", que és com l'escriu formatQuantity
+  const mixedMatch = s.match(/^(\d+)(?:\s+|\s*\+\s*)(\d+)\s*\/\s*(\d+)$/);
   if (mixedMatch) return parseInt(mixedMatch[1]) + parseInt(mixedMatch[2]) / parseInt(mixedMatch[3]);
   const num = parseFloat(s.replace(',', '.'));
   return isNaN(num) ? null : num;
+}
+
+// L'OCR llegeix sovint el «1» com una ela, una i majúscula o una barra, sobretot
+// en les tipografies on l'1 no porta ni peu ni ganxet: «l cebolla entera». Sense
+// número al davant, l'ingredient no s'escala i es queda quiet mentre la resta de
+// la recepta creix. Només ho toquem si la lletra va SOLA al principi i amb espai
+// al darrere: així «l'all» i «d'oli» no s'immuten, que no hi ha espai enmig.
+function corregirUnMalLlegit(text) {
+  return String(text == null ? '' : text).replace(/^([lI|])(\s+)/, '1$2');
+}
+
+// Els llibres escriuen les unitats abreujades amb punt: «500 grs.», «1 dl.».
+// El punt no forma part de la unitat, però sí del que hem de tornar a escriure,
+// així que el traiem només per buscar-la a la llista.
+function esUnitat(paraula) {
+  if (!paraula) return false;
+  return !!UNIT_MAP[paraula.toLowerCase().replace(/\.$/, '')];
 }
 
 function parseIngredientLine(text) {
@@ -4044,6 +4061,10 @@ function parseIngredientLine(text) {
   // i venen de les importacions. Si no, tapen el número i l'ingredient no s'escala.
   const senseSimbol = text.replace(/^[\s·•‧∙▪‣◦*\-–—]+/, '').trim();
   if (senseSimbol) text = senseSimbol;
+
+  // Es fa aquí, i no només en importar, perquè així les receptes que ja tens
+  // desades amb l'errada també escalen bé, sense haver-les de tornar a llegir.
+  text = corregirUnMalLlegit(text);
 
   // Normalitza fraccions Unicode a ASCII per al parser
   const FRAC_UNICODE = { '½':'1/2','¼':'1/4','¾':'3/4','⅓':'1/3','⅔':'2/3','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8' };
@@ -4062,8 +4083,7 @@ function parseIngredientLine(text) {
     const rest = text.slice(wordMatch[0].length).trim();
     // Comprova si segueix una unitat
     const words = rest.split(/\s+/);
-    const unitCandidate = words[0]?.toLowerCase();
-    if (unitCandidate && UNIT_MAP[unitCandidate]) {
+    if (esUnitat(words[0])) {
       // El UNIT_MAP només serveix per RECONÈIXER que la paraula és una unitat.
       // Conservem la unitat tal com l'ha escrita la recepta: si el llibre diu
       // "teaspoons", no volem convertir-ho en "culleradetes" i deixar la resta
@@ -4078,8 +4098,10 @@ function parseIngredientLine(text) {
     return { q, u, n: n || text };
   }
 
-  // Detecta número al principi (enter, decimal, fracció, mixt)
-  const numMatch = text.match(/^(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+[.,]\d+|\d+)/);
+  // Detecta número al principi (enter, decimal, fracció, mixt). La forma mixta
+  // va primera perquè si no, el "1" de "1 + 1/2" es menjaria tot sol el partit
+  // i el "+ 1/2" acabaria enganxat al nom de l'ingredient.
+  const numMatch = text.match(/^(\d+(?:\s+|\s*\+\s*)\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+[.,]\d+|\d+)/);
   if (numMatch) {
     q = parseFractionStr(numMatch[1]);
     let rest = text.slice(numMatch[0].length).trim();
@@ -4093,8 +4115,7 @@ function parseIngredientLine(text) {
 
     // Comprova si segueix una unitat
     const words = rest.split(/\s+/);
-    const unitCandidate = words[0]?.toLowerCase();
-    if (unitCandidate && UNIT_MAP[unitCandidate]) {
+    if (esUnitat(words[0])) {
       u = words[0];                       // la unitat, tal com la diu la recepta
       n = words.slice(1).join(' ');
     } else {
@@ -4143,9 +4164,40 @@ function getIngredientsParsed(r) {
   return parseAllIngredients(raw);
 }
 
-function formatQuantity(num) {
+// Les unitats mètriques no volen fraccions: ni es pesa un terç de gram ni es
+// mesura una dècima de mil·lilitre. Les petites van a número rodó; els quilos i
+// els litres es queden amb un decimal, que en una unitat tan grossa sí que diu
+// alguna cosa. La resta (tasses, cullerades, ous…) segueixen amb fraccions.
+const UNITATS_SENSE_DECIMALS = new Set(['g','ml','cl','dl']);
+const UNITATS_AMB_UN_DECIMAL = new Set(['kg','l']);
+
+// Torna la unitat reduïda a la seva forma de referència ('grs.' → 'g'), o cadena
+// buida si no la coneixem. El punt final de les abreviatures ('grs.') no compta.
+function unitatCanonica(unitat) {
+  if (!unitat) return '';
+  return UNIT_MAP[String(unitat).trim().toLowerCase().replace(/\.$/, '')] || '';
+}
+
+function formatQuantity(num, unitat) {
   if (num === null || num === undefined) return '';
   if (num === 0) return '0';
+
+  const canonica = unitatCanonica(unitat);
+
+  // Grams i mil·lilitres: sempre enter. De 100 en amunt, al múltiple de 5 més
+  // proper, que és com ho diria una persona: 585 grams, i no pas 583,33.
+  if (UNITATS_SENSE_DECIMALS.has(canonica)) {
+    const rodo = num >= 100 ? Math.round(num / 5) * 5 : Math.round(num);
+    // Una quantitat molt petita (mig gram de safrà) no es pot arrodonir a zero:
+    // desapareixeria de la recepta. En aquest cas val més deixar-hi el decimal.
+    if (rodo === 0) return num.toLocaleString('ca-ES', { maximumFractionDigits: 1 });
+    return String(rodo);
+  }
+
+  // Quilos i litres: un decimal com a màxim i cap fracció.
+  if (UNITATS_AMB_UN_DECIMAL.has(canonica)) {
+    return num.toLocaleString('ca-ES', { maximumFractionDigits: 1 });
+  }
 
   const enters = Math.floor(num);
   const decimal = num - enters;
@@ -4175,11 +4227,12 @@ function formatQuantity(num) {
 
   if (bestFrac.val === 0) return String(enters);
   if (enters === 0) return bestFrac.txt;
-  // Separats per un espai, no per un «+». No és cosmètica: aquest text va a parar
-  // al camp d'ingredients quan edites una recepta, i d'allà torna al parser. El
-  // parser entén "1 1/2" (→ 1,5) i no entén "1+1/2": s'hi quedava l'1 i el "+1/2"
-  // acabava enganxat al nom de l'ingredient, unitat inclosa.
-  return enters + ' ' + bestFrac.txt;
+  // Separats per un «+», no per un espai sol: "1 1/2" es llegeix de pressa com
+  // "11/2". Compte, que això no és només cosmètica: aquest text va a parar al
+  // camp d'ingredients quan edites una recepta, i d'allà torna al parser. Per
+  // això parseFractionStr i parseIngredientLine entenen les dues formes,
+  // "1 + 1/2" i "1 1/2". Si algun dia canvies aquest signe, canvia'ls també.
+  return enters + ' + ' + bestFrac.txt;
 }
 
 function escHTML(s) {
@@ -4309,7 +4362,7 @@ function unitatSegonsQuantitat(unitat, q) {
 function renderScaledIngredient(ing, factor) {
   if (ing.q === null) return escHTML(ing.n);
   const scaled = ing.q * factor;
-  const qStr = formatQuantity(scaled);
+  const qStr = formatQuantity(scaled, ing.u);
   const parts = [qStr];
   if (ing.u) parts.push(escHTML(unitatSegonsQuantitat(ing.u, scaled)));
   if (ing.n) parts.push(escHTML(ing.u ? ing.n : nomSegonsQuantitat(ing.n, scaled)));
@@ -4320,7 +4373,7 @@ function renderScaledIngredient(ing, factor) {
 function renderScaledIngredientPlain(ing, factor) {
   if (ing.q === null) return ing.n;
   const scaled = ing.q * factor;
-  const qStr = formatQuantity(scaled);
+  const qStr = formatQuantity(scaled, ing.u);
   const parts = [qStr];
   if (ing.u) parts.push(ing.u);
   if (ing.n) parts.push(ing.n);
@@ -5454,7 +5507,10 @@ function resetSorpren() {
 function aplicar() {
   resetSorpren(); // quan s'invoca aplicar des de cerca/filtre, sortim del mode sorpresa
   refrescarLlibresSuggeriments();
-  const q = (document.getElementById('cerca').value || '').toLowerCase();
+  // El `trim` no és cosmètic: sense ell, un espai de sobra deixava la cerca sense
+  // cap sinònim (cap entrada del diccionari conté «carbassa␣») i, de passada,
+  // tampoc trobava els noms que s'acaben just amb la paraula que has escrit.
+  const q = (document.getElementById('cerca').value || '').trim().toLowerCase();
   // El nom i els ingredients es tracten igual: tots dos sense accents i tots dos
   // amb els sinònims dels tres idiomes. Abans el nom es comparava en cru, i per
   // això «meló» no sortia escrivint «melo» ni «Crema de carbassa» buscant «calabaza».
@@ -6776,6 +6832,20 @@ function normalitzarFont(font) {
   return f;
 }
 
+// Les paraules de racions i de temps, en els tres idiomes de l'app. Viuen aquí
+// dalt perquè es fan servir a quatre regles diferents; abans anaven escrites a
+// mà a cada lloc, només en català, i per això «6 personas» no es veia.
+// L'anglès posa el número al darrere («Serves 4»), i això té regla pròpia.
+// L'ordre de dins de cada llista importa: la forma llarga ha d'anar SEMPRE
+// abans que la curta. Si no, «minutos» el mossega «minuts?» i queda un «os»
+// solt fent-se passar per ingredient. (Provat: passava.)
+const PARAULES_RACIONS = 'raciones|racions?|personas|persones|porciones|porcions?|comensales|comensals?|servings?|portions?';
+const PARAULES_TEMPS   = 'minutos?|minuts?|min\\.?|horas?|hores?|hours?|hrs?\\.?|h\\b';
+const RE_RACIONS_DAVANT = new RegExp('(\\d+)\\s*(?:' + PARAULES_RACIONS + ')', 'i');
+// L'anglès posa el número al darrere. Aquí no hi val un «para» pelat: «para 30
+// minutos» ens donaria trenta racions.
+const RE_RACIONS_DARRERE = /\b(?:serves|makes|rinde|serveix\s+per\s+a)\s+(\d+)/i;
+
 function detectarFont(lines, fontDefecte) {
   const zona = lines.slice(0, 3).join(' ');
 
@@ -6791,7 +6861,8 @@ function detectarFont(lines, fontDefecte) {
   const idxIng = lines.findIndex((l, i) => i > 0 && /^ingredients/i.test(l.trim()));
   const fi = idxIng >= 1 ? idxIng : Math.min(4, lines.length);
   const zonaAutoria = lines.slice(1, fi);
-  const reMetadades = /\b(racions?|minuts?|hores?|temps|porcions?|persones?|serves?|comensals?)\b/i;
+  const reMetadades = new RegExp(
+    '\\b(?:' + PARAULES_RACIONS + '|' + PARAULES_TEMPS + '|temps|tiempo|time|serves|makes)\\b', 'i');
   const reCapcalera = /^(ingredients?|ingredientes|preparaci[óo]n?|preparation|elaboraci[óo]n?|instruccions?|instrucciones|instructions?|m[èe]tode|m[ée]todo|method|passos?|pasos?|directions?|steps?)\b/i;
   const candidats = zonaAutoria.filter(l => {
     const t = l.trim();
@@ -7015,6 +7086,15 @@ function extraccioLocal(text, fontDefecte) {
   if (idxCapInstr !== -1) { idxInstr = idxCapInstr; saltaCapcalera = true; }
   else if (idxPrimerPas !== -1) idxInstr = idxPrimerPas;
 
+  // ── Receptes amb les columnes al revés ──
+  // Hi ha pàgines —les de dues columnes, sobretot— on l'elaboració és a
+  // l'esquerra i els ingredients a la dreta: l'OCR entrega una columna sencera i
+  // després l'altra, i arriba ELABORACIÓN abans que INGREDIENTES. Quan tenim les
+  // dues capçaleres no cal donar per fet cap ordre: cada bloc va de la seva
+  // capçalera fins a la següent. Sense això, el tros dels ingredients quedava
+  // girat, no hi cabia res i tot el document acabava dins de les instruccions.
+  const ingDespres = idxCapIng !== -1 && idxCapInstr !== -1 && idxCapIng > idxCapInstr;
+
   // ── Punt de tall: on s'acaba la recepta i comença la ferralla de la pàgina web
   //    (publicitat, afiliats d'Amazon, comentaris, categories, altres receptes, peu…).
   //    Només es busca A PARTIR del cos de la recepta, perquè el menú o els "5 comentarios"
@@ -7026,13 +7106,15 @@ function extraccioLocal(text, fontDefecte) {
     if (reFiRecepta.test(lines[i])) { idxTall = i; break; }
   }
   const fiCos = idxTall !== -1 ? idxTall : lines.length;
+  // Si els ingredients van al final, les instruccions s'aturen on ells comencen
+  const fiInstr = ingDespres ? idxCapIng : fiCos;
 
   // ── Bloc d'instruccions: passos numerats + línies de continuació enganxades ──
   let instruccions = '';
   if (idxInstr !== -1) {
     const passos = [];
     const inici = saltaCapcalera ? idxInstr + 1 : idxInstr;
-    for (let i = inici; i < fiCos; i++) {
+    for (let i = inici; i < fiInstr; i++) {
       const m = lines[i].match(/^([1-9]\d?)[\.\)]?\s+(.*)/);
       if (m) { passos.push({ num: m[1], text: m[2].trim() }); continue; } // pas numerat
       const ultim = passos[passos.length - 1];
@@ -7051,22 +7133,26 @@ function extraccioLocal(text, fontDefecte) {
 
   // ── Bloc d'ingredients: entre capçalera (o inici) i les instruccions ──
   const iniciIng = idxCapIng !== -1 ? idxCapIng + 1 : 0;
-  const fiIng    = idxInstr !== -1 ? idxInstr : fiCos;
+  const fiIng    = ingDespres ? fiCos : (idxInstr !== -1 ? idxInstr : fiCos);
   let racions = '';
   let candidats = [];
   for (let i = iniciIng; i < fiIng; i++) {
     if (i === idxCapInstr) continue;
-    let l = lines[i].replace(/^[\-–—•*·]\s*/, '').trim();
+    let l = corregirUnMalLlegit(lines[i].replace(/^[\-–—•*·]\s*/, '').trim());
     if (!l) continue;
     // Metadades (racions, temps): les extraiem i conservem el que quedi de la línia
     // (l'OCR de vegades hi fusiona el primer ingredient: "4 RACIONS 40 MINUTS 500 g de...")
-    if (/(racions?|persones?|porcions?|comensals?|minuts?|min\.?|hores?)/i.test(l)) {
-      const mRac = l.match(/(\d+)\s*(racions?|persones?|porcions?|comensals?)/i);
+    if (new RegExp('(?:' + PARAULES_RACIONS + '|' + PARAULES_TEMPS + '|serves|makes)', 'i').test(l)) {
+      const mRac = l.match(RE_RACIONS_DAVANT) || l.match(RE_RACIONS_DARRERE);
       if (mRac) racions = racions || mRac[1];
       l = l
-        .replace(/\d+\s*(racions?|persones?|porcions?|comensals?)/gi, '')
-        .replace(/\d+[\-–]\d+\s*(minuts?|min\.?|hores?|h\b)/gi, '')
-        .replace(/\d+\s*(minuts?|min\.?|hores?|h\b)/gi, '')
+        // El «para» / «per a» de davant se'n va amb la xifra: si no, quedava sol
+        // al mig dels ingredients («Para 6 personas» → «Para»).
+        .replace(new RegExp('(?:para|per\\s+a|rinde)?\\s*\\d+\\s*(?:' + PARAULES_RACIONS + ')', 'gi'), '')
+        .replace(/\b(?:serves|makes)\s+\d+(?:\s*[-–]\s*\d+)?/gi, '')
+        .replace(new RegExp('\\d+[\\-–]\\d+\\s*(?:' + PARAULES_TEMPS + ')', 'gi'), '')
+        .replace(new RegExp('\\d+\\s*(?:' + PARAULES_TEMPS + ')', 'gi'), '')
+        .replace(/^[\s(\-–—·,;]+|[\s)\-–—·,;]+$/g, '')   // el que queda dels parèntesis: "(6 personas)" → ""
         .trim();
       if (!l) continue;
     }
@@ -7085,9 +7171,19 @@ function extraccioLocal(text, fontDefecte) {
     // passa dels 120 caràcters i es perden tots de cop.
     for (const tros of separarIngredientsEnganxats(l)) {
       if (tros.length > 120) continue;             // això sí que és un paràgraf
-      candidats.push(tros);
+      candidats.push(corregirUnMalLlegit(tros));   // i el de darrere d'un tall, també
     }
   }
+  // Última passada per a les racions: molts llibres les posen a dalt de tot,
+  // abans de la capçalera d'ingredients («Serves 4», «Para 6 personas»), i el
+  // bucle de sobre només mira dins del bloc d'ingredients, on no hi arriben mai.
+  if (!racions) {
+    for (const l of lines) {
+      const m = l.match(RE_RACIONS_DAVANT) || l.match(RE_RACIONS_DARRERE);
+      if (m) { racions = m[1]; break; }
+    }
+  }
+
   const ingredients = candidats.length > 0 ? candidats.join(' · ') : lines.slice(1, 8).join(' · ');
 
   const font = detectarFont(linesOriginals, fontDefecte);
@@ -7779,7 +7875,7 @@ function filtrarEtiquetaIdea(et) {
 }
 
 function aplicarIdees() {
-  const q = (document.getElementById('cerca-idees').value || '').toLowerCase();
+  const q = (document.getElementById('cerca-idees').value || '').trim().toLowerCase();
   const resultat = idees.filter(it => {
     const titol = (it['Títol'] || '').toLowerCase();
     const com   = (it['Comentari'] || '').toLowerCase();
