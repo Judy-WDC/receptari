@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 160 · 26-08-2026                                     ║
+  ║  VERSIÓ 161 · 26-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -1957,9 +1957,16 @@
     flex-direction: column;
     align-items: center;
     padding: 3rem 1.5rem 2rem;
-    justify-content: center;
+    /* La portada es CENTRA quan hi cap tot i es deixa fer SCROLL quan no.
+       Abans anava centrada amb overflow:hidden, i això, amb la targeta de la
+       recepta del dia més alta, deixava el capdamunt tallat i inabastable a les
+       pantalles curtes. Ara el centrat el fan els marges automàtics del
+       .portada-container: quan sobra espai el reparteixen a dalt i a baix, i
+       quan no en sobra valen zero i tot flueix amb normalitat. */
+    justify-content: flex-start;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   #panell-portada.actiu { display: flex; }
   /* ── Modal de novetats ── */
@@ -2163,6 +2170,7 @@
   .portada-container {
     width: 100%;
     max-width: 400px;
+    margin: auto 0;   /* el centrat vertical; veure #panell-portada */
     animation: fadeUp 0.9s ease both;
   }
   @keyframes fadeUp {
@@ -2188,7 +2196,10 @@
     font-size: clamp(3.45rem, 13.5vw, 4.2rem);
     line-height: 1.15;
     color: var(--text);
-    margin: 1rem 0 5rem;
+    /* El buit de sota era de 5rem: se n'hi han retallat 2,5 per pagar la foto
+       de la recepta del dia i la targeta de Planificació sense fer créixer la
+       portada. El títol no perd presència: el que perd és aire. */
+    margin: 1rem 0 2.5rem;
   }
   .portada-h1 em { font-style: normal; color: var(--accent); }
   .portada-card {
@@ -2200,8 +2211,33 @@
     transition: border-color 0.2s;
   }
   .portada-card:hover { border-color: var(--border); }
+  /* La targeta de la recepta del dia: el text a l'esquerra i la foto a la
+     dreta. El dia que la recepta no en té, el quadrat de la dreta es queda
+     igual amb un marcador a dins: així la portada no canvia d'alçada d'un dia
+     a l'altre, i de passada recorda que a aquella recepta hi falta la foto. */
   .portada-receptadia {
     padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .portada-receptadia-text { flex: 1; min-width: 0; }
+  .portada-receptadia-foto {
+    width: 84px; height: 84px; border-radius: 12px;
+    overflow: hidden; flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .portada-receptadia-foto img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .portada-receptadia-foto.buida {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    background: rgba(245,247,73,0.06);
+    border: 1px dashed rgba(245,247,73,0.28);
+  }
+  .portada-receptadia-foto.buida i { font-size: 22px; color: rgba(245,247,73,0.55); }
+  .portada-receptadia-foto.buida span {
+    font-size: 0.52rem; font-weight: 300; letter-spacing: 0.04em;
+    color: rgba(245,247,73,0.5); text-align: center; line-height: 1.2;
   }
   .portada-receptadia-head {
     display: flex; align-items: center; gap: 6px;
@@ -2216,7 +2252,9 @@
   }
   .portada-receptadia-nom {
     font-family: 'Bricolage Grotesque', sans-serif;
-    font-size: 1rem; font-weight: 400;
+    /* Una mica més gran que abans: amb la foto al costat té menys amplada i,
+       si es quedés a 1rem, el nom hi faria pobre. */
+    font-size: 1.08rem; font-weight: 400;
     color: var(--text); display: block; line-height: 1.3;
   }
   .portada-receptadia-meta {
@@ -2235,27 +2273,30 @@
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
   }
-  .portada-cerca {
+  /* Targeta ampla amb icona, títol i fletxa. Se'n diu "ample" i no "cerca"
+     perquè des de la v161 la fan servir dues portes: Cercar receptes i
+     Planificació. */
+  .portada-ample {
     padding: 1rem 1.1rem;
     display: flex; align-items: center; gap: 14px;
   }
-  .portada-cerca-icona {
+  .portada-ample-icona {
     width: 42px; height: 42px; border-radius: 12px;
     background: rgba(245,247,73,0.08);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .portada-cerca-icona i { font-size: 19px; color: var(--accent); }
-  .portada-cerca-text { flex: 1; }
-  .portada-cerca-titol {
+  .portada-ample-icona i { font-size: 19px; color: var(--accent); }
+  .portada-ample-text { flex: 1; }
+  .portada-ample-titol {
     font-family: 'Syne', sans-serif;
     font-size: 1.47rem; color: var(--text); display: block;
   }
-  .portada-cerca-desc {
+  .portada-ample-desc {
     font-family: 'Poppins', sans-serif;
     font-size: 0.78rem; font-weight: 300; color: var(--text-dim);
   }
-  .portada-cerca-arrow { font-size: 16px; color: var(--accent2); }
+  .portada-ample-arrow { font-size: 16px; color: var(--accent2); }
   .portada-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2281,10 +2322,10 @@
   }
   .portada-footer {
     text-align: center;
-    position: absolute;
-    bottom: 2rem;
-    left: 0;
-    right: 0;
+    /* Va al flux, no enganxat a baix: així no trepitja el contingut el dia que
+       la portada no hi cap i s'ha de fer scroll. Els marges automàtics del
+       .portada-container ja l'empenyen al capdavall quan hi ha espai de sobres. */
+    margin-top: 1.6rem;
     font-size: 0.68rem;
     font-weight: 300;
     color: var(--accent2);
@@ -2679,24 +2720,40 @@ function tancarNovetats() {
     <h1 class="portada-h1">Les meves<br><em>receptes</em></h1>
 
     <div class="portada-card portada-receptadia" id="portada-receptadia" onclick="obrirReceptaDia()">
-      <div class="portada-receptadia-head">
-        <i class="ti ti-sparkles" aria-hidden="true"></i>
-        <span>Recepta del dia</span>
+      <div class="portada-receptadia-text">
+        <div class="portada-receptadia-head">
+          <i class="ti ti-sparkles" aria-hidden="true"></i>
+          <span>Recepta del dia</span>
+        </div>
+        <span class="portada-receptadia-loading" id="portada-receptadia-loading">Connectant amb el receptari…</span>
+        <span class="portada-receptadia-nom" id="portada-receptadia-nom" style="display:none;"></span>
+        <span class="portada-receptadia-meta" id="portada-receptadia-meta" style="display:none;"></span>
       </div>
-      <span class="portada-receptadia-loading" id="portada-receptadia-loading">Connectant amb el receptari…</span>
-      <span class="portada-receptadia-nom" id="portada-receptadia-nom" style="display:none;"></span>
-      <span class="portada-receptadia-meta" id="portada-receptadia-meta" style="display:none;"></span>
+      <!-- El quadrat de la dreta: la foto, o el marcador de que hi falta.
+           Comença amagat i el pinta actualitzarReceptaDia(). -->
+      <div class="portada-receptadia-foto" id="portada-receptadia-foto" style="display:none;"></div>
     </div>
 
-    <div class="portada-card portada-cerca" onclick="anarA('cerca')">
-      <div class="portada-cerca-icona">
+    <div class="portada-card portada-ample" onclick="anarA('cerca')">
+      <div class="portada-ample-icona">
         <i class="ti ti-search" aria-hidden="true"></i>
       </div>
-      <div class="portada-cerca-text">
-        <span class="portada-cerca-titol">Cercar receptes</span>
-        <span class="portada-cerca-desc">Explora el receptari</span>
+      <div class="portada-ample-text">
+        <span class="portada-ample-titol">Cercar receptes</span>
+        <span class="portada-ample-desc">Explora el receptari</span>
       </div>
-      <i class="ti ti-chevron-right portada-cerca-arrow" aria-hidden="true"></i>
+      <i class="ti ti-chevron-right portada-ample-arrow" aria-hidden="true"></i>
+    </div>
+
+    <div class="portada-card portada-ample" onclick="anarA('planificacio')">
+      <div class="portada-ample-icona">
+        <i class="ti ti-clipboard-list" aria-hidden="true"></i>
+      </div>
+      <div class="portada-ample-text">
+        <span class="portada-ample-titol">Planificació</span>
+        <span class="portada-ample-desc">Els menús de la setmana</span>
+      </div>
+      <i class="ti ti-chevron-right portada-ample-arrow" aria-hidden="true"></i>
     </div>
 
     <div class="portada-grid">
@@ -4685,10 +4742,34 @@ function triarReceptaDia() {
   return tria;
 }
 
+// El quadrat de la dreta de la targeta: la foto de la recepta del dia, o el
+// marcador de que encara no en té. Ocupa el mateix en tots dos casos, perquè la
+// portada no canviï d'alçada d'un dia a l'altre.
+function pintarFotoReceptaDia(nom, url) {
+  const box = document.getElementById('portada-receptadia-foto');
+  if (!box) return;
+  if (!url) { marcarFotoReceptaDiaBuida(); return; }
+  box.style.display = '';
+  box.classList.remove('buida');
+  // Si la foto no arriba (enllaç caducat, sense connexió), cau al marcador
+  box.innerHTML = '<img src="' + escHTML(url) + '" alt="Foto de ' + escHTML(nom) + '"'
+                + ' onerror="marcarFotoReceptaDiaBuida()">';
+}
+
+function marcarFotoReceptaDiaBuida() {
+  const box = document.getElementById('portada-receptadia-foto');
+  if (!box) return;
+  box.style.display = '';
+  box.classList.add('buida');
+  box.innerHTML = '<i class="ti ti-camera-plus" aria-hidden="true"></i>'
+                + '<span>Hi falta<br>la foto</span>';
+}
+
 function actualitzarReceptaDia() {
   const loading = document.getElementById('portada-receptadia-loading');
   const nomEl   = document.getElementById('portada-receptadia-nom');
   const metaEl  = document.getElementById('portada-receptadia-meta');
+  const fotoBox = document.getElementById('portada-receptadia-foto');
   const r = triarReceptaDia();
 
   // Encara no hi ha cap recepta: la targeta ho diu i convida a afegir-ne, en
@@ -4696,6 +4777,8 @@ function actualitzarReceptaDia() {
   if (!r) {
     receptaDiaNom = '';
     if (!usuariaId) return;   // abans d'iniciar la sessió, es queda com estava
+    // Sense cap recepta no hi ha res de què faltar la foto: el quadrat no hi surt
+    if (fotoBox) fotoBox.style.display = 'none';
     nomEl.textContent = 'Encara no tens cap recepta';
     metaEl.textContent = 'Comença per aquí';
     if (loading) loading.style.display = 'none';
@@ -4712,6 +4795,12 @@ function actualitzarReceptaDia() {
   nomEl.textContent = receptaDiaNom;
   metaEl.innerHTML =
     escHTML(cat) + (cat && val ? ' · ' : '') + (val ? `<span class="stars">${stars}</span>` : '');
+
+  // La foto local mana sobre la del servidor, igual que a la resta de l'app
+  const fotoRD = (receptaDiaNom in fotosLocals)
+    ? fotosLocals[receptaDiaNom]
+    : (r['Foto'] || '');
+  pintarFotoReceptaDia(receptaDiaNom, fotoRD);
 
   if (loading) loading.style.display = 'none';
   nomEl.style.display = '';
