@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 154 · 25-08-2026                                     ║
+  ║  VERSIÓ 157 · 25-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -876,6 +876,23 @@
   /* Cua */
   .cua { display: flex; flex-direction: column; gap: 0.85rem; }
 
+  /* Compte de les receptes desades en aquesta estona. Va just a sota de la
+     cua: la cua només ensenya feina per fer, i aquesta ratlla recorda el que
+     ja ha entrat, que la fitxa desapareix als tres segons d'haver-la desada. */
+  .compte-desades {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding-top: 0.9rem; border-top: 1px solid var(--border-dim);
+    font-size: 0.8rem; color: var(--text-muted);
+  }
+  .compte-desades:empty { display: none; }   /* sense res desat, ni existeix */
+  .compte-desades strong { font-weight: 500; color: var(--text-dim); }
+  .compte-desades .tic {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    background: var(--verd-clar); color: #6fcf97;
+    font-size: 0.7rem; font-weight: 600;
+  }
+
   /* Targeta ítem */
   .targeta {
     background: var(--bg); border-radius: 12px;
@@ -1301,7 +1318,52 @@
   .btn-enviar-menus-meta i { font-size: 20px; display: block; }
   .btn-cuinar-detall-meta:hover,
   .btn-enviar-menus-meta:hover { color: var(--accent); background: rgba(245,247,73,0.08); }
+  /* Enviar la recepta a algú. Va primer dels tres, i per tant és ell qui es
+     queda el marge automàtic i empeny el grup cap al final de la fila. */
+  .btn-compartir-meta { margin-left: auto; }
+  .btn-compartir-meta ~ .btn-cuinar-detall-meta { margin-left: 0; }
   .btn-cuinar-detall-meta.actiu { background: var(--accent); color: var(--bg); }
+  /* ── Una recepta que t'han enviat ── */
+  .rebuda-marca {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0.85rem 1.25rem; background: rgba(245,247,73,0.08);
+    border-bottom: 1px solid var(--border-dim);
+    font-size: 0.85rem; color: var(--text);
+  }
+  .rebuda-marca i { color: var(--accent); font-size: 18px; }
+  .rebuda-de { font-size: 0.82rem; color: var(--text-muted); margin: 0.35rem 0 1rem; }
+  .rebuda-de strong { color: var(--text-dim); font-weight: 500; }
+  .rebuda-accions {
+    display: flex; flex-direction: column; gap: 9px;
+    margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-dim);
+    max-width: 420px;
+  }
+  .rebuda-btn-ple {
+    padding: 11px 14px; border-radius: 10px; border: none;
+    background: var(--accent); color: var(--bg);
+    font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .rebuda-btn-ple:disabled { background: #33351c; color: #7f8148; cursor: not-allowed; }
+  .rebuda-btn-buit {
+    padding: 11px 14px; border-radius: 10px; background: transparent;
+    color: var(--text-muted); border: 1.5px solid var(--border-dim);
+    font-family: inherit; font-size: 13px; cursor: pointer;
+  }
+  .rebuda-caducat {
+    padding: 3.5rem 1.5rem; display: flex; flex-direction: column;
+    align-items: center; text-align: center;
+  }
+  .rebuda-caducat-icona {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--surface2); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 1rem;
+  }
+  .rebuda-caducat-txt {
+    font-size: 0.9rem; color: var(--text-dim); line-height: 1.65;
+    max-width: 320px; margin: 0;
+  }
+
   .detall-seccio { margin-bottom: 1.25rem; }
   .detall-seccio-label {
     font-size: 12px; font-weight: 600; text-transform: uppercase;
@@ -1395,6 +1457,7 @@
     }
     .detall-title-actions button svg { width: 18px; height: 18px; display: block; }
     .detall-meta .btn-cuinar-detall-meta { display: none; }
+    .detall-meta .btn-compartir-meta { display: none; }  /* a l'ordinador ja és a dalt */
     .detall-header-icons { display: none; }
     .detall-dos-cols {
       flex-direction: row; gap: 0;
@@ -1846,6 +1909,9 @@
   #panell-scan .badge.fet        { background: rgba(61,107,79,0.35); color: #8fd4a8; }
   #panell-scan .badge.desat      { background: rgba(61,107,79,0.35); color: #6fbf8a; }
   #panell-scan .badge.error      { background: rgba(139,32,32,0.3); color: #e68080; }
+
+  /* El verd del compte, aquí, és el mateix del badge «desat» d'aquesta secció */
+  #panell-scan .compte-desades .tic { background: rgba(61,107,79,0.35); color: #6fbf8a; }
 
   #panell-scan .btn-eliminar {
     color: #e68080; border-color: #8B3030;
@@ -2921,6 +2987,7 @@ function tancarNovetats() {
             <input type="file" id="fileInputGrup" accept="image/*" multiple style="display:none">
 
             <div class="cua" id="cua"></div>
+            <div class="compte-desades" id="compteDesades"></div>
 
             <div class="accions">
               <button class="btn-primary" id="btnProcessar" disabled>Processar receptes</button>
@@ -2955,6 +3022,7 @@ function tancarNovetats() {
               <button class="btn-primary" id="btnImportarUrl" onclick="importarEnllac()" style="flex-shrink:0">Importar recepta</button>
             </div>
             <div class="cua" id="cuaEnllac"></div>
+            <div class="compte-desades" id="compteDesadesEnllac"></div>
           </div>
         </div>
       </div>
@@ -3048,6 +3116,9 @@ function tancarNovetats() {
      PANELL: DETALL RECEPTA
 ══════════════════════════════════════ -->
 <div id="panell-detall" class="panell"></div>
+
+<!-- Una recepta que t'han enviat: es dibuixa en obrir l'enllaç -->
+<div id="panell-rebuda" class="panell"></div>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -3481,9 +3552,12 @@ sb.auth.onAuthStateChange((event, session) => {
     const nou = session.user.id !== usuariaId;
     usuariaId     = session.user.id;
     usuariaActiva = session.user.email || '';
+    // El nom amb què la veuen els altres quan envia una recepta. Pot ser buit:
+    // només se li demana la primera vegada que n'envia una.
+    nomUsuaria    = (session.user.user_metadata && session.user.user_metadata.nom) || '';
     if (nou) engegarReceptari();
   } else {
-    usuariaId = null; usuariaActiva = '';
+    usuariaId = null; usuariaActiva = ''; nomUsuaria = '';
   }
 });
 
@@ -3511,6 +3585,9 @@ function missatgesDInici() {
   const clau = 'obertures:' + usuariaId;
   const n = (parseInt(llegirLocal(clau), 10) || 0) + 1;
   desarLocal(clau, String(n));
+  // Si ha entrat per un enllaç de recepta compartida, aquella pantalla mana:
+  // la benvinguda i les novetats ja sortiran una altra vegada.
+  if (codiRebut) return;
   if (n === 1) { mostrarBenvinguda(); return; }
   if (n >= OBERTURES_NOVETATS) mostrarNovetats();
 }
@@ -3529,6 +3606,10 @@ function engegarReceptari() {
     document.getElementById('subtitol').textContent = 'Carregant...';
   }
   carregar();
+  // Ha entrat per un enllaç: la recepta que li han enviat va per davant de tot.
+  // Es fa aquí i no en carregar la pàgina perquè cal la sessió iniciada: si no
+  // en tenia, ha hagut d'entrar-hi primer i el codi l'ha esperat.
+  if (codiRebut) obrirReceptaCompartida(codiRebut);
 }
 
 // ══════════════════════════════════════════════
@@ -4763,6 +4844,9 @@ function obrirDetall(nom, desDePopstate) {
             ${fontHTML}
             ${llibreHTML}
             ${etHTML}
+            <button class="btn-enviar-menus-meta btn-compartir-meta" onclick="compartirRecepta('${nomEsc}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
+              <i class="ti ti-share-2" aria-hidden="true"></i>
+            </button>
             <button class="btn-cuinar-detall-meta js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
             </button>
@@ -4772,6 +4856,9 @@ function obrirDetall(nom, desDePopstate) {
           </div>
         </div>
         <div class="detall-title-actions">
+          <button onclick="compartirRecepta('${nomEsc}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
+            <i class="ti ti-share-2" aria-hidden="true"></i>
+          </button>
           <button class="js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
           </button>
@@ -6605,6 +6692,51 @@ function actualitzarBotons() {
   btnProcessar.disabled = !items.some(it => it.status === 'pendent');
   btnExportar.disabled  = !items.some(it => it.recepta);
 }
+// ── Les fitxes ja desades marxen de la cua ──
+// La cua ha de contenir només feina per fer. Una recepta desada ja no ho és:
+// si es queda, es llegeix com si encara s'hagués de desar i fa dubtar si ha
+// entrat o si cal tornar-hi. Però tampoc no pot esfumar-se de cop, que llavors
+// et perds la confirmació. Per això es queda un moment ensenyant el «✓ Desat!»
+// i després se'n va, i a sota hi queda el compte del que portes desat.
+const ESPERA_FITXA_DESADA = 3000;   // el temps que l'ull necessita per veure-ho
+
+// Cada calaix compta el seu: la ratlla viu dins de la seva caixa i parla només
+// del que ha passat allà dins.
+const desadesEnAquestaEstona = { cua: 0, cuaEnllac: 0 };
+
+function calaixDeLItem(item) {
+  return item && item.tipus === 'enllac' ? 'cuaEnllac' : 'cua';
+}
+
+function pintarCompteDesades(calaix) {
+  const el = document.getElementById(calaix === 'cuaEnllac' ? 'compteDesadesEnllac' : 'compteDesades');
+  if (!el) return;
+  const n = desadesEnAquestaEstona[calaix];
+  if (!n) { el.innerHTML = ''; return; }
+  // El plural canvia la vocal final, no s'hi afegeix res: recepta → receptes.
+  el.innerHTML = `<span class="tic">✓</span>` +
+    `<span><strong>${n} ${n > 1 ? 'receptes' : 'recepta'}</strong> ` +
+    `${n > 1 ? 'desades' : 'desada'} al receptari</span>`;
+}
+
+function retirarFitxaDesada(idx) {
+  const calaix = calaixDeLItem(items[idx]);
+  setTimeout(() => {
+    const targeta = document.getElementById(`targeta-${idx}`);
+    // El compte puja quan la fitxa se'n va, no abans: mentre la fitxa hi és
+    // amb el seu «✓ Desat!», ja diu ella tota sola que ha anat bé.
+    if (!targeta) { desadesEnAquestaEstona[calaix]++; pintarCompteDesades(calaix); return; }
+    targeta.style.transition = 'opacity 0.3s, transform 0.3s';
+    targeta.style.opacity = '0';
+    targeta.style.transform = 'translateX(10px)';
+    setTimeout(() => {
+      targeta.remove();
+      desadesEnAquestaEstona[calaix]++;
+      pintarCompteDesades(calaix);
+    }, 300);
+  }, ESPERA_FITXA_DESADA);
+}
+
 function eliminarItem(idx) {
   items[idx].status = 'eliminat';
   const targeta = document.getElementById(`targeta-${idx}`);
@@ -7222,6 +7354,303 @@ async function desarReceptaNova(recepta) {
 }
 
 // ══════════════════════════════════════════════
+// ENVIAR UNA RECEPTA A UNA ALTRA USUÀRIA
+//
+// Cada receptari està tancat amb clau: ningú no pot escriure al d'una altra
+// persona ni llegir-lo. Per això, compartir vol dir deixar la recepta en un
+// calaix de pas del Supabase amb un codi llarg i impossible d'endevinar, i
+// enviar l'enllaç que porta aquell codi. Qui el rep decideix si se la queda;
+// si diu que sí, se'n fa una còpia SEVA, independent de l'original.
+//
+// La taula i la finestreta de lectura són a supabase-compartir-receptes.sql.
+// ══════════════════════════════════════════════
+
+// El nom amb què la veuen els altres. Viu al compte i no al mòbil, perquè la
+// segueixi si entra des d'un altre aparell. L'app no el sap de cap altra banda:
+// al registre només es demana el correu, i el correu no és el nom de ningú.
+let nomUsuaria = '';
+
+// Prou llarg perquè no es pugui trobar provant. Sense la i, la l, la O ni el
+// zero: no s'han de confondre mai si algun dia s'ha de llegir en veu alta.
+function generarCodiEnllac() {
+  const lletres = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const sortides = new Uint8Array(18);
+  crypto.getRandomValues(sortides);
+  return Array.from(sortides, n => lletres[n % lletres.length]).join('');
+}
+
+// Es demana la primera vegada que s'envia una recepta, i només aquella vegada.
+function demanarNomUsuaria() {
+  return new Promise(resolve => {
+    document.getElementById('dialegNom')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'novetats-overlay visible';
+    overlay.id = 'dialegNom';
+    overlay.innerHTML = `
+      <div class="novetats-modal">
+        <h2 class="novetats-titol">Amb quin nom vols que et vegin?</h2>
+        <p class="novetats-versio" style="margin-bottom:16px">El teu nom sortirà a les receptes que enviïs, perquè qui les rebi sàpiga de qui són.</p>
+        <input type="text" id="camp-nom-usuaria" placeholder="El teu nom" maxlength="40"
+               style="width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid var(--border-dim);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:14px">
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <button class="dup-btn dup-btn-primari" data-accio="desar">Desar i continuar</button>
+          <button class="dup-btn dup-btn-cancel" data-accio="cancelar">Cancel·lar</button>
+        </div>
+      </div>`;
+    const camp = () => document.getElementById('camp-nom-usuaria');
+    const tancar = valor => { overlay.remove(); resolve(valor); };
+    overlay.addEventListener('click', e => {
+      const accio = e.target?.dataset?.accio;
+      if (accio === 'desar') {
+        const nom = camp().value.trim();
+        if (!nom) { camp().focus(); return; }   // sense nom no es tanca
+        tancar(nom);
+      } else if (accio === 'cancelar' || e.target === overlay) {
+        tancar('');
+      }
+    });
+    overlay.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { const nom = camp().value.trim(); if (nom) tancar(nom); }
+    });
+    document.body.appendChild(overlay);
+    setTimeout(() => camp()?.focus(), 50);
+  });
+}
+
+async function assegurarNomUsuaria() {
+  if (nomUsuaria) return nomUsuaria;
+  const nom = await demanarNomUsuaria();
+  if (!nom) return '';                       // ha cancel·lat: no s'envia res
+  const { error } = await sb.auth.updateUser({ data: { nom } });
+  if (error) { gestionarError(error, 'No s\'ha pogut desar el teu nom'); return ''; }
+  nomUsuaria = nom;
+  return nom;
+}
+
+async function compartirRecepta(nom) {
+  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
+
+  const de = await assegurarNomUsuaria();
+  if (!de) return;
+
+  // El que viatja. La valoració i els comentaris NO hi són a posta: són de qui
+  // té la recepta, no de la recepta.
+  const dades = {
+    nom:          r['Nom de la recepta'] || '',
+    categoria:    r['Categoria']         || '',
+    ingredients:  r['Ingredients']       || '[]',
+    font:         r['Font']              || '',
+    llibre:       r['Llibre']            || '',
+    url:          r['URL']               || '',
+    foto:         r['Foto']              || '',
+    etiquetes:    r['Etiquetes']         || '',
+    instruccions: r['Instruccions']      || '',
+    racions:      r['Racions']           || '',
+  };
+
+  const codi = generarCodiEnllac();
+  const { error } = await sb.from('receptes_compartides').insert({ codi, de, dades });
+  if (error) { gestionarError(error, 'No s\'ha pogut preparar l\'enviament'); return; }
+
+  // L'adreça de l'app, neta: sense el que hi pengi al darrere. Es fa a partir
+  // de location.href i no de l'origen més el camí, que aquells dos no sempre
+  // es poden ajuntar (obrint el fitxer en local, l'origen no existeix).
+  const base   = location.href.split('#')[0].split('?')[0];
+  const enllac = base + '#r=' + codi;
+  const missatge =
+    `${de} t'envia una recepta: ${dades.nom}.\n` +
+    `Per a guardar-la al teu receptari, clica l'enllaç\n\n` +
+    `${enllac}\n\n` +
+    `L'enllaç funcionarà durant una setmana.`;
+
+  // El quadre de compartir del mòbil és el camí bo: hi surten els contactes de
+  // sempre. A l'ordinador sovint no hi és, i llavors es copia per enganxar-ho.
+  try {
+    if (navigator.share) await navigator.share({ text: missatge });
+    else {
+      await navigator.clipboard.writeText(missatge);
+      mostrarToast('📋 Missatge copiat: ja el pots enganxar on vulguis');
+    }
+  } catch (e) {
+    // Tancar el quadre de compartir no és cap errada: no li diem res.
+    if (e && e.name === 'AbortError') return;
+    try {
+      await navigator.clipboard.writeText(missatge);
+      mostrarToast('📋 Missatge copiat: ja el pots enganxar on vulguis');
+    } catch { mostrarToast('❌ No s\'ha pogut enviar la recepta'); }
+  }
+}
+
+// ── Rebre una recepta ──────────────────────────
+
+let codiRebut    = '';   // el que ha arribat per l'adreça i encara no s'ha obert
+let receptaRebuda = null; // la que s'està ensenyant ara mateix
+
+// El codi arriba enganxat a l'adreça (#r=…). Se'n treu de seguida: si es
+// recarregués la pàgina, tornaria a sortir la mateixa pantalla un altre cop.
+function recollirCodiDeLAdreca() {
+  const m = (location.hash || '').match(/^#r=([A-Za-z0-9]+)$/);
+  if (!m) return;
+  codiRebut = m[1];
+  history.replaceState({ panell: 'portada' }, '', location.pathname + location.search);
+}
+recollirCodiDeLAdreca();
+
+async function obrirReceptaCompartida(codi) {
+  codiRebut = '';
+  const { data, error } = await sb.rpc('recepta_compartida', { p_codi: codi });
+  if (error) { gestionarError(error, 'No s\'ha pogut obrir la recepta'); return; }
+  if (!data || !data.dades) { pintarEnllacCaducat(); return; }
+  pintarReceptaRebuda(data.de || '', data.dades);
+}
+
+function pintarReceptaRebuda(de, dades) {
+  receptaRebuda = dades;
+  const ings = getIngredientsParsed({ 'Ingredients': dades.ingredients || '' });
+  const ingHTML = ings.length
+    ? ings.map(i => `<div><span class="detall-ing-dot">·</span>${renderScaledIngredient(i, 1)}</div>`).join('')
+    : '';
+  const fotoHTML = dades.foto
+    ? `<img class="detall-hero" src="${escHTML(dades.foto)}" alt="${escHTML(dades.nom || '')}">`
+    : `<div class="detall-hero-placeholder"><i class="ti ti-photo" aria-hidden="true"></i></div>`;
+  // Els passos, un per línia i amb la mateixa lletra que a la fitxa de sempre.
+  // Aquí no hi ha mode cuinar: això és una ullada abans de decidir, no la cuina.
+  const passos = (dades.instruccions || '').split('\n').filter(p => p.trim());
+  const instrHTML = passos.length
+    ? `<div class="detall-seccio detall-instruccions">
+         <div class="detall-seccio-label">Instruccions</div>
+         <ol>${passos.map(p => `<li>${escHTML(p)}</li>`).join('')}</ol>
+       </div>`
+    : '';
+
+  document.getElementById('panell-rebuda').innerHTML = `
+    <div class="rebuda-marca">
+      <i class="ti ti-gift" aria-hidden="true"></i>
+      <span>T'han enviat una recepta</span>
+    </div>
+    ${fotoHTML}
+    <div class="detall-contingut">
+      <div class="detall-nom">${escHTML(dades.nom || '')}</div>
+      ${de ? `<div class="rebuda-de">De part de <strong>${escHTML(de)}</strong></div>` : ''}
+      ${dades.categoria ? `<div class="detall-meta"><span class="badge-cat" style="${badgeStyle(dades.categoria)}">${escHTML(dades.categoria)}</span></div>` : ''}
+      ${ingHTML ? `<div class="detall-seccio">
+        <div class="detall-seccio-label">Ingredients</div>
+        <div class="detall-ing">${ingHTML}</div>
+      </div>` : ''}
+      ${instrHTML}
+      <div class="rebuda-accions">
+        <button class="rebuda-btn-ple" id="btn-acceptar-rebuda" onclick="acceptarReceptaRebuda()">Afegir-la al meu receptari</button>
+        <button class="rebuda-btn-buit" onclick="tornarInici()">Ara no</button>
+      </div>
+    </div>`;
+  mostrarPanell('rebuda');
+}
+
+function pintarEnllacCaducat() {
+  receptaRebuda = null;
+  document.getElementById('panell-rebuda').innerHTML = `
+    <div class="rebuda-caducat">
+      <div class="rebuda-caducat-icona"><i class="ti ti-clock-off" aria-hidden="true"></i></div>
+      <div class="detall-nom" style="font-size:1.3rem;margin-bottom:0.6rem">Aquest enllaç ha caducat</div>
+      <p class="rebuda-caducat-txt">Demana a qui et va enviar la recepta, que te la torni a enviar.</p>
+      <button class="rebuda-btn-buit" style="margin-top:1.5rem;max-width:220px" onclick="tornarInici()">Ara no</button>
+    </div>`;
+  mostrarPanell('rebuda');
+}
+
+// La fotografia es copia al magatzem de qui la rep, no s'hi apunta: si qui
+// l'ha enviada esborra la seva recepta, aquesta no s'ha de quedar sense imatge.
+async function copiarFotoRebuda(id, urlFoto) {
+  try {
+    const resp = await fetch(urlFoto);
+    if (!resp.ok) return;
+    const blob = await resp.blob();
+    const dataUrl = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload  = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    });
+    await dbPujarFoto(id, dataUrl);
+  } catch (e) {
+    // Sense fotografia la recepta s'aguanta igual: no val la pena aturar-ho tot.
+    console.warn('No s\'ha pogut copiar la fotografia de la recepta rebuda:', e);
+  }
+}
+
+async function acceptarReceptaRebuda() {
+  const dades = receptaRebuda;
+  if (!dades) return;
+
+  // Els noms repetits es resolen amb el quadre que ja existeix. Si el nom nou
+  // que escriu també el té, hi torna: així no cal cap avís nou enlloc.
+  let nom = dades.nom || '';
+  while (existeixRecepta(nom)) {
+    const decisio = await mostrarDialegDuplicat(nom);
+    if (decisio === 'cancelar') return;
+    if (decisio === 'distintiu') { nom = nomAmbDistintiu(nom); break; }
+    const nouNom = await demanarNomReceptaRebuda(nom);
+    if (!nouNom) return;
+    nom = nouNom;
+  }
+
+  const btn = document.getElementById('btn-acceptar-rebuda');
+  if (btn) { btn.disabled = true; btn.textContent = 'Desant…'; }
+
+  try {
+    const nova = await desarReceptaNova({ ...dades, nom });
+    if (dades.foto) await copiarFotoRebuda(nova.id, dades.foto);
+    receptaRebuda = null;
+    await carregar();
+    mostrarToast(`✅ "${nom}" desada al receptari`);
+    obrirDetall(nom);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Afegir-la al meu receptari'; }
+    mostrarToast('❌ Error en desar: ' + e.message);
+  }
+}
+
+// El quadre de duplicats ofereix "canviar-li jo el nom", i quan surt escanejant
+// et torna al camp del formulari. Aquí no hi ha formulari: cal donar-li un lloc
+// on escriure'l.
+function demanarNomReceptaRebuda(nomActual) {
+  return new Promise(resolve => {
+    document.getElementById('dialegNomRecepta')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'novetats-overlay visible';
+    overlay.id = 'dialegNomRecepta';
+    overlay.innerHTML = `
+      <div class="novetats-modal">
+        <h2 class="novetats-titol" style="margin-bottom:14px">Com la vols anomenar?</h2>
+        <input type="text" id="camp-nom-recepta" value="${escHTML(nomActual)}" maxlength="120"
+               style="width:100%;padding:10px 12px;border-radius:9px;border:1.5px solid var(--accent);background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;margin-bottom:14px">
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <button class="dup-btn dup-btn-primari" data-accio="desar">Afegir-la al meu receptari</button>
+          <button class="dup-btn dup-btn-cancel" data-accio="cancelar">Cancel·lar</button>
+        </div>
+      </div>`;
+    const camp = () => document.getElementById('camp-nom-recepta');
+    const tancar = valor => { overlay.remove(); resolve(valor); };
+    overlay.addEventListener('click', e => {
+      const accio = e.target?.dataset?.accio;
+      if (accio === 'desar') {
+        const nou = camp().value.trim();
+        if (!nou) { camp().focus(); return; }
+        tancar(nou);
+      } else if (accio === 'cancelar' || e.target === overlay) {
+        tancar('');
+      }
+    });
+    overlay.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { const nou = camp().value.trim(); if (nou) tancar(nou); }
+    });
+    document.body.appendChild(overlay);
+    setTimeout(() => { camp()?.focus(); camp()?.select(); }, 50);
+  });
+}
+
+// ══════════════════════════════════════════════
 // PROTECCIÓ CONTRA RECEPTES DUPLICADES
 // L'app identifica cada recepta pel seu nom: dos noms iguals
 // fan que targetes i edicions es confonguin entre elles.
@@ -7391,6 +7820,15 @@ async function desarRecepta(idx) {
       <div style="flex-shrink:0;background:#1a4a22;color:#6fcf97;font-size:0.78rem;font-weight:500;padding:0.45rem 1rem;border-radius:8px;border:1px solid #2d6b35">✓ Desat!</div>
     </div>`;
   actualitzarBotons();
+
+  // El botó de treure la fitxa ja no vol dir res: la recepta és al receptari i
+  // aquell botó només retirava la fitxa de la cua, que és el que passarà tot
+  // sol d'aquí a un moment. Al costat mateix del «✓ Desat!» convidaria a pensar
+  // que desfà el desat, i no en desfà cap.
+  const btnTreure = document.querySelector(`#targeta-${idx} .btn-eliminar`);
+  if (btnTreure) btnTreure.remove();
+
+  retirarFitxaDesada(idx);   // s'ensenya un moment i marxa: la feina ja està feta
 }
 
 // ── Exportar Excel ──
