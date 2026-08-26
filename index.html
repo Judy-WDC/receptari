@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 161 · 26-08-2026                                     ║
+  ║  VERSIÓ 162 · 26-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -407,6 +407,13 @@
   }
   .foto-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .foto-preview-buida { font-size: 12px; color: var(--text-muted); }
+  /* Buit, el requadre fa de botó i obre el mateix selector que "Puja una foto".
+     Amb foto ja posada no fa res, i per això tampoc no en té l'aspecte. El
+     :has() ho lliga al contingut real del requadre, que canvia sense refer el
+     formulari: així no hi ha cap classe que es pugui quedar desaparellada. */
+  .foto-preview:has(.foto-preview-buida) { cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+  .foto-preview:has(.foto-preview-buida):hover { border-color: var(--border); }
+  .foto-preview:has(.foto-preview-buida):hover .foto-preview-buida { color: var(--text-dim); }
   .foto-edit-accions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn-foto {
     display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
@@ -5950,12 +5957,12 @@ function aplicar() {
               <div class="card-edit-group full">
                 <span class="card-edit-label">Foto de la recepta</span>
                 <div class="foto-edit">
-                  <div class="foto-preview" id="foto-preview-${nomId}">
+                  <div class="foto-preview" id="foto-preview-${nomId}" onclick="triarFotoSiBuit('${nomId}')">
                     ${foto ? `<img src="${escHTML(foto)}" alt="Foto de ${escHTML(nom)}">` : `<span class="foto-preview-buida">Encara no hi ha foto</span>`}
                   </div>
                   <div class="foto-edit-accions">
                     <div class="btn-foto" onclick="this.querySelector('input').click()">
-                      <input type="file" accept="image/*" onchange="pujarFotoRecepta('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', this)">
+                      <input type="file" id="foto-input-${nomId}" accept="image/*" onchange="pujarFotoRecepta('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', this)">
                       <i class="ti ti-photo-up" aria-hidden="true"></i> Puja una foto
                     </div>
                     <div class="btn-foto" onclick="obrirCamera('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
@@ -6494,6 +6501,18 @@ function finalitzarCameraEscaner() {
   tancarCamera();
   // Totes les fotos d'aquesta sessió = una sola recepta
   if (fotos.length) afegirGrupFotos(fotos);
+}
+
+// El requadre gran de la foto fa de botó MENTRE és buit: obre el mateix
+// selector de fitxers que "Puja una foto". Si la recepta ja té foto no fa res
+// (decisió del 26-08-2026): tocar-lo per canviar-la ja es va valorar i es va
+// deixar per a més endavant. La comprovació es fa aquí, en clicar, i no en
+// pintar el formulari, perquè el requadre canvia de contingut sense refer-lo.
+function triarFotoSiBuit(nomId) {
+  const prev = document.getElementById('foto-preview-' + nomId);
+  if (!prev || prev.querySelector('img')) return;
+  const input = document.getElementById('foto-input-' + nomId);
+  if (input) input.click();
 }
 
 async function pujarFotoRecepta(nomId, nom, input) {
