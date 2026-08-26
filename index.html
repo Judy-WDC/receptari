@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 158 · 26-08-2026                                     ║
+  ║  VERSIÓ 160 · 26-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -871,6 +871,19 @@
   }
 
   /* Drop zone */
+
+  /* La font i la categoria de tota la tanda, plegades darrere d'una ratlla */
+  .per-defecte-bloc { border-top: 1px solid var(--border-dim); }
+  .per-defecte {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: none; border: none; cursor: pointer;
+    font-family: 'Poppins', sans-serif; font-size: 0.8rem;
+    color: var(--text-muted); padding: 0.7rem 0; text-align: left;
+    transition: color 0.2s;
+  }
+  .per-defecte:hover { color: var(--text-dim); }
+  .per-defecte i { font-size: 15px; flex-shrink: 0; }
+  .per-defecte span { border-bottom: 1px dotted currentColor; }
 
   /* Cua */
   .cua { display: flex; flex-direction: column; gap: 0.85rem; }
@@ -2940,20 +2953,6 @@ function tancarNovetats() {
       <div class="form-manual-wrap" id="formDocsWrap">
         <div class="form-manual-inner">
           <div class="col-body" style="border-radius:0 0 14px 14px;border-top:none;margin-top:0">
-            <div class="form-row" style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border-dim)">
-              <div class="form-group">
-                <label>Font / Llibre per defecte <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
-                <input type="text" id="fontDefecte" placeholder="p.ex. Pick Up Limes, la mama...">
-              </div>
-              <div class="form-group">
-                <label>Categoria per defecte <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
-                <div class="select-wrap">
-                  <select id="catDefecte">
-                    <option value="">— Sense categoria —</option>
-                  </select>
-                </div>
-              </div>
-            </div>
             <div class="scan-portes">
               <div class="scan-porta" id="dropZone">
                 <span class="icon"><i class="ti ti-file-upload" aria-hidden="true"></i></span>
@@ -2984,6 +2983,34 @@ function tancarNovetats() {
               accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               multiple style="display:none">
             <input type="file" id="fileInputGrup" accept="image/*" multiple style="display:none">
+
+            <!-- La font i la categoria de tota la tanda. Van plegades i a sota
+                 de les portes perquè és una eina de tanda, no de cada dia, i
+                 perquè és aquí on es fan servir: es llegeixen en processar. -->
+            <div class="per-defecte-bloc">
+              <button class="per-defecte" id="btnPerDefecte" onclick="togglePerDefecte()">
+                <i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>
+                <span>Posar la mateixa font o categoria a totes</span>
+              </button>
+              <div class="form-manual-wrap" id="perDefecteWrap">
+                <div class="form-manual-inner">
+                  <div class="form-row" style="padding-top:0.9rem">
+                    <div class="form-group">
+                      <label>Font / Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
+                      <input type="text" id="fontDefecte" placeholder="p.ex. Pick Up Limes, la mama...">
+                    </div>
+                    <div class="form-group">
+                      <label>Categoria <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
+                      <div class="select-wrap">
+                        <select id="catDefecte">
+                          <option value="">— Sense categoria —</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="cua" id="cua"></div>
             <div class="compte-desades" id="compteDesades"></div>
@@ -3102,6 +3129,35 @@ function tancarNovetats() {
         </div>
       </div>
     </div>
+    </div>
+  </div>
+
+  <!-- Una recepta que t'han enviat: s'hi enganxa l'enllaç -->
+  <div class="contenidor" style="margin-top:1.75rem">
+    <div class="seccio">
+      <div class="col-header" id="btnRebudaToggle" onclick="toggleFormRebuda()" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;border-radius:14px;transition:border-radius 0.35s">
+        <div>
+          <h3>M'han enviat una recepta</h3>
+          <p>Enganxa-hi l'enllaç que t'han passat.</p>
+        </div>
+        <svg id="rebuda-arrow" style="flex-shrink:0;color:var(--text-muted);transition:transform 0.3s;margin-left:12px" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="form-manual-wrap" id="formRebudaWrap">
+        <div class="form-manual-inner">
+          <div class="col-body" style="border-radius:0 0 14px 14px;border-top:none;margin-top:0">
+            <div class="form-row">
+              <div class="form-group full">
+                <label>Enllaç de la recepta</label>
+                <input type="text" id="rebudaEnganxa" placeholder="Enganxa aquí l'enllaç"
+                  onkeydown="if(event.key==='Enter'){obrirReceptaEnganxada();event.preventDefault()}">
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:0.25rem">
+              <button class="btn-primary" id="btnObrirRebuda" onclick="obrirReceptaEnganxada()" style="flex-shrink:0">Obrir la recepta</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3573,6 +3629,14 @@ function obrirSessioQuanEsPugui() {
 sb.auth.getSession().then(({ data, error }) => {
   const senseSessio = !data || !data.session;
   if (error && gestionarConnexio(error, () => { if (senseSessio) obrirSessioQuanEsPugui(); })) return;
+  // Ha vingut per un enllaç de recepta i aquí no té la sessió: en comptes del
+  // quadre de la contrasenya, l'enviem a la seva app, que és on ja hi és.
+  if (senseSessio && codiRebut) {
+    if (document.readyState === 'loading')
+      window.addEventListener('DOMContentLoaded', pintarReceptaEsperant);
+    else pintarReceptaEsperant();
+    return;
+  }
   if (senseSessio) obrirSessioQuanEsPugui();
 });
 
@@ -7366,11 +7430,17 @@ async function desarReceptaNova(recepta) {
 // al registre només es demana el correu, i el correu no és el nom de ningú.
 let nomUsuaria = '';
 
+// Els nostres codis fan sempre aquesta llargada exacta, i a l'adreça van darrere
+// d'un «#r=». Ser-hi tan estrictes no és mania: si ens conforméssim amb qualsevol
+// «r=», una web de cuina que en portés una a l'adreça se'ns colaria com si fos
+// una recepta nostra, i l'app deixaria d'importar-la com el que és.
+const LLARGADA_CODI = 18;
+
 // Prou llarg perquè no es pugui trobar provant. Sense la i, la l, la O ni el
 // zero: no s'han de confondre mai si algun dia s'ha de llegir en veu alta.
 function generarCodiEnllac() {
   const lletres = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const sortides = new Uint8Array(18);
+  const sortides = new Uint8Array(LLARGADA_CODI);
   crypto.getRandomValues(sortides);
   return Array.from(sortides, n => lletres[n % lletres.length]).join('');
 }
@@ -7454,9 +7524,13 @@ async function compartirRecepta(nom) {
   // es poden ajuntar (obrint el fitxer en local, l'origen no existeix).
   const base   = location.href.split('#')[0].split('?')[0];
   const enllac = base + '#r=' + codi;
+  // El missatge no explica com fer-ho a posta. Dir-li «clica l'enllaç» seria
+  // prometre una cosa que sovint no passa: des del WhatsApp, l'enllaç s'obre al
+  // seu propi navegador i no a l'app. Qui hi clica i no hi arriba, troba la
+  // instrucció a la pantalla que li surt, que és quan de debò la necessita.
   const missatge =
     `${de} t'envia una recepta: ${dades.nom}.\n` +
-    `Per a guardar-la al teu receptari, clica l'enllaç\n\n` +
+    `Per a guardar-la al teu receptari:\n\n` +
     `${enllac}\n\n` +
     `L'enllaç funcionarà durant una setmana.`;
 
@@ -7480,8 +7554,9 @@ async function compartirRecepta(nom) {
 
 // ── Rebre una recepta ──────────────────────────
 
-let codiRebut    = '';   // el que ha arribat per l'adreça i encara no s'ha obert
+let codiRebut     = '';   // el que ha arribat per l'adreça i encara no s'ha obert
 let receptaRebuda = null; // la que s'està ensenyant ara mateix
+let enllacRebut   = '';   // l'enllaç sencer, per poder-lo tornar a copiar
 
 // El codi arriba enganxat a l'adreça (#r=…). Se'n treu de seguida: si es
 // recarregués la pàgina, tornaria a sortir la mateixa pantalla un altre cop.
@@ -7489,9 +7564,54 @@ function recollirCodiDeLAdreca() {
   const m = (location.hash || '').match(/^#r=([A-Za-z0-9]+)$/);
   if (!m) return;
   codiRebut = m[1];
+  // Ens el guardem ABANS de netejar l'adreça: si no hi ha sessió, l'hi haurem
+  // d'oferir per copiar, i llavors ja no serà enlloc.
+  enllacRebut = location.href;
   history.replaceState({ panell: 'portada' }, '', location.pathname + location.search);
 }
 recollirCodiDeLAdreca();
+
+// Treu el codi de qualsevol cosa que li donin: l'enllaç sol, el missatge sencer
+// amb l'enllaç a dins, o el codi pelat. Així tant li fa què hagi copiat.
+function codiDeTextCompartit(text) {
+  const net = String(text == null ? '' : text).trim();
+  if (!net) return '';
+  const re = new RegExp('#r=([A-Za-z0-9]{' + LLARGADA_CODI + '})(?![A-Za-z0-9])');
+  const ambEnllac = net.match(re);
+  if (ambEnllac) return ambEnllac[1];
+  const pelat = net.match(new RegExp('^[A-Za-z0-9]{' + LLARGADA_CODI + '}$'));
+  return pelat ? pelat[0] : '';
+}
+
+// Si la sessió ja hi és, la recepta s'obre de seguida; si no, el codi espera i
+// engegarReceptari() l'obrirà quan hi hagi entrat.
+function encaminarCodiRebut(codi) {
+  if (!codi) return false;
+  if (usuariaId) obrirReceptaCompartida(codi);
+  else codiRebut = codi;
+  return true;
+}
+
+// La quarta porta d'«Afegir receptes». El botó fa les dues coses: si el camp és
+// buit, mira què s'ha copiat; si hi ha alguna cosa escrita, fa cas d'allò.
+async function obrirReceptaEnganxada() {
+  const camp = document.getElementById('rebudaEnganxa');
+  let text = camp.value.trim();
+  if (!text) {
+    try { text = (await navigator.clipboard.readText()) || ''; }
+    catch { camp.focus(); return; }   // sense permís: que ho enganxi a mà
+    if (!text) { camp.focus(); return; }
+  }
+  const codi = codiDeTextCompartit(text);
+  if (!codi) {
+    camp.value = text;                // que vegi què hi ha entrat i ho pugui esmenar
+    camp.focus();
+    mostrarToast('❌ Això no sembla l\'enllaç d\'una recepta');
+    return;
+  }
+  camp.value = '';
+  encaminarCodiRebut(codi);
+}
 
 async function obrirReceptaCompartida(codi) {
   codiRebut = '';
@@ -7541,6 +7661,36 @@ function pintarReceptaRebuda(de, dades) {
       </div>
     </div>`;
   mostrarPanell('rebuda');
+}
+
+// Ha obert l'enllaç en un navegador on no té la sessió: el cas del WhatsApp,
+// que obre els enllaços al seu propi navegador, que és un compartiment estanc.
+// Aquí NO li demanem la contrasenya: acostumar ningú a escriure-la dins del
+// navegador d'una altra app és mala escola. L'enviem a la seva app, que és on
+// ja hi és, i li donem l'enllaç a punt de copiar.
+function pintarReceptaEsperant() {
+  receptaRebuda = null;
+  document.getElementById('panell-rebuda').innerHTML = `
+    <div class="rebuda-caducat">
+      <div class="rebuda-caducat-icona"><i class="ti ti-device-mobile" aria-hidden="true"></i></div>
+      <div class="detall-nom" style="font-size:1.3rem;margin-bottom:0.6rem">Aquesta recepta t'espera a la teva app</div>
+      <p class="rebuda-caducat-txt">Copia l'enllaç, obre la teva app de receptes i enganxa'l a «Afegir receptes» → «M'han enviat una recepta».</p>
+      <button class="rebuda-btn-ple" id="btn-copiar-enllac" style="margin-top:1.5rem;width:100%;max-width:260px" onclick="copiarEnllacRebut()">Copiar l'enllaç</button>
+      <button class="rebuda-btn-buit" style="margin-top:0.75rem;width:100%;max-width:260px;border-color:transparent" onclick="obrirConfigUrl()">Entrar-hi des d'aquí</button>
+    </div>`;
+  mostrarPanell('rebuda');
+  // Sense sessió, la barra de sota no porta enlloc: fora.
+  document.getElementById('nav-principal').classList.remove('visible');
+}
+
+async function copiarEnllacRebut() {
+  if (!enllacRebut) return;
+  try {
+    await navigator.clipboard.writeText(enllacRebut);
+    mostrarToast('📋 Enllaç copiat');
+  } catch {
+    mostrarToast('❌ No s\'ha pogut copiar l\'enllaç');
+  }
 }
 
 function pintarEnllacCaducat() {
@@ -7840,6 +7990,23 @@ function toggleFormDocs() {
   btn.style.borderRadius = obert ? '14px 14px 0 0' : '14px';
 }
 
+function togglePerDefecte() {
+  const wrap = document.getElementById('perDefecteWrap');
+  wrap.classList.toggle('obert');
+}
+
+function toggleFormRebuda() {
+  const wrap  = document.getElementById('formRebudaWrap');
+  const btn   = document.getElementById('btnRebudaToggle');
+  const arrow = document.getElementById('rebuda-arrow');
+  const obert = wrap.classList.toggle('obert');
+  arrow.style.transform = obert ? 'rotate(180deg)' : '';
+  btn.style.borderRadius = obert ? '14px 14px 0 0' : '14px';
+  if (obert) {
+    setTimeout(() => btn.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+}
+
 function toggleFormEnllac() {
   const wrap  = document.getElementById('formEnllacWrap');
   const btn   = document.getElementById('btnEnllacToggle');
@@ -7872,9 +8039,18 @@ function gestionarCompartit() {
   // L'enllaç pot venir a 'url', dins de 'text' (YouTube ho fa així) o a 'titol'
   const cru = [params.get('compartit_url'), params.get('compartit_text'), params.get('compartit_titol')]
     .filter(Boolean).join(' ');
-  const m = cru.match(/https?:\/\/\S+/);
   // Netegem els paràmetres perquè recarregar la pàgina no repeteixi la importació
   history.replaceState(null, '', location.pathname);
+
+  // Pot ser un enllaç NOSTRE: una recepta que algú li ha enviat. Llavors no és
+  // cap pàgina web de cuina per anar a llegir a Internet, sinó una recepta que
+  // ja espera al calaix de pas i que només s'ha d'anar a buscar pel seu codi.
+  // Sense aquesta comprovació, l'app intentava importar el seu propi enllaç com
+  // si fos una web de receptes, i fracassava.
+  const codiPropi = codiDeTextCompartit(cru);
+  if (codiPropi) { setTimeout(() => encaminarCodiRebut(codiPropi), 500); return; }
+
+  const m = cru.match(/https?:\/\/\S+/);
   if (!m) return;
   urlCompartidaPendent = m[0];
   setTimeout(processarUrlCompartida, 500); // marge perquè acabi la inicialització
