@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 162 · 26-08-2026                                     ║
+  ║  VERSIÓ 165 · 28-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 147 (index-receptes-Supabase-147.html) i la següent, la 157.
+  l'última és la 157 (index-receptes-Supabase-157.html) i la següent, la 167.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 2, a la versió 150; la següent, la 3, toca a la versió 175.
 
@@ -1283,14 +1283,22 @@
     display: flex; align-items: center; gap: 12px;
     padding: 1rem 1.25rem;
   }
+  /* La fletxa i el rètol són un sol botó. Abans el rètol era un text a part:
+     deia on anaves, però no es podia tocar, i tota la zona clicable eren els
+     28 px de la fletxa. El marge negatiu compensa el farciment: la zona del dit
+     creix cap amunt i cap avall sense que el capçal es faci més alt. */
   .detall-header-back {
     background: none; border: none; cursor: pointer;
-    color: var(--accent); font-size: 20px; padding: 4px;
-    display: flex; align-items: center;
+    color: var(--accent); font-size: 20px;
+    padding: 10px 4px; margin: -6px 0;
+    display: flex; align-items: center; gap: 12px;
+    flex: 1; min-width: 0; text-align: left;
+    font-family: 'Poppins', sans-serif;
   }
   .detall-header-back:hover { opacity: 0.7; }
   .detall-header-text {
-    font-size: 13px; color: var(--text-muted); flex: 1;
+    font-size: 13px; color: var(--text-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .detall-header-icons { display: flex; gap: 10px; }
   .detall-header-icons button {
@@ -1633,6 +1641,14 @@
      fitxa d'àpat (50 px) a posta: aquí és una vista prèvia, no la pantalla on
      treballes, i si fossin iguals el botó «Obrir» es quedaria sense promesa. */
   .plat-fila.amb-mini { padding: 0.45rem 0.75rem 0.45rem 0.45rem; gap: 9px; }
+  /* La fila porta a la recepta, com a la fitxa d'àpat. Tota la fila i no només el
+     nom: aquí no hi ha res més a tocar-hi. El fosc del toc el posem nosaltres, i
+     per això apaguem el que hi posa el navegador: si no, se'n veurien dos. */
+  .plat-fila.clicable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .plat-fila.clicable:active { background: rgba(11,32,39,0.85); }
+  /* Les racions es queden fora: la xifra és un botó a la fitxa d'àpat i, si aquí
+     obrís la recepta, el dit que hi va a canviar-les acabaria on no toca. */
+  .plat-fila.clicable .plat-racions { cursor: default; }
   .fila-mini {
     width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
     object-fit: cover; background: var(--surface2);
@@ -1644,9 +1660,17 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .plat-nom.esborrada { color: var(--text-muted); font-style: italic; }
+  /* Les racions són una nota al marge, no una dada que hagi de cridar: aquí és una
+     vista prèvia i qui vol la xifra de debò va a la fitxa d'àpat, que té el control
+     de − i +. Per això la píndola és de contorn i no plena, i per això no és groga:
+     a la secció, el groc vol dir «on ets» (el dia obert, el punt d'avui) i no «quant
+     n'hi ha». El blau la posa a la família de l'«Obrir» i del «dinar / sopar», que és
+     la informació de servei; un graó més clar que ells perquè és una dada i no una
+     etiqueta. Amb el contorn, la negreta ja no cal. */
   .plat-racions {
-    font-size: 0.72rem; font-weight: 500; color: var(--bg); background: var(--accent);
-    padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    font-size: 0.72rem; font-weight: 400; color: #92b5c2;
+    background: none; border: 1px solid rgba(64,121,140,0.5);
+    padding: 1px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
   }
   .btn-afegir-plat {
     display: flex; align-items: center; gap: 6px;
@@ -1698,6 +1722,11 @@
     object-fit: cover; background: var(--surface2);
     display: flex; align-items: center; justify-content: center; overflow: hidden;
   }
+  /* La foto també porta a la recepta, com el nom del costat i com la fila de la
+     graella: la regla és una de sola, siguis on siguis. És un embolcall i no un
+     estil sobre la peça perquè la miniatura es fa en un sol lloc per a les tres
+     mides i no ha de saber què hi ha al seu voltant. */
+  .plat-mini-porta { display: flex; flex-shrink: 0; cursor: pointer; }
 
   /* ── El plat sense foto, igual a les tres mides ──
      La inicial del nom sobre el color de la seva categoria: la mateixa paleta
@@ -4826,7 +4855,7 @@ history.replaceState({ panell: 'portada' }, '', '');
 window.addEventListener('popstate', function(e) {
   const estat = e.state;
   if (estat && estat.panell === 'detall' && estat.receptaNom) {
-    obrirDetall(estat.receptaNom, true);
+    obrirDetall(estat.receptaNom, true, estat.origen);
   } else if (estat && estat.panell === 'apat' && estat.dia && estat.apat) {
     apatObert = { dia: estat.dia, apat: estat.apat };
     mostrarPanell('apat');
@@ -4840,9 +4869,19 @@ window.addEventListener('popstate', function(e) {
 // PANELL DETALL RECEPTA
 // ══════════════════════════════════════════════
 
-function obrirDetall(nom, desDePopstate) {
+// D'on s'ha arribat a la fitxa. Només mana el rètol de tornada: la fletxa fa
+// history.back() i torna on toca en tots els casos, digui el que digui el rètol.
+let origenDetall = 'receptari';
+
+// L'origen el diu qui obre la fitxa. Les portes que no diuen res venen del
+// receptari, que són la majoria. Quan es reobre la mateixa fitxa per repintar-la
+// (desDePopstate) no s'hi toca: si no, definir les racions et canviaria el rètol.
+function obrirDetall(nom, desDePopstate, origen) {
   const r = receptes.find(x => x['Nom de la recepta'] === nom);
   if (!r) return;
+
+  if (origen) origenDetall = origen;
+  else if (!desDePopstate) origenDetall = 'receptari';
 
   // Reinicia les racions al valor original cada cop que s'obre el detall
   delete racionsActual[nom];
@@ -4981,10 +5020,10 @@ function obrirDetall(nom, desDePopstate) {
   const panell = document.getElementById('panell-detall');
   panell.innerHTML = `
     <div class="detall-header">
-      <button class="detall-header-back" onclick="history.back()" aria-label="Tornar">
+      <button class="detall-header-back" onclick="history.back()">
         <i class="ti ti-arrow-left" aria-hidden="true"></i>
+        <span class="detall-header-text">${origenDetall === 'menus' ? 'Tornar als menús' : 'Tornar al receptari'}</span>
       </button>
-      <span class="detall-header-text">Tornar al receptari</span>
       <div class="detall-header-icons">
         <button onclick="detallEditar('${nomId}','${nomEsc}')" title="Editar recepta" aria-label="Editar recepta">
           <i class="ti ti-edit" aria-hidden="true"></i>
@@ -5055,7 +5094,7 @@ function obrirDetall(nom, desDePopstate) {
   window.scrollTo(0, 0);
 
   if (!desDePopstate) {
-    history.pushState({ panell: 'detall', receptaNom: nom }, '', '');
+    history.pushState({ panell: 'detall', receptaNom: nom, origen: origenDetall }, '', '');
   }
 }
 
@@ -9262,10 +9301,10 @@ function pintarDia(dia) {
 function blocApat(dia, apat, plats) {
   const files = plats.map(p => {
     const fora = receptaEsborrada(p);
-    return `<div class="plat-fila amb-mini">
+    return `<div class="plat-fila amb-mini clicable" onclick="obrirReceptaDePlat('${p.id}')">
       ${miniPlat(p, 'fila-mini')}
       <span class="plat-nom${fora ? ' esborrada' : ''}">${escHTML(nomDePlat(p))}${fora ? ' · recepta esborrada' : ''}</span>
-      <span class="plat-racions">${p.racions || '?'} rac.</span>
+      <span class="plat-racions" onclick="event.stopPropagation()">${p.racions || '?'} rac.</span>
     </div>`;
   }).join('');
 
@@ -9344,7 +9383,7 @@ function targetaPlat(p) {
       onpointerup="finalitzarPulsacio()"
       onpointercancel="finalitzarPulsacio()"
       onpointerleave="finalitzarPulsacio()">
-    ${mini}
+    <span class="plat-mini-porta" onclick="obrirReceptaDePlat('${p.id}')">${mini}</span>
     <div class="plat-cos">
       <div class="plat-linia">
         <span class="plat-nom${fora ? ' esborrada' : ''}" onclick="obrirReceptaDePlat('${p.id}')">${escHTML(nom)}${fora ? ' · recepta esborrada' : ''}</span>
@@ -9526,7 +9565,7 @@ function obrirReceptaDePlat(id) {
   if (!p) return;
   const r = receptaDePlat(p);
   if (!r) { mostrarToast('Aquesta recepta ja no és al receptari'); return; }
-  obrirDetall(r['Nom de la recepta']);
+  obrirDetall(r['Nom de la recepta'], false, 'menus');
 }
 
 // ── Afegir un plat: cercador contra el receptari ──
