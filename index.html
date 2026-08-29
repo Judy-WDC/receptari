@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 165 · 28-08-2026                                     ║
+  ║  VERSIÓ 167 · 29-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 157 (index-receptes-Supabase-157.html) i la següent, la 167.
+  l'última és la 167 (index-receptes-Supabase-167.html) i la següent, la 177.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 2, a la versió 150; la següent, la 3, toca a la versió 175.
 
@@ -4852,6 +4852,36 @@ function obrirReceptaDia() {
 // Inicialitzem l'estat base (portada) a l'historial
 history.replaceState({ panell: 'portada' }, '', '');
 
+// ── Tornar al lloc on eres ──
+// En sortir d'un panell, la porta apunta quin element miraves; en tornar-hi amb
+// el botó d'enrere, l'hi tornem. Entrar-hi a posta des de la pestanya de sota NO
+// ho fa: allò és començar de nou, el mateix criteri que l'ordre del receptari.
+//
+// El navegador també es guarda l'scroll de cada entrada de l'historial, i el
+// restauraria després que nosaltres l'haguéssim mogut. Com que tots els panells
+// viuen a la mateixa pàgina i sempre en sortim amb un scrollTo(0, 0), el que ell
+// desa és un zero: no perdem res prenent-li la feina i ens estalviem la baralla.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+let ancoraTornada = null;   // { panell, id } — serveix un sol cop
+const AIRE_ANCORA = 12;     // píxels per sobre de l'element, perquè no quedi enganxat a dalt
+
+function recordarAncora(panell, id) {
+  ancoraTornada = { panell, id };
+}
+
+// Sense animació: no és un desplaçament que hagis demanat, és el lloc d'on
+// venies, i ha de semblar que no s'ha mogut de puesto.
+function recuperarAncora(panell) {
+  const ancora = ancoraTornada;
+  ancoraTornada = null;
+  if (!ancora || ancora.panell !== panell) return;
+  const el = document.getElementById(ancora.id);
+  if (!el) return;
+  const y = el.getBoundingClientRect().top + window.pageYOffset - AIRE_ANCORA;
+  window.scrollTo(0, Math.max(0, y));
+}
+
 window.addEventListener('popstate', function(e) {
   const estat = e.state;
   if (estat && estat.panell === 'detall' && estat.receptaNom) {
@@ -4861,7 +4891,9 @@ window.addEventListener('popstate', function(e) {
     mostrarPanell('apat');
     pintarApat();
   } else {
-    mostrarPanell(estat && estat.panell ? estat.panell : 'portada');
+    const panell = estat && estat.panell ? estat.panell : 'portada';
+    mostrarPanell(panell);
+    recuperarAncora(panell);
   }
 });
 
@@ -4882,6 +4914,20 @@ function obrirDetall(nom, desDePopstate, origen) {
 
   if (origen) origenDetall = origen;
   else if (!desDePopstate) origenDetall = 'receptari';
+
+  // On tornarem quan es premi enrere. Des dels menús, el dia que hi ha obert;
+  // des del receptari, la targeta de la recepta. De la resta de portes (la
+  // portada, una recepta acabada de rebre) no es torna a cap llista.
+  if (!desDePopstate) {
+    if (origenDetall === 'menus') {
+      if (diaObert) recordarAncora('planificacio', 'dia-' + diaObert);
+      else ancoraTornada = null;
+    } else if (document.getElementById('panell-cerca').classList.contains('actiu')) {
+      recordarAncora('cerca', 'card-' + nom.replace(/[^a-zA-Z0-9]/g, '_'));
+    } else {
+      ancoraTornada = null;
+    }
+  }
 
   // Reinicia les racions al valor original cada cop que s'obre el detall
   delete racionsActual[nom];
@@ -7353,6 +7399,34 @@ function separarIngredientsEnganxats(linia) {
   return trossos.length ? trossos : [linia];
 }
 
+// Les línies de tot seguit, semblen una llista d'ingredients? Es miren les deu
+// següents i es compten les que comencen amb una quantitat i una unitat coneguda.
+// Amb dues n'hi ha prou: una llista de debò en té més, i un índex no en té cap.
+function semblaLlistaIngredients(lines, desde) {
+  const re = reIniciIngredient();
+  let quantes = 0;
+  for (let i = desde + 1; i < Math.min(desde + 11, lines.length); i++) {
+    re.lastIndex = 0;
+    if (re.test(lines[i])) quantes++;
+  }
+  return quantes >= 2;
+}
+
+// Els blogs de cuina solen obrir amb una taula de continguts que repeteix tots
+// els títols de la pàgina. Quedar-nos la primera capçalera «Ingredients» que
+// trobem vol dir quedar-nos la de l'índex, i llavors els ingredients comencen
+// molt amunt i s'empassen la introducció sencera. La bona és la que va seguida
+// de coses que semblen ingredients. Si cap no ho està —receptes de llibre amb
+// quantitats sense unitat: «2 ous, 1 ceba»— ens quedem la primera, que és el
+// que s'ha fet sempre.
+function triarCapcaleraIngredients(lines, reCapIng) {
+  const candidates = [];
+  lines.forEach((l, i) => { if (reCapIng.test(l)) candidates.push(i); });
+  if (!candidates.length) return -1;
+  const bona = candidates.find(i => semblaLlistaIngredients(lines, i));
+  return bona !== undefined ? bona : candidates[0];
+}
+
 function extraccioLocal(text, fontDefecte) {
   let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const linesOriginals = lines.slice(); // per a detectarFont
@@ -7375,9 +7449,23 @@ function extraccioLocal(text, fontDefecte) {
   // ── Capçaleres explícites (si el llibre en té, les aprofitem) ──
   const reCapIng   = /^(ingredients?|ingredientes?|ingr\.?)(\s*:)?(\s.{0,60})?\s*$/i;
   const reCapInstr = /^(preparació|preparación|preparation|elaboració|elaboración|mètode|método|method|instruccions?|instrucciones|instructions?|passos?|pasos?|directions?|steps?|com es fa|cómo se hace)(\s*:)?(\s.{0,25})?\s*$/i;
+  // «Paso a paso: com fer el sandvitx de xocolata, plàtan i crema de cacauet» és
+  // una capçalera per llarga que sigui: cap pas de recepta no comença així. Per
+  // això aquesta no porta la cua limitada com les altres.
+  const reCapPasAPas = /^(pas a pas|paso a paso|step by step)\b/i;
+  const esCapInstr   = l => reCapInstr.test(l) || reCapPasAPas.test(l);
 
-  const idxCapIng   = lines.findIndex(l => reCapIng.test(l));
-  const idxCapInstr = lines.findIndex(l => reCapInstr.test(l));
+  const idxCapIng = triarCapcaleraIngredients(lines, reCapIng);
+
+  // La capçalera dels passos: la primera que hi hagi DESPRÉS dels ingredients,
+  // perquè l'índex del principi tampoc no ens enredi. Si només n'hi ha abans, ens
+  // la quedem igualment: són les receptes amb les columnes al revés, que es
+  // contemplen unes línies més avall.
+  const totsCapInstr = [];
+  lines.forEach((l, i) => { if (esCapInstr(l)) totsCapInstr.push(i); });
+  const capDespres  = idxCapIng !== -1 ? totsCapInstr.find(i => i > idxCapIng) : undefined;
+  const idxCapInstr = capDespres !== undefined ? capDespres
+                    : (totsCapInstr.length ? totsCapInstr[0] : -1);
 
   // ── Detecció del primer pas numerat: número + verb de cuina ──
   // (els passos comencen per "1" i van seguits d'un verb: "1 Peleu i talleu...")
@@ -8322,12 +8410,17 @@ function omplirDesDEnllac(item, dades, hostname) {
   } else {
     let textNet = dades.text || '';
     if (dades.tipus === 'youtube') textNet = netejarDescripcioYoutube(textNet);
+    // Quan la web porta la fitxa a mitges —els ingredients sí i els passos no, o
+    // només el títol i l'autora—, l'ajudant ens envia el que en tenia JUNT amb el
+    // text de la pàgina. El que ve de la fitxa mana, perquè és exacte; la resta,
+    // la llegim nosaltres. Dels vídeos de YouTube no en ve mai res d'això i tot
+    // queda com abans.
     const ext = extraccioLocal(textNet, dades.font || hostname);
     recepta = {
       nom:          normalitzarTitol(dades.nom || '') || ext.nom || '',
-      ingredients:  ext.ingredients  || '',
-      instruccions: ext.instruccions || '',
-      racions:      ext.racions || dades.racions || '',
+      ingredients:  dades.ingredients  || ext.ingredients  || '',
+      instruccions: dades.instruccions || ext.instruccions || '',
+      racions:      dades.racions || ext.racions || '',
       font:         dades.font  || ext.font || hostname,
     };
   }
@@ -9276,7 +9369,7 @@ function pintarDia(dia) {
             .map(([etiqueta, plats]) => tiraMinis(etiqueta, plats))
             .join('')
         }</div>`;
-    return `<div class="dia-card${buit ? ' buida' : ''}">
+    return `<div class="dia-card${buit ? ' buida' : ''}" id="dia-${dia}">
       <div class="dia-head" onclick="obrirDia('${dia}')">
         ${capsalera}
         <i class="ti ti-chevron-down" aria-hidden="true"></i>
@@ -9286,7 +9379,7 @@ function pintarDia(dia) {
   }
 
   // Desplegat: els dos àpats, amb la seva porta cap a la fitxa
-  return `<div class="dia-card obert">
+  return `<div class="dia-card obert" id="dia-${dia}">
     <div class="dia-head" onclick="obrirDia(null)">
       ${capsalera}
       <i class="ti ti-chevron-up" aria-hidden="true"></i>
@@ -9325,6 +9418,7 @@ function obrirDia(dia) {
 
 // ── La fitxa d'àpat ──
 function obrirApat(dia, apat) {
+  recordarAncora('planificacio', 'dia-' + dia);
   apatObert  = { dia, apat };
   mostrarPanell('apat');
   history.pushState({ panell: 'apat', dia, apat }, '', '');
