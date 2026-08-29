@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 167 · 29-08-2026                                     ║
+  ║  VERSIÓ 169 · 29-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -334,6 +334,27 @@
   @media (max-width: 600px) {
     .filtre-etiqueta { padding: 4px 10px; font-size: 12px; }
   }
+
+  /* Les etiquetes que ja fas servir, sota els camps d'escriure'n.
+     Les píndoles són les mateixes dels filtres: ja saps què són i com es toquen.
+     El bloc entra cap a dins i porta un filet vertical: així es veu que penja del
+     camp de sobre en comptes de partir el requadre en dos. I el títol va en
+     minúscula i més apagat, perquè les majúscules espaiades són els noms dels
+     camps, i això no n'és cap. */
+  .sug-etiq {
+    margin-top: 0.7rem;
+    padding-left: 0.75rem;
+    border-left: 1.5px solid var(--border-dim);
+  }
+  .sug-etiq:empty { display: none; }   /* qui encara no en té cap, no veu res */
+  .sug-etiq-titol {
+    font-size: 0.73rem; color: var(--text-fet);
+    font-weight: 300; margin-bottom: 0.5rem;
+  }
+  .sug-etiq-fila { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sug-etiq-fila .filtre-etiqueta.mes { border-style: dashed; }
+  .sug-etiq-buit { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+  .sug-etiq-buit b { color: var(--text-dim); font-weight: 400; }
 
   /* Cards recepta */
   .card {
@@ -1930,6 +1951,9 @@
     --text:        #F6F5AE;
     --text-dim:    #d4e8ee;
     --text-muted:  #92b5c2;
+    /* Un graó més fluix que el "muted" d'aquí. El de la paleta fosca és massa
+       terrós per a aquest fons clar: aquí el silenci es fa acostant-se al blau. */
+    --text-fet:    #7ba2b0;
     --accent:      #F5F749;
     --accent2:     #a8d4e0;
     --verd:        #3D6B4F;
@@ -2921,7 +2945,9 @@ function tancarNovetats() {
       </div>
       <div class="card-edit-group full">
         <span class="card-edit-label">Etiquetes</span>
-        <input type="text" id="idea-etiquetes" placeholder="ràpid, sense cuinar, sopar…">
+        <input type="text" id="idea-etiquetes" placeholder="ràpid, sense cuinar, sopar…"
+          oninput="pintarEtiquetesSuggerides('idea-etiquetes','idees')">
+        <div class="sug-etiq" id="sug-idea-etiquetes"></div>
       </div>
       <div class="card-edit-group full">
         <span class="card-edit-label">Comentari</span>
@@ -3211,7 +3237,9 @@ function tancarNovetats() {
           <div class="form-row">
             <div class="form-group full">
               <label>Etiquetes</label>
-              <input type="text" id="manual-etiquetes" placeholder="sopar ràpid, meal prep…">
+              <input type="text" id="manual-etiquetes" placeholder="sopar ràpid, meal prep…"
+                oninput="pintarEtiquetesSuggerides('manual-etiquetes','receptes')">
+              <div class="sug-etiq" id="sug-manual-etiquetes"></div>
             </div>
           </div>
           <div id="manual-error" style="display:none;font-size:0.82rem;color:#E57373;margin-top:-0.25rem"></div>
@@ -6094,7 +6122,9 @@ function aplicar() {
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Etiquetes</span>
-                <input type="text" id="edit-etiquetes-${nomId}" value="${escHTML(etiquetes)}" placeholder="sopar ràpid, meal prep…">
+                <input type="text" id="edit-etiquetes-${nomId}" value="${escHTML(etiquetes)}" placeholder="sopar ràpid, meal prep…"
+                  oninput="pintarEtiquetesSuggerides('edit-etiquetes-${nomId}','receptes')">
+                <div class="sug-etiq" id="sug-edit-etiquetes-${nomId}"></div>
               </div>
               <div class="card-edit-accions">
                 <button class="btn-edit-cancel" onclick="tancarEdicio('${nomId}')">Cancel·lar</button>
@@ -6163,6 +6193,10 @@ function obrirEdicio(nomId, nom) {
   }
   const form = document.getElementById('edit-form-' + nomId);
   if (form) form.classList.add('visible');
+
+  // Les etiquetes suggerides es pinten en obrir el formulari, no en dibuixar la
+  // targeta: si no, es pintarien seixanta vegades sense que ningú les miri.
+  pintarEtiquetesSuggerides('edit-etiquetes-' + nomId, 'receptes');
 
   // Guarda el text original dels ingredients per detectar canvis al desar
   const ingTextarea = document.getElementById('edit-ing-' + nomId);
@@ -6910,9 +6944,13 @@ function renderItem(item) {
         </div>
         <div class="form-group">
           <label>Etiquetes</label>
-          <input type="text" id="etiquetes-${idx}" placeholder="sopar ràpid, meal prep…">
+          <input type="text" id="etiquetes-${idx}" placeholder="sopar ràpid, meal prep…"
+            oninput="pintarEtiquetesSuggerides('etiquetes-${idx}','receptes')">
         </div>
       </div>
+      <!-- Les píndoles van sota la fila sencera, no dins de la meitat del camp:
+           en una columna de mitja pantalla es partirien en un llistat massa alt -->
+      <div class="sug-etiq" id="sug-etiquetes-${idx}"></div>
       <div class="form-row">
         <div class="form-group full">
           <label>Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
@@ -6930,6 +6968,7 @@ function renderItem(item) {
       </button>
     </div>`;
   (tipus === 'enllac' ? document.getElementById('cuaEnllac') : cua).appendChild(div);
+  pintarEtiquetesSuggerides(`etiquetes-${idx}`, 'receptes');
 }
 
 function setBadge(idx, classe, text) {
@@ -7618,15 +7657,144 @@ function extraccioLocal(text, fontDefecte) {
 }
 
 // ── Desar a Google Sheets ──
-function normalitzarEtiquetes(raw) {
+// La xarxa de seguretat de l'escriptura: si el que has escrit a mà és una
+// etiqueta que ja tens, canviant només majúscules o accents, s'adopta
+// l'escriptura de la que ja hi era. Així «Ràpid» no neix al costat de «ràpid».
+// No s'avisa de res: no has fet res mal fet.
+function normalitzarEtiquetes(raw, bossa) {
+  const conegudes = etiquetesDeLaBossa(bossa === 'idees' ? 'idees' : 'receptes');
   return (raw || '').split(',')
-    .map(e => e.trim().replace(/^#+/, '').trim())
+    .map(e => netejarEtiqueta(e))
     .filter(Boolean)
+    .map(e => conegudes.find(c => etiquetaPlana(c) === etiquetaPlana(e)) || e)
     .join(', ');
 }
 
 function netejarEtiqueta(e) {
   return e.trim().replace(/^#+/, '').trim();
+}
+
+// ══════════════════════════════════════════════
+// ETIQUETES SUGGERIDES
+// ══════════════════════════════════════════════
+// Sota cada camp d'etiquetes hi ha les que ja fas servir, en píndoles. En toques
+// una i s'afegeix al camp; la tornes a tocar i se'n va. Mentre escrius, només hi
+// queden les que encaixen amb el tros que portes escrit darrere de l'última coma.
+//
+// Les receptes i les idees tenen bosses SEPARADES i no es barregen mai: cada camp
+// diu de quina beu.
+
+const ETIQ_VISIBLES = 10;           // quantes se n'ensenyen abans del «+ N més»
+const etiqDesplegades = new Set();  // quins camps tenen la llista sencera oberta
+
+// Minúscules i sense accents, només per comparar: «Ràpid» i «rapid» són la mateixa.
+function etiquetaPlana(t) {
+  // Els signes d'accent, un cop separats de la lletra amb NFD, són els codis
+  // 768 a 879 de la taula Unicode. Es compten un a un a posta: la mateixa regla
+  // escrita com a rang dins d'una expressió regular queda invisible al fitxer.
+  return String(t || '').toLowerCase().normalize('NFD')
+    .split('')
+    .filter(c => { const n = c.charCodeAt(0); return n < 768 || n > 879; })
+    .join('');
+}
+
+// Les etiquetes que ja té, de la més usada a la menys. Les que només es
+// diferencien per una majúscula o un accent compten com una de sola.
+function etiquetesDeLaBossa(bossa) {
+  const files = bossa === 'idees' ? idees : receptes;
+  const compte = new Map();
+  (files || []).forEach(fila => {
+    (fila['Etiquetes'] || '').split(',').map(e => netejarEtiqueta(e)).filter(Boolean)
+      .forEach(et => {
+        const clau = etiquetaPlana(et);
+        const ja = compte.get(clau);
+        if (ja) ja.quantes++;
+        else compte.set(clau, { et, quantes: 1 });
+      });
+  });
+  return [...compte.values()]
+    .sort((a, b) => b.quantes - a.quantes || a.et.localeCompare(b.et))
+    .map(x => x.et);
+}
+
+// Què hi ha al camp: les etiquetes senceres i el tros que s'està escrivint ara.
+// L'últim tros ja compta com a posat si és igual que una de les que tens.
+function estatCampEtiquetes(camp, conegudes) {
+  const trossos   = (camp.value || '').split(',');
+  const aEscriure = netejarEtiqueta(trossos[trossos.length - 1]);
+  const posades   = trossos.slice(0, -1).map(t => netejarEtiqueta(t)).filter(Boolean);
+  if (aEscriure && conegudes.some(e => etiquetaPlana(e) === etiquetaPlana(aEscriure))) {
+    posades.push(aEscriure);
+  }
+  return { posades, aEscriure };
+}
+
+function pintarEtiquetesSuggerides(idCamp, bossa) {
+  const cont = document.getElementById('sug-' + idCamp);
+  const camp = document.getElementById(idCamp);
+  if (!cont || !camp) return;
+
+  const conegudes = etiquetesDeLaBossa(bossa);
+  if (!conegudes.length) { cont.innerHTML = ''; return; }
+
+  const { posades, aEscriure } = estatCampEtiquetes(camp, conegudes);
+  const posadesPla = posades.map(etiquetaPlana);
+  const escrivint  = aEscriure && !posadesPla.includes(etiquetaPlana(aEscriure));
+
+  // Mentre escrius es miren TOTES, no només les deu de davant: si no, el
+  // «+ N més» t'amagaria justament la que estàs buscant.
+  const llista = (escrivint
+    ? conegudes.filter(e => etiquetaPlana(e).includes(etiquetaPlana(aEscriure)))
+    : conegudes.slice())
+    .sort((a, b) => posadesPla.includes(etiquetaPlana(b)) - posadesPla.includes(etiquetaPlana(a)));
+
+  const titol = '<div class="sug-etiq-titol">Les que ja fas servir</div>';
+
+  if (!llista.length) {
+    cont.innerHTML = titol + `<p class="sug-etiq-buit">Cap de les teves no s'hi assembla. `
+      + `<b>«${escHTML(aEscriure)}» serà una etiqueta nova.</b></p>`;
+    return;
+  }
+
+  const desplegada = etiqDesplegades.has(idCamp);
+  const retallem   = !escrivint && !desplegada && llista.length > ETIQ_VISIBLES;
+  const mostrades  = retallem ? llista.slice(0, ETIQ_VISIBLES) : llista;
+
+  const pindoles = mostrades.map(et => {
+    const escapada = et.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `<button type="button" class="filtre-etiqueta${posadesPla.includes(etiquetaPlana(et)) ? ' actiu' : ''}"
+              onclick="toggleEtiquetaSuggerida('${idCamp}','${bossa}','${escapada}')">${escHTML(et)}</button>`;
+  }).join('');
+
+  let botoMes = '';
+  if (retallem) {
+    botoMes = `<button type="button" class="filtre-etiqueta mes"
+                 onclick="desplegarEtiquetes('${idCamp}','${bossa}')">+ ${llista.length - ETIQ_VISIBLES} més</button>`;
+  } else if (desplegada && !escrivint) {
+    botoMes = `<button type="button" class="filtre-etiqueta mes"
+                 onclick="desplegarEtiquetes('${idCamp}','${bossa}')">Mostra-ne menys</button>`;
+  }
+
+  cont.innerHTML = titol + '<div class="sug-etiq-fila">' + pindoles + botoMes + '</div>';
+}
+
+function desplegarEtiquetes(idCamp, bossa) {
+  if (etiqDesplegades.has(idCamp)) etiqDesplegades.delete(idCamp);
+  else etiqDesplegades.add(idCamp);
+  pintarEtiquetesSuggerides(idCamp, bossa);
+}
+
+function toggleEtiquetaSuggerida(idCamp, bossa, et) {
+  const camp = document.getElementById(idCamp);
+  if (!camp) return;
+  const conegudes = etiquetesDeLaBossa(bossa);
+  const { posades } = estatCampEtiquetes(camp, conegudes);
+  const pla = etiquetaPlana(et);
+  const noves = posades.map(etiquetaPlana).includes(pla)
+    ? posades.filter(x => etiquetaPlana(x) !== pla)
+    : posades.concat(et);
+  camp.value = noves.join(', ');
+  pintarEtiquetesSuggerides(idCamp, bossa);
 }
 
 // Desa una recepta nova a Supabase
@@ -8459,6 +8627,7 @@ function toggleFormManual() {
 
   // Omple el select de categories quan s'obre i fa scroll fins al formulari
   if (obert) {
+    pintarEtiquetesSuggerides('manual-etiquetes', 'receptes');
     setTimeout(function() {
       btn.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
@@ -8803,7 +8972,9 @@ function renderIdea(it) {
             </div>
             <div class="card-edit-group full">
               <span class="card-edit-label">Etiquetes</span>
-              <input type="text" id="idea-edit-etiquetes-${titolId}" value="${escHTML(etiquetes)}" placeholder="ràpid, sense cuinar…">
+              <input type="text" id="idea-edit-etiquetes-${titolId}" value="${escHTML(etiquetes)}" placeholder="ràpid, sense cuinar…"
+                oninput="pintarEtiquetesSuggerides('idea-edit-etiquetes-${titolId}','idees')">
+              <div class="sug-etiq" id="sug-idea-edit-etiquetes-${titolId}"></div>
             </div>
             <div class="card-edit-group full">
               <span class="card-edit-label">Comentari</span>
@@ -8880,6 +9051,7 @@ function netejarCercaIdees() {
 function obrirFormIdea() {
   const form = document.getElementById('idea-form-nova');
   form.classList.add('visible');
+  pintarEtiquetesSuggerides('idea-etiquetes', 'idees');
   document.getElementById('idea-titol').focus();
 }
 function tancarFormIdea() {
@@ -8905,7 +9077,7 @@ async function desarIdea() {
     titolCamp.value = titol;            // per si el desat falla i el formulari es queda obert
   }
 
-  const etiquetes = normalitzarEtiquetes(document.getElementById('idea-etiquetes').value);
+  const etiquetes = normalitzarEtiquetes(document.getElementById('idea-etiquetes').value, 'idees');
   const comentari = document.getElementById('idea-comentari').value.trim();
 
   const camp = receptaDelCampIdea('');
@@ -8942,6 +9114,7 @@ function obrirEdicioIdea(titolId, titol) {
   }
   const form = document.getElementById('idea-edit-form-' + titolId);
   if (form) form.classList.add('visible');
+  pintarEtiquetesSuggerides('idea-edit-etiquetes-' + titolId, 'idees');
 }
 function tancarEdicioIdea(titolId) {
   const form = document.getElementById('idea-edit-form-' + titolId);
@@ -8966,7 +9139,7 @@ async function desarEdicioIdea(titolId, titolOriginal) {
 
   btn.disabled = true; btn.textContent = 'Desant…';
 
-  const etiquetes = normalitzarEtiquetes(document.getElementById('idea-edit-etiquetes-' + titolId).value);
+  const etiquetes = normalitzarEtiquetes(document.getElementById('idea-edit-etiquetes-' + titolId).value, 'idees');
   const comentari = document.getElementById('idea-edit-comentari-' + titolId).value.trim();
 
   const camp = receptaDelCampIdea('-' + titolId);
