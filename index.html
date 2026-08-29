@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 169 · 29-08-2026                                     ║
+  ║  VERSIÓ 170 · 29-08-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -6938,23 +6938,25 @@ function renderItem(item) {
         <textarea id="instruccions-${idx}" class="ta-scan ta-scan-instr" placeholder="Instruccions…"></textarea>
       </div>
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group full">
           <label>Font</label>
           <input type="text" id="font-${idx}" placeholder="Font detectada…">
         </div>
-        <div class="form-group">
-          <label>Etiquetes</label>
-          <input type="text" id="etiquetes-${idx}" placeholder="sopar ràpid, meal prep…"
-            oninput="pintarEtiquetesSuggerides('etiquetes-${idx}','receptes')">
-        </div>
       </div>
-      <!-- Les píndoles van sota la fila sencera, no dins de la meitat del camp:
-           en una columna de mitja pantalla es partirien en un llistat massa alt -->
-      <div class="sug-etiq" id="sug-etiquetes-${idx}"></div>
       <div class="form-row">
         <div class="form-group full">
           <label>Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></label>
           <input type="text" id="llibre-${idx}" list="dl-llibres" placeholder="p.ex. Simple, pàg. 142">
+        </div>
+      </div>
+      <!-- Les etiquetes van les últimes i a tota l'amplada: les píndoles de sota
+           ocupen tota la fitxa, i penjades de mig camp semblaven d'una altra cosa -->
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Etiquetes</label>
+          <input type="text" id="etiquetes-${idx}" placeholder="sopar ràpid, meal prep…"
+            oninput="pintarEtiquetesSuggerides('etiquetes-${idx}','receptes')">
+          <div class="sug-etiq" id="sug-etiquetes-${idx}"></div>
         </div>
       </div>
       <div class="form-row">
