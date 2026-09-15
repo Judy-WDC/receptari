@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 173 · 15-09-2026                                     ║
+  ║  VERSIÓ 174 · 16-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -10044,7 +10044,11 @@ async function enviarAApat(dia, apat) {
     missatge: `✅ Afegit a ${nomDia.toLowerCase()} · ${apat}`,
   });
   destiPlatNou = null;
-  if (fet) tancarSelectorApat();
+  // El full es queda obert i es repinta: la casella on acaba d'anar mostra la
+  // miniatura i la vora groga, i així es veu on ha anat a parar. Abans es
+  // tancava sol, i la Judy va trobar que despistava (16-09-2026). Es tanca
+  // amb la creu o tocant fora, com sempre.
+  if (fet) pintarSelectorApat();
 }
 </script>
 
