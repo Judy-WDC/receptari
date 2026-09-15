@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 172 · 15-09-2026                                     ║
+  ║  VERSIÓ 173 · 15-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -4201,6 +4201,20 @@ function _senseAccents(s) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Diu si el terme és al text començant una paraula: «almo» troba «almonds» i
+// «almond milk», però no «salmorejo». Tots dos ja han de venir sense accents
+// i en minúscules. Compta com a inici de paraula qualsevol cosa que no sigui
+// lletra ni xifra (espai, coma, apòstrof, parèntesi, el punt volat...).
+function _comencaParaula(text, terme) {
+  let des = 0;
+  while (true) {
+    const i = text.indexOf(terme, des);
+    if (i < 0) return false;
+    if (i === 0 || !/[a-z0-9]/.test(text[i - 1])) return true;
+    des = i + 1;
+  }
+}
+
 /**
  * Genera les formes singulars candidates d'una cerca en plural,
  * per als tres idiomes: ametlles→ametlla, pomes→poma, cigrons→cigró(cigro),
@@ -5876,12 +5890,16 @@ function aplicar() {
   // Els sinònims i troncs surten del diccionari amb accents: els normalitzem
   // igual que el text on els anirem a buscar
   const qExpansio = expandirCerca(q).map(t => _senseAccents(t.toLowerCase()));
+  // El que ha escrit ella es busca a qualsevol lloc del text; els sinònims i
+  // els troncs del diccionari, només al començament d'una paraula. Si no, el
+  // tronc curt «almo» (d'almond) treia el salmorejo i el salmó buscant ametlles.
+  const expansioOk = text => qExpansio.some(t => _comencaParaula(text, t));
   const resultat = receptes.filter(r => {
     const catOk  = catActiva === 'totes' || r['Categoria'] === catActiva;
     const nomText = _senseAccents((r['Nom de la recepta'] || '').toLowerCase());
-    const nomOk  = nomText.includes(qNorm) || qExpansio.some(t => nomText.includes(t));
+    const nomOk  = nomText.includes(qNorm) || expansioOk(nomText);
     const ingText = _senseAccents((r['Ingredients'] || '').toLowerCase());
-    const ingOk  = ingText.includes(qNorm) || qExpansio.some(t => ingText.includes(t));
+    const ingOk  = ingText.includes(qNorm) || expansioOk(ingText);
     const fontOk = !fontActiva || r['Font'] === fontActiva;
     const etOk  = etiquetaActiva.size === 0 ||
       (() => {
