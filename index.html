@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 171 · 02-09-2026                                     ║
+  ║  VERSIÓ 172 · 15-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -2745,6 +2745,10 @@ function clauNovetats() { return 'novetats_versio:' + (usuariaId || ''); }
 
 function mostrarNovetats() {
   if (llegirLocal(clauNovetats()) === VERSIO_NOVETATS) return;
+  // Es dona per vist en el moment d'ensenyar-lo, no en tancar-lo: al mòbil
+  // l'app s'engega de nou molt sovint (tancada sense tocar el botó, treta de
+  // la memòria pel sistema...) i, si no, el requadre tornava cada vegada.
+  desarLocal(clauNovetats(), VERSIO_NOVETATS);
   const llista = document.getElementById('novetats-llista');
   llista.innerHTML = NOVETATS.map(n =>
     `<div class="novetats-item"><div class="novetats-dot"></div><div class="novetats-text"><strong>${n.titol}:</strong> ${n.desc}</div></div>`
@@ -2754,7 +2758,6 @@ function mostrarNovetats() {
 }
 
 function tancarNovetats() {
-  desarLocal(clauNovetats(), VERSIO_NOVETATS);
   document.getElementById('novetats-overlay').classList.remove('visible');
 }
 </script>
