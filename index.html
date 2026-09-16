@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 175 · 16-09-2026                                     ║
+  ║  VERSIÓ 176 · 16-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -10,7 +10,7 @@
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
   l'última és la 167 (index-receptes-Supabase-167.html) i la següent, la 177.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
-  ser la número 2, a la versió 150; la següent, la 3, toca a la versió 175.
+  ser la número 3, a la versió 175; la següent, la 4, toca a la versió 200.
 
   Cap còpia es crea sense dir-ho abans a la Judy.
 
@@ -9374,8 +9374,8 @@ function obrirReceptaPerNom(nom) {
 
 const DIES_SETMANA = ['dilluns','dimarts','dimecres','dijous','divendres','dissabte','diumenge'];
 const MESOS = ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
-// Només s'aplica si la recepta no diu quantes racions fa
-const RACIONS_PER_DEFECTE = 4;
+// Un plat d'una recepta que no diu quantes racions fa es queda sense racions
+// (null): val més un guió que un número inventat que sembli que ve de la recepta.
 
 let setmanaActual  = dillunsDe(new Date());
 let menusSetmana   = [];     // files de la setmana que s'està mirant
@@ -9621,7 +9621,7 @@ function blocApat(dia, apat, plats) {
     return `<div class="plat-fila amb-mini clicable" onclick="obrirReceptaDePlat('${p.id}')">
       ${miniPlat(p, 'fila-mini')}
       <span class="plat-nom${fora ? ' esborrada' : ''}">${escHTML(nomDePlat(p))}${fora ? ' · recepta esborrada' : ''}</span>
-      <span class="plat-racions" onclick="event.stopPropagation()">${p.racions || '?'} rac.</span>
+      <span class="plat-racions" onclick="event.stopPropagation()">${p.racions || '—'} rac.</span>
     </div>`;
   }).join('');
 
@@ -9658,9 +9658,10 @@ function pintarApat() {
   const plats   = platsDe(dia, apat);
   const nomDia  = dia.charAt(0).toUpperCase() + dia.slice(1);
   const nomApat = apat.charAt(0).toUpperCase() + apat.slice(1);
+  // Els plats sense racions no sumen; si cap en té, el tros de racions no surt
   const racions = plats.reduce((suma, p) => suma + (parseInt(p.racions) || 0), 0);
   const subtitol = plats.length
-    ? `${plats.length} ${plats.length === 1 ? 'plat' : 'plats'} · ${racions} racions`
+    ? `${plats.length} ${plats.length === 1 ? 'plat' : 'plats'}${racions ? ` · ${racions} racions` : ''}`
     : 'Encara no hi ha cap plat';
 
   cont.innerHTML = `<div class="container">
@@ -9690,7 +9691,7 @@ function targetaPlat(p) {
          <button onclick="canviarRacionsPlat('${p.id}',-1)" aria-label="Menys racions">−</button>
          <div class="plat-rac-camp">
            <button class="plat-rac-valor" onclick="escriureRacionsPlat('${p.id}')"
-                   aria-label="Racions">${p.racions || '?'}</button>
+                   aria-label="Racions">${p.racions || '—'}</button>
            <span class="plat-rac-unitat" aria-hidden="true">rac.</span>
          </div>
          <button onclick="canviarRacionsPlat('${p.id}',1)" aria-label="Més racions">+</button>
@@ -9848,6 +9849,8 @@ document.addEventListener('touchmove', ev => {
 async function canviarRacionsPlat(id, delta) {
   const p = menusSetmana.find(x => x.id === id);
   if (!p) return;
+  // Sense racions, el «−» no té d'on treure; el «+» comença per 1
+  if (!parseInt(p.racions) && delta < 0) return;
   const noves = Math.max(1, (parseInt(p.racions) || 0) + delta);
   p.racions = noves;
   pintarApat();
@@ -9943,7 +9946,7 @@ async function afegirPlat(receptaId, opcions = {}) {
     apat:        apat,
     recepta_id:  receptaId,
     nom_recepta: r['Nom de la recepta'] || '',
-    racions:     opcions.racions || parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
+    racions:     opcions.racions || parseInt(r['Racions']) || null,
     ordre:       platsDe(dia, apat).length,
   };
 
@@ -9996,7 +9999,7 @@ async function obrirSelectorApat(nom) {
   receptaAEnviar = {
     id:      r['_id'],
     nom:     nom,
-    racions: getRacionsActual(nom) || parseInt(r['Racions']) || RACIONS_PER_DEFECTE,
+    racions: getRacionsActual(nom) || parseInt(r['Racions']) || null,
   };
 
   document.getElementById('apat-picker').classList.add('visible');
