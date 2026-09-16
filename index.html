@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 174 · 16-09-2026                                     ║
+  ║  VERSIÓ 175 · 16-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -7276,6 +7276,17 @@ function normalitzarFont(font) {
   return f;
 }
 
+// «CREAMY PASTA WITH MUSHROOMS AND SPINACH (DE)»: les inicials de la font entre
+// parèntesis al final del títol. Només compten si normalitzarFont les reconeix:
+// un «(vegan)» o un «(sense gluten)» es queda al nom com fins ara.
+const RE_INICIALS_TITOL = /\s*\(([A-Za-z.]{2,6})\)\s*$/;
+function fontDelTitol(titol) {
+  const m = (titol || '').match(RE_INICIALS_TITOL);
+  if (!m) return '';
+  const font = normalitzarFont(m[1]);
+  return font !== m[1] ? font : '';
+}
+
 // Les paraules de racions i de temps, en els tres idiomes de l'app. Viuen aquí
 // dalt perquè es fan servir a quatre regles diferents; abans anaven escrites a
 // mà a cada lloc, només en català, i per això «6 personas» no es veia.
@@ -7285,7 +7296,14 @@ function normalitzarFont(font) {
 // solt fent-se passar per ingredient. (Provat: passava.)
 const PARAULES_RACIONS = 'raciones|racions?|personas|persones|porciones|porcions?|comensales|comensals?|servings?|portions?';
 const PARAULES_TEMPS   = 'minutos?|minuts?|min\\.?|horas?|hores?|hours?|hrs?\\.?|h\\b';
-const RE_RACIONS_DAVANT = new RegExp('(\\d+)\\s*(?:' + PARAULES_RACIONS + ')', 'i');
+// «2 portions of pasta», «2 raciones de arroz», «2 porcions d'arròs»: si darrere
+// la paraula de racions ve un «of» / «de» / «d'», és la quantitat d'un ingredient,
+// no el nombre de comensals. Sense això, «2 portions» se n'anava i l'ingredient
+// quedava com «of pasta». (Provat amb la pasta cremosa de la Deliciously Ella.)
+// El \b de davant és necessari: sense ell, «portions?» es quedava amb «portion»
+// i la mirada endavant veia una «s», no un «of». (Provat: passava.)
+const NO_ES_INGREDIENT = '\\b(?!\\s+(?:of|de|d\')\\b)';
+const RE_RACIONS_DAVANT = new RegExp('(\\d+)\\s*(?:' + PARAULES_RACIONS + ')' + NO_ES_INGREDIENT, 'i');
 // L'anglès posa el número al darrere. Aquí no hi val un «para» pelat: «para 30
 // minutos» ens donaria trenta racions.
 const RE_RACIONS_DARRERE = /\b(?:serves|makes|rinde|serveix\s+per\s+a)\s+(\d+)/i;
@@ -7300,6 +7318,11 @@ function detectarFont(lines, fontDefecte) {
   // dins d'un títol ("PASTÍS DE POMA" ja no salta).
   const teLiniaDE = lines.slice(0, 4).some(l => /^D\.?\s?E\.?$/.test(l.trim()));
   if (teLiniaDE || /deliciously/i.test(zona)) return 'Deliciously Ella';
+  // Les inicials al final del títol: «… (DE)», «… (PUL)»
+  for (const l of lines.slice(0, 3)) {
+    const f = fontDelTitol(l);
+    if (f) return f;
+  }
 
   // ── Autoria genèrica: una línia curta (1-3 paraules) entre el títol i els ingredients ──
   const idxIng = lines.findIndex((l, i) => i > 0 && /^ingredients/i.test(l.trim()));
@@ -7502,7 +7525,12 @@ function extraccioLocal(text, fontDefecte) {
       idxTitol = i; break;
     }
   }
-  const nom = normalitzarTitol(lines[idxTitol]);
+  // Si el títol acaba amb les inicials de la font, «(DE)», se'n van del nom;
+  // detectarFont les recull de la línia original.
+  const titolNet = fontDelTitol(lines[idxTitol])
+    ? lines[idxTitol].replace(RE_INICIALS_TITOL, '').trim()
+    : lines[idxTitol];
+  const nom = normalitzarTitol(titolNet);
   lines = lines.filter((_, i) => i !== idxTitol);
 
   // ── Capçaleres explícites (si el llibre en té, les aprofitem) ──
@@ -7628,13 +7656,16 @@ function extraccioLocal(text, fontDefecte) {
     if (!l) continue;
     // Metadades (racions, temps): les extraiem i conservem el que quedi de la línia
     // (l'OCR de vegades hi fusiona el primer ingredient: "4 RACIONS 40 MINUTS 500 g de...")
-    if (new RegExp('(?:' + PARAULES_RACIONS + '|' + PARAULES_TEMPS + '|serves|makes)', 'i').test(l)) {
+    // (les racions porten la mateixa excepció d'aquí dalt: «2 portions of pasta»
+    //  no ha d'entrar aquí, perquè la neteja del final li prendria el parèntesi)
+    if (new RegExp('(?:(?:' + PARAULES_RACIONS + ')' + NO_ES_INGREDIENT + '|' + PARAULES_TEMPS + '|serves|makes)', 'i').test(l)) {
       const mRac = l.match(RE_RACIONS_DAVANT) || l.match(RE_RACIONS_DARRERE);
       if (mRac) racions = racions || mRac[1];
       l = l
         // El «para» / «per a» de davant se'n va amb la xifra: si no, quedava sol
-        // al mig dels ingredients («Para 6 personas» → «Para»).
-        .replace(new RegExp('(?:para|per\\s+a|rinde)?\\s*\\d+\\s*(?:' + PARAULES_RACIONS + ')', 'gi'), '')
+        // al mig dels ingredients («Para 6 personas» → «Para»). I el «makes» /
+        // «serves» igual: «Makes 4 portions» deixava un «Makes» sol.
+        .replace(new RegExp('(?:para|per\\s+a|rinde|makes|serves)?\\s*\\d+\\s*(?:' + PARAULES_RACIONS + ')' + NO_ES_INGREDIENT, 'gi'), '')
         .replace(/\b(?:serves|makes)\s+\d+(?:\s*[-–]\s*\d+)?/gi, '')
         .replace(new RegExp('\\d+[\\-–]\\d+\\s*(?:' + PARAULES_TEMPS + ')', 'gi'), '')
         .replace(new RegExp('\\d+\\s*(?:' + PARAULES_TEMPS + ')', 'gi'), '')
