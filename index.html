@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 187 · 17-09-2026                                     ║
+  ║  VERSIÓ 188 · 17-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -10599,7 +10599,8 @@ async function enviarAApat(dia, apat) {
 // sense tocar la fusió ni la pantalla.
 
 const COMPRA_DIES_DEFECTE = 3;
-const COMPRA_OPCIONS_DIES = [3, 5, 7];
+const COMPRA_OPCIONS_DIES = [1, 2, 3, 4, 7];
+const COMPRA_MAX_DIES = 14;   // dues setmanes: més enllà la llista no serveix i el menú no hi arriba
 const COMPRA_CK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
 
 let compra            = null;   // la fila de compra_llista: { user_id, des_de, dies, avis }
@@ -10631,8 +10632,14 @@ function nomDeData(d, ambMes) {
 function textPeriodeCompra() {
   const dies   = diesDeCompra();
   const primer = dies[0], ultim = dies[dies.length - 1];
+  // Un sol dia: «Dijous 17 de setembre», no pas «Del dijous 17 al dijous 17»
+  if (dies.length === 1) {
+    const t = nomDeData(primer, true);
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   return 'Del ' + nomDeData(primer, primer.getMonth() !== ultim.getMonth()) + ' al ' + nomDeData(ultim, true);
 }
+function textDiesCompra(n) { return n === 1 ? '1 dia' : n + ' dies'; }
 function compraHaPassat() {
   const dies = diesDeCompra();
   return dies[dies.length - 1] < avuiData();
@@ -10887,14 +10894,14 @@ function pintarCompra() {
   const plural   = (n, un, molts) => n === 1 ? un : molts;
 
   posarSubtitol(compraCarregant ? 'Carregant...'
-              : !nPlats ? `Cap plat en ${compra.dies} dies`
-              : `${nPlats} ${plural(nPlats, 'plat', 'plats')} en ${compra.dies} dies`);
+              : !nPlats ? `Cap plat en ${textDiesCompra(compra.dies)}`
+              : `${nPlats} ${plural(nPlats, 'plat', 'plats')} en ${textDiesCompra(compra.dies)}`);
 
   let html = `
     <div class="compra-periode">
       <div>
         <div class="compra-periode-text">${textPeriodeCompra()}</div>
-        <div class="compra-periode-dies">${compra.dies} dies · ${nPlats ? nPlats + ' ' + plural(nPlats, 'plat', 'plats') : 'cap plat'}</div>
+        <div class="compra-periode-dies">${textDiesCompra(compra.dies)} · ${nPlats ? nPlats + ' ' + plural(nPlats, 'plat', 'plats') : 'cap plat'}</div>
       </div>
       <button class="compra-canvia" onclick="obrirTriaCompra()">
         <i class="ti ti-${compraTriaOberta ? 'chevron-up' : 'calendar'}" aria-hidden="true"></i>
@@ -10968,12 +10975,17 @@ function triaCompraHTML() {
     { iso: isoData(dilluns), text: 'Dilluns ' + dilluns.getDate() },
   ];
   const unAltre = !opcions.some(o => o.iso === compra.des_de);
+  // Com «Un altre dia»: si el nombre no té píndola, la píndola del final el diu
+  const unAltreNombre = !COMPRA_OPCIONS_DIES.includes(compra.dies);
   return `
     <div class="compra-tria">
       <div class="compra-tria-etiq">Quants dies</div>
       <div class="compra-tria-fila">
         ${COMPRA_OPCIONS_DIES.map(n => `<button class="compra-pill${n === compra.dies ? ' actiu' : ''}"
-            onclick="canviarPeriodeCompra('${compra.des_de}', ${n})">${n} dies</button>`).join('')}
+            onclick="canviarPeriodeCompra('${compra.des_de}', ${n})">${textDiesCompra(n)}</button>`).join('')}
+        <button class="compra-pill${unAltreNombre ? ' actiu' : ''}" onclick="demanarDiesCompra()">
+          ${unAltreNombre ? textDiesCompra(compra.dies) : 'Un altre nombre'}
+        </button>
       </div>
       <div class="compra-tria-etiq">Des de</div>
       <div class="compra-tria-fila">
@@ -11064,6 +11076,18 @@ async function canviarPeriodeCompra(desDe, dies) {
   pintarCompra();
 }
 function novaCompraDesDAvui() { canviarPeriodeCompra(isoData(avuiData()), compra.dies); }
+
+// «Un altre nombre» de dies: de l'1 al màxim, i prou
+async function demanarDiesCompra() {
+  const resposta = await demanarText({ titol: 'Quants dies?', valor: String(compra.dies), boto: 'Desa' });
+  if (resposta === null) return;
+  const n = parseInt(resposta.trim(), 10);
+  if (isNaN(n) || n < 1 || n > COMPRA_MAX_DIES || String(n) !== resposta.trim()) {
+    mostrarToast(`❌ Escriu un número de l'1 al ${COMPRA_MAX_DIES}`);
+    return;
+  }
+  canviarPeriodeCompra(compra.des_de, n);
+}
 
 // «600 g», «1,5 kg», «3», o res (sense quantitat). Torna null si no s'entén.
 function llegirQuantitatCompra(text) {
