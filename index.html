@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 185 · 17-09-2026                                     ║
+  ║  VERSIÓ 187 · 17-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 176 (index-receptes-Supabase-176.html, feta abans de començar
-  la llista de la compra) i la següent, la 186.
+  l'última és la 186 (index-receptes-Supabase-186.html) i la següent, la 196.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 3, a la versió 175; la següent, la 4, toca a la versió 200.
 
@@ -1074,6 +1073,9 @@
     margin-top: 12px;
   }
   .card-edit-form.visible { display: flex; }
+  /* A la fitxa el formulari no és dins de cap targeta: sense la ratlla de dalt,
+     que allà separava el formulari del contingut de la targeta */
+  .detall-edicio .card-edit-form { border-top: none; padding-top: 0; margin-top: 0 !important; }
   .card-edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .card-edit-group { display: flex; flex-direction: column; gap: 0.25rem; }
   .card-edit-group.full { grid-column: 1/-1; }
@@ -5467,18 +5469,6 @@ function obrirDetall(nom, desDePopstate, origen) {
   }
 }
 
-function detallEditar(nomId, nom) {
-  mostrarPanell('cerca');
-  history.pushState({ panell: 'cerca' }, '', '');
-  // L'edició es desplega dins la fila: cal la vista llista, però això no és
-  // una tria de la usuària i no ha de canviar-li la preferència desada
-  if (vistaTipus === 'grid') canviarVista('llista', false);
-  if (!oberts.has(nom)) { oberts.add(nom); aplicar(); }
-  setTimeout(() => {
-    obrirEdicio(nomId, nom);
-    document.getElementById('card-' + nomId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 150);
-}
 
 
 // ══════════════════════════════════════════════
@@ -5632,7 +5622,7 @@ function aplicarVista() {
   }
 }
 
-// recordar = false quan el canvi no surt d'una tria de la usuària (veure detallEditar)
+// recordar = false quan el canvi no surt d'una tria de la usuària (ho feia l'antic «Editar» de la fitxa; avui no ho crida ningú així, però l'opció es queda)
 function canviarVista(tipus, recordar = true) {
   vistaTipus = tipus;
   if (recordar) desarLocal(CLAU_VISTA, tipus);
@@ -6230,10 +6220,6 @@ function aplicar() {
     const fotoSrc    = foto ? foto : PLACEHOLDER_IMG;
     const obert      = oberts.has(nom);
     const nomId      = nom.replace(/[^a-zA-Z0-9]/g, '_');
-    const catSelect  = ['', ...CAT_OPCIONS, '__nova__'].map(c => {
-      if (c === '__nova__') return `<option value="__nova__">+ Nova categoria…</option>`;
-      return `<option value="${escHTML(c)}"${c === cat ? ' selected' : ''}>${escHTML(c) || '— Sense categoria —'}</option>`;
-    }).join('');
     const starsHTML  = starsInteractiusHTML(nom, valoracio);
     const instrHTML  = instruccions
       ? (() => {
@@ -6357,6 +6343,39 @@ function aplicar() {
               <button class="card-accio-btn${(cookState[nom] && cookState[nom].actiu) ? ' actiu' : ''}" id="card-accio-cuinar-${nomId}" onclick="toggleCookMode('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Mode cuinar</button>
               <button class="card-accio-btn" onclick="obrirEdicio('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Editar</button>
             </div>
+            ${formulariEdicioHTML(r, nomId)}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// El formulari d'edició d'una recepta. Es pinta a dos llocs: dins la targeta
+// del receptari i, des del 17-09-2026, dins la fitxa de la recepta (en lloc del
+// contingut). Els dos fan servir les mateixes funcions de desar, foto i
+// etiquetes, que troben els camps per l'identificador: a la fitxa el
+// identificador porta el sufix «_det» perquè no xoqui amb el de la targeta,
+// que pot ser al DOM al mateix temps.
+function formulariEdicioHTML(r, nomId, alDetall) {
+  const nom          = r['Nom de la recepta'] || '';
+  const cat          = r['Categoria'] || '';
+  const ing          = r['Ingredients'] || '';
+  const font         = r['Font'] || '';
+  const llibre       = r['Llibre'] || '';
+  const url          = r['URL'] || '';
+  const etiquetes    = r['Etiquetes'] || '';
+  const instruccions = r['Instruccions'] || '';
+  const comentaris   = r['Comentaris'] || '';
+  const foto         = (nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '');
+  const nomEsc       = nom.replace(/'/g, "\'").replace(/"/g, '&quot;');
+  const catSelect    = ['', ...CAT_OPCIONS, '__nova__'].map(c => {
+    if (c === '__nova__') return `<option value="__nova__">+ Nova categoria…</option>`;
+    return `<option value="${escHTML(c)}"${c === cat ? ' selected' : ''}>${escHTML(c) || '— Sense categoria —'}</option>`;
+  }).join('');
+  // «Cancel·lar» a la targeta plega el formulari; a la fitxa, torna a la recepta
+  const cancelar = alDetall ? `cancelarEdicioDetall('${nomEsc}')` : `tancarEdicio('${nomId}')`;
+  return `
             <div class="card-edit-form" id="edit-form-${nomId}" onclick="event.stopPropagation()" style="margin-top:12px;">
               <div class="card-edit-row">
                 <div class="card-edit-group">
@@ -6431,7 +6450,7 @@ function aplicar() {
                 <div class="sug-etiq" id="sug-edit-etiquetes-${nomId}"></div>
               </div>
               <div class="card-edit-accions">
-                <button class="btn-edit-cancel" onclick="tancarEdicio('${nomId}')">Cancel·lar</button>
+                <button class="btn-edit-cancel" onclick="${cancelar}">Cancel·lar</button>
                 <button class="btn-edit-desar" id="edit-btn-${nomId}"
                   onclick="desarEdicio('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
                   Desar canvis
@@ -6444,11 +6463,7 @@ function aplicar() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  `;
 }
 
 function sorprenMe() {
@@ -6497,7 +6512,28 @@ function obrirEdicio(nomId, nom) {
   }
   const form = document.getElementById('edit-form-' + nomId);
   if (form) form.classList.add('visible');
+  prepararFormulariEdicio(nomId);
 
+  // Scroll perquè el formulari quedi visible
+  // Si hi cap sencer a la pantalla → el centrem; si no → posem el principi a dalt
+  setTimeout(() => {
+    if (!form) return;
+    const rect = form.getBoundingClientRect();
+    const altura = window.innerHeight;
+    const margeSuperior = 16; // un petit espai sobre el formulari
+    if (rect.height <= altura - margeSuperior) {
+      // Hi cap sencer: el centrem dins la finestra
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // No hi cap: posem el principi al capdamunt amb un petit marge
+      const y = rect.top + window.pageYOffset - margeSuperior;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }, 50);
+}
+
+// El que cal fer un cop el formulari és al DOM, sigui a la targeta o a la fitxa
+function prepararFormulariEdicio(nomId) {
   // Les etiquetes suggerides es pinten en obrir el formulari, no en dibuixar la
   // targeta: si no, es pintarien seixanta vegades sense que ningú les miri.
   pintarEtiquetesSuggerides('edit-etiquetes-' + nomId, 'receptes');
@@ -6518,28 +6554,45 @@ function obrirEdicio(nomId, nom) {
     sel.innerHTML = opts;
     sel.value = catActual;
   }
-
-  // Scroll perquè el formulari quedi visible
-  // Si hi cap sencer a la pantalla → el centrem; si no → posem el principi a dalt
-  setTimeout(() => {
-    if (!form) return;
-    const rect = form.getBoundingClientRect();
-    const altura = window.innerHeight;
-    const margeSuperior = 16; // un petit espai sobre el formulari
-    if (rect.height <= altura - margeSuperior) {
-      // Hi cap sencer: el centrem dins la finestra
-      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      // No hi cap: posem el principi al capdamunt amb un petit marge
-      const y = rect.top + window.pageYOffset - margeSuperior;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-  }, 50);
 }
 
 function tancarEdicio(nomId) {
   const form = document.getElementById('edit-form-' + nomId);
   if (form) form.classList.remove('visible');
+}
+
+// ── Editar des de la fitxa: el formulari en lloc del contingut ──
+// Abans «Editar» te'n treia cap al receptari i desplegava la targeta; ara la
+// fitxa es converteix en el formulari i, en desar o cancel·lar, torna a ser la
+// recepta. (Decisió de la Judy, 17-09-2026.)
+const SUFIX_EDICIO_DETALL = '_det';
+function esEdicioAlDetall(nomId) { return nomId.endsWith(SUFIX_EDICIO_DETALL); }
+
+function detallEditar(nomId, nom) {
+  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+  if (!r) return;
+  const panell = document.getElementById('panell-detall');
+  const idDet  = nomId + SUFIX_EDICIO_DETALL;
+  const nomEsc = nom.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  // La fletxa de dalt, mentre s'edita, fa de «Cancel·lar»: torna a la recepta
+  // sense desar. Abans se n'anava al receptari, i els canvis a mitges es
+  // perdien sense que ho semblés. (Petició de la Judy, 17-09-2026.)
+  panell.innerHTML = `
+    <div class="detall-header">
+      <button class="detall-header-back" onclick="cancelarEdicioDetall('${nomEsc}')">
+        <i class="ti ti-arrow-left" aria-hidden="true"></i>
+        <span class="detall-header-text">Tornar a la recepta</span>
+      </button>
+    </div>
+    <div class="detall-contingut detall-edicio">
+      ${formulariEdicioHTML(r, idDet, true)}
+    </div>`;
+  document.getElementById('edit-form-' + idDet)?.classList.add('visible');
+  prepararFormulariEdicio(idDet);
+  window.scrollTo(0, 0);
+}
+function cancelarEdicioDetall(nom) {
+  obrirDetall(nom, true);
 }
 
 async function eliminarRecepta(nomId, nomOriginal) {
@@ -6585,6 +6638,8 @@ async function eliminarRecepta(nomId, nomOriginal) {
     card.style.transform = 'translateX(10px)';
     setTimeout(() => { card.remove(); aplicar(); }, 310);
   }
+  // Des de la fitxa: la recepta ja no hi és, així que se'n va cap on venia
+  if (esEdicioAlDetall(nomId)) { construirFiltres(); aplicar(); history.back(); }
 
   mostrarToast(`🗑 "${nomOriginal}" eliminada del receptari`);
 }
@@ -6700,6 +6755,9 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
     delete racionsActual[nomOriginal];
     cuinantActius.delete(nomOriginal);
     gestionarWakeLock();
+
+    // Des de la fitxa, la fitxa torna a ser la recepta, ja amb els canvis
+    if (esEdicioAlDetall(nomId)) obrirDetall(nomNou, true);
 
     setTimeout(() => { construirFiltres(); aplicar(); }, 400);
   } catch (e) {
