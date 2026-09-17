@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 184 · 17-09-2026                                     ║
+  ║  VERSIÓ 185 · 17-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -2912,6 +2912,18 @@ function desarLocal(clau, valor) {
 function esborrarLocal(clau) {
   try { localStorage.removeItem(clau); } catch (e) { /* no es pot oblidar: tant se val */ }
 }
+// La memòria de sessió: dura mentre l'app és oberta (canviar de finestra o
+// d'app, o recarregar, no la toca) i s'esborra en tancar-la. Per al que és
+// «d'ara», com el mode cuinar. Les mateixes precaucions que la permanent.
+function llegirSessio(clau) {
+  try { return sessionStorage.getItem(clau); } catch (e) { return null; }
+}
+function desarSessio(clau, valor) {
+  try { sessionStorage.setItem(clau, valor); } catch (e) { /* no es pot recordar: tant se val */ }
+}
+function esborrarSessio(clau) {
+  try { sessionStorage.removeItem(clau); } catch (e) { /* no es pot oblidar: tant se val */ }
+}
 
 function clauNovetats() { return 'novetats_versio:' + (usuariaId || ''); }
 
@@ -5509,8 +5521,10 @@ const cuinantActius = new Set(); // noms de receptes amb mode cuinar actiu
 let carregant = false; // guard per evitar crides simultànies
 let darreraCarrega = 0; // quan vam demanar les dades per última vegada
 
-// ── Persistència del mode cuinar: sobreviu a recàrregues de la pàgina ──
-// (clau per usuària, com la cache de receptes)
+// ── Persistència del mode cuinar: sobreviu a recàrregues i a canvis de finestra,
+// però NO a tancar l'app: va a la memòria de sessió, no a la permanent. Abans hi
+// anava, i en obrir l'app l'endemà encara «cuinaves» el sopar d'ahir.
+// (Decisió de la Judy, 17-09-2026. Clau per usuària, com la cache de receptes.)
 const COOK_KEY = () => 'cookstate_' + (usuariaActiva || 'anonima');
 
 function desarCookState() {
@@ -5520,8 +5534,8 @@ function desarCookState() {
     if (!e.actiu) continue; // només guardem receptes amb el mode cuinar actiu
     pla[nom] = { marcats: [...e.marcats], marcatsInstr: [...(e.marcatsInstr || new Set())] };
   }
-  if (Object.keys(pla).length) desarLocal(COOK_KEY(), JSON.stringify(pla));
-  else esborrarLocal(COOK_KEY());
+  if (Object.keys(pla).length) desarSessio(COOK_KEY(), JSON.stringify(pla));
+  else esborrarSessio(COOK_KEY());
 }
 
 // La crida a aquesta funció NO pot anar aquí, solta: la clau porta el correu de
@@ -5531,7 +5545,10 @@ function restaurarCookState() {
   // Si abans hi havia una altra sessió oberta, el que cuinava no ha de sobreviure
   for (const nom in cookState) delete cookState[nom];
   cuinantActius.clear();
-  const raw = llegirLocal(COOK_KEY());
+  // El que hi pugui haver a la memòria permanent d'abans del canvi se'n va:
+  // si no, el «cuinant» vell tornaria a sortir un cop i prou
+  esborrarLocal(COOK_KEY());
+  const raw = llegirSessio(COOK_KEY());
   if (raw) {
     // Aquí el try ja només és per si el que hi ha desat està malmès
     try {
