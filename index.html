@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 178 · 17-09-2026                                     ║
+  ║  VERSIÓ 184 · 17-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -1864,7 +1864,16 @@
   #text-picker input[type=text] { width: 100%; }
   .text-picker-pista { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5; }
   .text-picker-pista:empty { display: none; }
-  .text-picker-peu { display: flex; justify-content: flex-end; margin-top: 0.85rem; }
+  .text-picker-peu { display: flex; justify-content: flex-end; gap: 8px; margin-top: 0.85rem; }
+  #confirm-picker .plat-picker-caixa { max-width: 400px; }
+  /* Els salts de línia del text es respecten: l'avís dels menús va en un paràgraf a part */
+  .confirm-picker-text { font-size: 0.88rem; color: var(--text-dim); line-height: 1.55; white-space: pre-line; }
+  .text-picker-cancel {
+    background: none; color: var(--text-dim); border: 1px solid var(--border-dim); cursor: pointer;
+    border-radius: 8px; padding: 0.45rem 1rem;
+    font-family: 'Poppins', sans-serif; font-size: 0.82rem;
+  }
+  .text-picker-cancel:hover { border-color: var(--border); }
   .text-picker-boto {
     background: var(--accent); color: var(--bg); border: none; cursor: pointer;
     border-radius: 8px; padding: 0.45rem 1.1rem;
@@ -1973,6 +1982,43 @@
   /* L'avís: la mateixa peça que el de reordenar, amb el text en HTML */
   .avis-compra .avis-reordenar-text b { color: var(--text); font-weight: 500; }
 
+  /* A l'ordinador, la llista es tanca a 960 px i les línies van en dues
+     columnes, com un full plegat: es llegeixen de dalt a baix i passen a la
+     dreta. La resta (capçalera, tria-dies, progrés, avís) es queda com al
+     mòbil. El commutador va amb ella, perquè si no quedaria sol de punta a
+     punta. Decisió de la Judy, 17-09-2026 (proposta B del mockup). */
+  @media (min-width: 900px) {
+    #panell-planificacio .plan-tabs, #plan-compra { max-width: 960px; margin-left: auto; margin-right: auto; }
+    .compra-linies { column-count: 2; column-gap: 1.5rem; }
+    .compra-linia, .compra-seccio { break-inside: avoid; }
+  }
+
+  /* ── Menús a l'ordinador: la setmana a l'esquerra, el dia obert a la dreta ──
+     Els dies es queden sempre plegats (330 px) i el que toques s'il·lumina;
+     a la dreta hi va la fitxa d'àpat sencera, dinar i sopar, amb les mateixes
+     targetes i els − / + de racions. L'«Obrir» deixa de fer falta: el dia obert
+     i la fitxa d'àpat es fonen en una sola pantalla. Al mòbil no canvia res.
+     Decisió de la Judy, 17-09-2026 (proposta D del segon mockup). */
+  #menus-dia-obert { display: none; }
+  @media (min-width: 900px) {
+    #plan-menus { max-width: 1200px; margin: 0 auto; }
+    .menus-cos { display: grid; grid-template-columns: 330px 1fr; gap: 1.5rem; align-items: start; }
+    #menus-dia-obert { display: block; }
+    /* La fletxa del dia il·luminat apunta cap a la dreta, on és el dia */
+    #menus-dies .dia-card.obert .dia-head i { color: var(--accent); }
+    .dia-obert-caixa {
+      background: #1d3b46; border: 1.5px solid rgba(245,247,73,0.25);
+      border-radius: 14px; padding: 1.1rem 1.1rem 1rem;
+    }
+    .dia-obert-caixa .avis-reordenar { margin-top: 1rem; margin-bottom: 0; }
+    .apat-bloc { margin-top: 1.1rem; }
+    .apat-bloc-titol {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin: 0 0.25rem 0.55rem;
+    }
+    .apat-bloc-titol .apat-titol { font-size: 0.72rem; }
+    .apat-bloc-titol .apat-subtitol { margin: 0; }
+  }
   /* Les línies: la fila de plat de la graella amb la vora de la pastilla de
      dia, i el cercle del mode cuina. Tota la fila marca «fet», com al mode
      cuina; la zona de la dreta (la quantitat i la fletxeta) obre la línia. */
@@ -3124,7 +3170,12 @@ function tancarNovetats() {
         <button onclick="canviarSetmana(1)" aria-label="Setmana següent"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
       </div>
       <button class="setmana-avui" id="btn-setmana-avui" onclick="anarASetmanaActual()">Tornar a aquesta setmana</button>
-      <div id="menus-dies"></div>
+      <!-- A l'ordinador, els dies van a l'esquerra i el dia obert (que és la
+           fitxa d'àpat sencera) a la dreta. Al mòbil, el de la dreta no existeix. -->
+      <div class="menus-cos">
+        <div id="menus-dies"></div>
+        <div id="menus-dia-obert"></div>
+      </div>
     </div>
 
     <!-- La llista de la compra: tot es pinta des de pintarCompra() -->
@@ -3187,6 +3238,21 @@ function tancarNovetats() {
     <div class="text-picker-pista" id="text-picker-pista"></div>
     <div class="text-picker-peu">
       <button class="text-picker-boto" id="text-picker-boto" onclick="tancarDemanarText(document.getElementById('text-picker-camp').value)"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Demanar un «segur que…?». Substitueix el confirm() del navegador pel mateix motiu. -->
+<div class="plat-picker" id="confirm-picker" onclick="if (event.target === this) tancarDemanarConfirmacio(false)">
+  <div class="plat-picker-caixa">
+    <div class="plat-picker-cap">
+      <span class="plat-picker-titol" id="confirm-picker-titol"></span>
+      <button class="avis-reordenar-x" onclick="tancarDemanarConfirmacio(false)" aria-label="Tancar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="confirm-picker-text" id="confirm-picker-text"></div>
+    <div class="text-picker-peu">
+      <button class="text-picker-cancel" onclick="tancarDemanarConfirmacio(false)">Cancel·la</button>
+      <button class="text-picker-boto" id="confirm-picker-boto" onclick="tancarDemanarConfirmacio(true)"></button>
     </div>
   </div>
 </div>
@@ -4926,6 +4992,9 @@ function mostrarPanell(id) {
   document.querySelectorAll('.bottom-nav-item').forEach(t => t.classList.remove('actiu'));
   document.getElementById('panell-portada').classList.remove('actiu');
   document.getElementById('nav-principal').classList.remove('visible');
+  // Fora de la fitxa d'àpat, no hi ha àpat obert: si es quedava, les accions
+  // dels plats repintaven la fitxa (amagada) en comptes de la graella
+  if (id !== 'apat') apatObert = null;
 
   if (id === 'portada') {
     document.getElementById('panell-portada').classList.add('actiu');
@@ -6468,12 +6537,16 @@ async function eliminarRecepta(nomId, nomOriginal) {
     ]);
     if (quants) {
       avisMenus = `\n\nAtenció: surt en ${quants} ${quants === 1 ? 'plat' : 'plats'} dels teus menús. `
-                + `Hi quedarà el nom escrit, però ja no s'hi podrà entrar`
+                + `Si esborres la recepta, al menú hi quedarà el nom escrit, però ja no la podràs veure`
                 + (aLaCompra ? `, i els seus ingredients se n'aniran de la llista de la compra.` : `.`);
     }
   }
 
-  if (!confirm(`Segur que vols eliminar "${nomOriginal}"? Aquesta acció no es pot desfer.${avisMenus}`)) return;
+  if (!await demanarConfirmacio({
+    titol: 'Eliminar la recepta',
+    text:  `Segur que vols eliminar «${nomOriginal}»? Aquesta acció no es pot desfer.${avisMenus}`,
+    boto:  'Elimina',
+  })) return;
 
   // Si no la trobem o l'esborrat falla, la recepta es queda on és i s'avisa:
   // fer desaparèixer la targeta d'una recepta que encara hi és seria pitjor
@@ -6894,7 +6967,7 @@ async function pujarFotoRecepta(nomId, nom, input) {
 }
 
 async function treureFotoRecepta(nomId, nom) {
-  if (!confirm('Vols treure la foto d\'aquesta recepta?')) return;
+  if (!await demanarConfirmacio({ titol: 'Treure la foto', text: 'Vols treure la foto d\'aquesta recepta?', boto: 'Treu-la' })) return;
   const estat = document.getElementById('foto-estat-' + nomId);
 
   // Aquí no cal fer veure que ja està fet: treiem la foto de debò primer i,
@@ -9427,7 +9500,11 @@ async function desarEdicioIdea(titolId, titolOriginal) {
 }
 
 async function eliminarIdea(titolId, titolOriginal) {
-  if (!confirm(`Segur que vols eliminar la idea "${titolOriginal}"? Aquesta acció no es pot desfer.`)) return;
+  if (!await demanarConfirmacio({
+    titol: 'Eliminar la idea',
+    text:  `Segur que vols eliminar la idea «${titolOriginal}»? Aquesta acció no es pot desfer.`,
+    boto:  'Elimina',
+  })) return;
 
   // Si no la trobem o l'esborrat falla, la idea es queda a la llista i s'avisa
   const idIdeaEsborrar = idIdea(titolOriginal);
@@ -9764,8 +9841,12 @@ function pintarSetmana() {
     btnAvui.style.display = esAquesta ? 'none' : 'block';
   }
 
+  // A l'ordinador sempre hi ha un dia a la dreta: si no n'has triat cap, avui
+  if (esOrdinador() && !diaObert) diaObert = diaObertPerDefecte();
+
   const cont = document.getElementById('menus-dies');
   if (cont) cont.innerHTML = DIES_SETMANA.map(pintarDia).join('');
+  pintarDiaObert();
 
   const sub = document.getElementById('subtitol-planificacio');
   if (sub && subPestanyaPlan === 'menus') {
@@ -9788,6 +9869,28 @@ function pintarDia(dia) {
       ${esAvui(dia) ? '<span class="avui-punt" aria-hidden="true"></span>' : ''}
       <span class="dia-nom">${nomDia}</span>
     </span>`;
+
+  // A l'ordinador el dia no es desplega aquí: s'obre a la dreta. La pastilla
+  // es queda plegada, s'il·lumina si és la que hi ha oberta, i la fletxa
+  // apunta cap on és el dia.
+  if (esOrdinador()) {
+    const obert = diaObert === dia;
+    const resum = buit
+      ? '<div class="dia-resum"><span class="dia-buit">Sense plats</span></div>'
+      : `<div class="dia-resum tires">${
+          [['Dinar', dinar], ['Sopar', sopar]]
+            .filter(([, plats]) => plats.length)
+            .map(([etiqueta, plats]) => tiraMinis(etiqueta, plats))
+            .join('')
+        }</div>`;
+    return `<div class="dia-card${buit ? ' buida' : ''}${obert ? ' obert' : ''}" id="dia-${dia}">
+      <div class="dia-head" onclick="obrirDia('${dia}')">
+        ${capsalera}
+        <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      </div>
+      ${resum}
+    </div>`;
+  }
 
   // Plegat: una tira de miniatures per àpat. Els noms dels plats no hi caben i
   // tampoc són el que necessites d'un cop d'ull setmanal: el que vols saber és
@@ -9844,8 +9947,66 @@ function blocApat(dia, apat, plats) {
 }
 
 function obrirDia(dia) {
+  // A l'ordinador sempre hi ha un dia obert (a la dreta): tocar-lo no el tanca
+  if (esOrdinador() && !dia) return;
   diaObert = dia;
   pintarSetmana();
+}
+
+// ── A l'ordinador: el dia obert, a la dreta, amb la fitxa d'àpat sencera ──
+const MQ_ORDINADOR = window.matchMedia('(min-width: 900px)');
+function esOrdinador() { return MQ_ORDINADOR.matches; }
+// En creuar el llindar (girar la tauleta, canviar la mida de la finestra) la
+// pantalla es repinta, perquè les dues mides no s'organitzen igual
+MQ_ORDINADOR.addEventListener('change', () => {
+  if (document.getElementById('panell-planificacio')?.classList.contains('actiu')) pintarSetmana();
+});
+
+// Si no has triat cap dia, a la dreta hi ha avui (o dilluns, si la setmana no és aquesta)
+function diaObertPerDefecte() {
+  const ara = new Date();
+  const esAquestaSetmana = isoData(dillunsDe(ara)) === isoData(setmanaActual);
+  return esAquestaSetmana ? DIES_SETMANA[(ara.getDay() + 6) % 7] : DIES_SETMANA[0];
+}
+
+function pintarDiaObert() {
+  const cont = document.getElementById('menus-dia-obert');
+  if (!cont) return;
+  if (!esOrdinador() || !diaObert) { cont.innerHTML = ''; return; }
+
+  const dia    = diaObert;
+  const nomDia = dia.charAt(0).toUpperCase() + dia.slice(1);
+  const data   = sumarDies(setmanaActual, DIES_SETMANA.indexOf(dia));
+  const tots   = [...platsDe(dia, 'dinar'), ...platsDe(dia, 'sopar')];
+  const plural = (n, un, molts) => n === 1 ? un : molts;
+  const resum  = plats => {
+    const racions = plats.reduce((suma, p) => suma + (parseInt(p.racions) || 0), 0);
+    return plats.length
+      ? `${plats.length} ${plural(plats.length, 'plat', 'plats')}${racions ? ` · ${racions} racions` : ''}`
+      : 'Cap plat';
+  };
+
+  const bloc = apat => {
+    const plats = platsDe(dia, apat);
+    return `<div class="apat-bloc">
+      <div class="apat-bloc-titol">
+        <span class="apat-titol">${apat}</span>
+        <span class="apat-subtitol">${resum(plats)}</span>
+      </div>
+      <div class="apat-bloc-plats">${plats.map(p => targetaPlat(p)).join('')}</div>
+      <button class="btn-afegir-plat-gran" onclick="obrirCercadorPlat('${dia}','${apat}')">
+        <i class="ti ti-plus" aria-hidden="true"></i> Afegir plat
+      </button>
+    </div>`;
+  };
+
+  cont.innerHTML = `<div class="dia-obert-caixa">
+    <div class="apat-titol-gran">${nomDia} ${data.getDate()}</div>
+    <div class="apat-subtitol">${tots.length ? resum(tots) : 'Encara no hi ha cap plat'}</div>
+    ${avisReordenarHTML()}
+    ${bloc('dinar')}
+    ${bloc('sopar')}
+  </div>`;
 }
 
 // ── La fitxa d'àpat ──
@@ -9858,9 +10019,12 @@ function obrirApat(dia, apat) {
   window.scrollTo(0, 0);
 }
 
+// Repinta els plats allà on siguin: a la fitxa d'àpat si hi som, i si no, a la
+// graella (que a l'ordinador inclou el dia obert de la dreta). Així les accions
+// de les targetes (racions, treure, reordenar) no han de saber on viuen.
 function pintarApat() {
   const cont = document.getElementById('panell-apat');
-  if (!cont || !apatObert) return;
+  if (!cont || !apatObert) { pintarSetmana(); return; }
 
   const { dia, apat } = apatObert;
   const plats   = platsDe(dia, apat);
@@ -9983,7 +10147,9 @@ function finalitzarPulsacio() {
 function entrarModeMoure(card, id, yInicial) {
   card.classList.add('movent', 'arrossegant');
 
-  const germans = [...document.querySelectorAll('#panell-apat .plat-card')];
+  // Els germans són les targetes del mateix àpat: a la fitxa són totes les de
+  // la pantalla, i al dia obert de l'ordinador, les del seu bloc
+  const germans = [...card.parentElement.querySelectorAll('.plat-card')];
   const index   = germans.indexOf(card);
   arrossegant = {
     id, card, germans, index, indexNou: index, yInicial,
@@ -10035,8 +10201,10 @@ async function deixarAnarPlat() {
 
 // Porta un plat fins a una posició concreta de l'àpat i desa l'ordre nou
 async function recolocarPlat(id, posicio) {
-  if (!apatObert) return;
-  const plats = platsDe(apatObert.dia, apatObert.apat);
+  // L'àpat es dedueix del plat mateix, i així val igual a la fitxa i al dia obert
+  const p = menusSetmana.find(x => x.id === id);
+  if (!p) return;
+  const plats = platsDe(p.dia, p.apat);
   const desde = plats.findIndex(p => p.id === id);
   if (desde < 0 || posicio < 0 || posicio >= plats.length || posicio === desde) { pintarApat(); return; }
 
@@ -10080,7 +10248,7 @@ async function escriureRacionsPlat(id) {
 async function treurePlat(id) {
   const p = menusSetmana.find(x => x.id === id);
   if (!p) return;
-  if (!confirm(`Segur que vols treure "${nomDePlat(p)}" d'aquest àpat?`)) return;
+  if (!await demanarConfirmacio({ titol: 'Treure el plat', text: `Segur que vols treure «${nomDePlat(p)}» d'aquest àpat?`, boto: 'Treu-lo' })) return;
   if (!await dbEsborrarPlat(id)) return;
   menusSetmana = menusSetmana.filter(x => x.id !== id);
   pintarApat();
@@ -10135,8 +10303,29 @@ function tancarDemanarText(resposta) {
   respondreDemanarText = null;
   if (resol) resol(resposta);
 }
+// ── Demanar un «segur que…?» ──
+// Substitueix el confirm(). `if (!await demanarConfirmacio({...})) return;`
+let respondreConfirmacio = null;
+function demanarConfirmacio({ titol, text, boto = 'D\'acord' }) {
+  return new Promise(resol => {
+    respondreConfirmacio = resol;
+    document.getElementById('confirm-picker-titol').textContent = titol;
+    document.getElementById('confirm-picker-text').textContent  = text;
+    document.getElementById('confirm-picker-boto').textContent  = boto;
+    document.getElementById('confirm-picker').classList.add('visible');
+    setTimeout(() => document.getElementById('confirm-picker-boto').focus(), 60);
+  });
+}
+function tancarDemanarConfirmacio(resposta) {
+  document.getElementById('confirm-picker').classList.remove('visible');
+  const resol = respondreConfirmacio;
+  respondreConfirmacio = null;
+  if (resol) resol(resposta);
+}
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && respondreDemanarText) tancarDemanarText(null);
+  if (e.key !== 'Escape') return;
+  if (respondreDemanarText)  tancarDemanarText(null);
+  if (respondreConfirmacio)  tancarDemanarConfirmacio(false);
 });
 function pintarResultatsPlat(text) {
   const cont = document.getElementById('plat-resultats');
@@ -10397,6 +10586,15 @@ async function carregarCompra() {
     const items = await dbLlegirItemsCompra();
     if (items === null) { compra = null; return; }
     compraItems = items;
+    // L'avís i els «nou» de l'última vegada es veuen un sol cop: en tornar a
+    // obrir la llista se'n van sols, hagis tocat «Entesos» o no. Els que
+    // toquin avui els posarà la fusió de sota. (Decisió de la Judy, 17-09-2026.)
+    if (compra.avis || compraItems.some(it => it.nou)) {
+      compra.avis = '';
+      compraItems.forEach(it => { it.nou = false; });
+      await dbDesarCompra({ user_id: compra.user_id, des_de: compra.des_de, dies: compra.dies, avis: '' });
+      await dbActualitzarTotsItemsCompra({ nou: false });
+    }
     await regenerarCompra({ avisar: !primeraVegada });
   } finally {
     compraCarregant = false;
@@ -10654,8 +10852,10 @@ function pintarCompra() {
         <button class="ck-reinicia" onclick="desmarcarTotCompra()">Desmarca-ho tot</button>
       </div>
       <div class="ck-bar-track"><div class="ck-bar" style="width:${visibles.length ? Math.round(fets / visibles.length * 100) : 0}%"></div></div>
-      ${ambQ.map(liniaCompraHTML).join('')}
-      ${senseQ.length ? '<div class="compra-seccio">Sense quantitat</div>' + senseQ.map(liniaCompraHTML).join('') : ''}`;
+      <div class="compra-linies">
+        ${ambQ.map(liniaCompraHTML).join('')}
+        ${senseQ.length ? '<div class="compra-seccio">Sense quantitat</div>' + senseQ.map(liniaCompraHTML).join('') : ''}
+      </div>`;
   }
 
   const senseRecepta = compraPlats.filter(receptaEsborrada).map(nomDePlat);
@@ -10772,12 +10972,13 @@ async function tancarAvisCompra() {
   await dbActualitzarTotsItemsCompra({ nou: false });
 }
 
+// El tria-dies es queda obert després de triar: sovint es canvien les dues
+// coses de cop («5 dies des de demà passat»), i només es tanca amb «Tanca».
 async function canviarPeriodeCompra(desDe, dies) {
-  if (!compra || (desDe === compra.des_de && dies === compra.dies)) { compraTriaOberta = false; pintarCompra(); return; }
+  if (!compra || (desDe === compra.des_de && dies === compra.dies)) return;
   const fila = await dbDesarCompra({ user_id: compra.user_id, des_de: desDe, dies, avis: '' });
   if (!fila) return;
   compra = fila;
-  compraTriaOberta  = false;
   compraLiniaOberta = null;
   // Amb uns altres dies, el «nou» de l'última fusió ja no vol dir res
   if (compraItems.some(it => it.nou)) {
