@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 176 · 16-09-2026                                     ║
+  ║  VERSIÓ 178 · 17-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 167 (index-receptes-Supabase-167.html) i la següent, la 177.
+  l'última és la 176 (index-receptes-Supabase-176.html, feta abans de començar
+  la llista de la compra) i la següent, la 186.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 3, a la versió 175; la següent, la 4, toca a la versió 200.
 
@@ -1857,6 +1858,18 @@
   }
   .apat-picker-sub span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .apat-carregant { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-bottom: 0.6rem; }
+
+  /* ── Demanar un text curt: la caixa dels fulls, amb un camp i un botó ── */
+  #text-picker .plat-picker-caixa { max-width: 400px; }
+  #text-picker input[type=text] { width: 100%; }
+  .text-picker-pista { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.5; }
+  .text-picker-pista:empty { display: none; }
+  .text-picker-peu { display: flex; justify-content: flex-end; margin-top: 0.85rem; }
+  .text-picker-boto {
+    background: var(--accent); color: var(--bg); border: none; cursor: pointer;
+    border-radius: 8px; padding: 0.45rem 1.1rem;
+    font-family: 'Poppins', sans-serif; font-size: 0.82rem; font-weight: 500;
+  }
   /* Mentre no hi són tots els plats no es pot triar: el número d'ordre del plat
      nou surt de comptar els que ja hi ha, i comptar-los a mitges els desendreça */
   .apat-graella.esperant { opacity: 0.45; pointer-events: none; }
@@ -1899,12 +1912,125 @@
   }
   .apat-casella:hover .apat-casella-mes { color: var(--accent); border-color: rgba(245,247,73,0.4); }
 
-  /* Missatge provisional de la llista de la compra */
-  .compra-aviat {
-    text-align: center; background: var(--surface); border-radius: 14px;
+  /* ══════════════════════════════════════
+     PLANIFICACIÓ: LLISTA DE LA COMPRA
+     Tot ve de peces que ja hi són: la fila de plat de la graella, el cercle
+     de «fet» del mode cuina, l'avís groc de la fitxa d'àpat i les píndoles
+     dels filtres. Res de nou per aprendre.
+  ══════════════════════════════════════ */
+  /* La capçalera del període: de quins dies és la llista */
+  .compra-periode {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 0.35rem;
+  }
+  .compra-periode-text { font-size: 0.95rem; font-weight: 500; color: var(--text-dim); }
+  .compra-periode-dies { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+  .compra-canvia {
+    display: flex; align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-family: 'Poppins', sans-serif; font-size: 0.75rem;
+    text-decoration: underline; text-underline-offset: 3px; white-space: nowrap;
+  }
+  .compra-canvia i { font-size: 14px; }
+  .compra-canvia:hover { color: var(--text-dim); }
+
+  /* El tria-dies desplegat: quants i des de quin */
+  .compra-tria {
+    background: var(--surface); border-radius: 12px; padding: 0.85rem 0.9rem 0.9rem;
+    margin: 0.5rem 0 1rem;
+  }
+  .compra-tria-etiq {
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 0.45rem;
+  }
+  .compra-tria-fila { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.85rem; }
+  .compra-tria-fila:last-child { margin-bottom: 0; }
+  .compra-pill {
+    font-size: 0.78rem; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--border-dim); color: var(--text-dim); background: none;
+    font-family: 'Poppins', sans-serif; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .compra-pill:hover { border-color: var(--border); }
+  .compra-pill.actiu { border-color: var(--accent); color: var(--accent); background: rgba(245,247,73,0.06); }
+  .compra-pill i { font-size: 13px; }
+  /* «Un altre dia» és un camp de data disfressat de píndola: el calendari el
+     posa el mòbil. El camp és transparent a sobre de la píndola, i així el toc
+     obre el calendari sense que es vegi cap caixa d'entrada. */
+  .compra-pill.data {
+    position: relative; overflow: hidden; margin: 0;
+    /* És un <label>, i el label de l'app va en majúscules: aquí no */
+    text-transform: none; letter-spacing: normal; font-weight: 300;
+  }
+  .compra-pill.data input {
+    position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+  }
+
+  /* El progrés: el mateix del mode cuina */
+  .compra-progres { display: flex; align-items: center; justify-content: space-between; margin: 0.9rem 0 0.4rem; }
+  .compra-progres-num { font-size: 0.75rem; color: var(--text-muted); }
+  .compra-progres + .ck-bar-track { margin-bottom: 1rem; }
+
+  /* L'avís: la mateixa peça que el de reordenar, amb el text en HTML */
+  .avis-compra .avis-reordenar-text b { color: var(--text); font-weight: 500; }
+
+  /* Les línies: la fila de plat de la graella amb la vora de la pastilla de
+     dia, i el cercle del mode cuina. Tota la fila marca «fet», com al mode
+     cuina; la zona de la dreta (la quantitat i la fletxeta) obre la línia. */
+  .compra-linia {
+    background: rgba(11,32,39,0.55); border: 1.5px solid #244b5b; border-radius: 10px;
+    margin-bottom: 6px; -webkit-tap-highlight-color: transparent;
+  }
+  .compra-linia-cap { display: flex; align-items: center; gap: 10px; padding: 0.6rem 0.75rem; cursor: pointer; }
+  .compra-linia-cap:active { background: rgba(11,32,39,0.85); }
+  .compra-linia .ck-circle { display: inline-flex; }
+  .compra-nom {
+    flex: 1; min-width: 0; font-size: 0.88rem; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .compra-dreta {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    margin: -0.6rem -0.75rem -0.6rem 0; padding: 0.6rem 0.6rem 0.6rem 0.5rem;
+  }
+  .compra-quant { font-size: 0.82rem; color: #92b5c2; white-space: nowrap; }
+  .compra-dreta i { font-size: 15px; color: var(--text-muted); transition: transform 0.15s; }
+  .compra-linia.oberta .compra-dreta i { transform: rotate(180deg); }
+  .compra-linia.fet { border-color: transparent; }
+  .compra-linia.fet .compra-nom, .compra-linia.fet .compra-quant { color: var(--text-fet); }
+  .compra-linia.fet .ck-circle { background: var(--cook-check-bg); border-color: var(--cook-check-bg); color: var(--cook-check-mark); }
+  .compra-linia.fet .ck-circle svg { display: block; }
+  /* «nou»: ha entrat amb l'última fusió. Se'n va quan tanques l'avís. */
+  .compra-nou {
+    font-size: 0.62rem; color: var(--accent); margin-left: 7px;
+    border: 1px solid rgba(245,247,73,0.4); border-radius: 20px; padding: 0 6px; vertical-align: 1px;
+  }
+  /* La línia oberta: el mateix graó que el dia obert */
+  .compra-linia.oberta { background: #1d3b46; border-color: rgba(245,247,73,0.25); }
+  .compra-origen { margin: 0 0.75rem 0 2.5rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.7; }
+  .compra-origen b { color: var(--text-dim); font-weight: 400; }
+  .compra-accions { display: flex; gap: 6px; flex-wrap: wrap; margin: 0.6rem 0.75rem 0.7rem 2.5rem; }
+  .compra-accions button {
+    display: flex; align-items: center; gap: 5px; cursor: pointer;
+    background: none; border: 1px solid var(--border-dim); border-radius: 8px;
+    color: var(--text-dim); font-family: 'Poppins', sans-serif; font-size: 0.75rem; padding: 0.3rem 0.7rem;
+  }
+  .compra-accions button:hover { border-color: var(--border); }
+  .compra-accions button i { font-size: 14px; }
+
+  .compra-seccio {
+    font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); margin: 1.1rem 0 0.5rem 2px;
+  }
+  .compra-peu { font-size: 0.75rem; color: var(--text-muted); margin: 0.9rem 2px 0; line-height: 1.6; font-style: italic; }
+  .compra-buida {
+    text-align: center; background: var(--surface); border-radius: 14px; margin-top: 1rem;
     padding: 2.75rem 1.5rem; color: var(--text-dim); font-size: 0.9rem; line-height: 1.75;
   }
-  .compra-aviat i { display: block; font-size: 34px; color: var(--text-muted); margin-bottom: 0.85rem; }
+  .compra-buida i { display: block; font-size: 34px; color: var(--text-muted); margin-bottom: 0.85rem; }
+  .compra-buida button {
+    display: inline-block; margin-top: 1rem; background: var(--accent); color: var(--bg); border: none;
+    border-radius: 8px; padding: 0.45rem 1rem; cursor: pointer;
+    font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 500;
+  }
 
   /* Amb quatre botons a la barra, les etiquetes no s'han de partir mai */
   .bottom-nav-item span { white-space: nowrap; }
@@ -3001,12 +3127,8 @@ function tancarNovetats() {
       <div id="menus-dies"></div>
     </div>
 
-    <div id="plan-compra" style="display: none;">
-      <div class="compra-aviat">
-        <i class="ti ti-basket" aria-hidden="true"></i>
-        Aquí ben aviat hi haurà la llista de la compra, feta a partir dels teus menús. Una mica de paciència, que ja ve!
-      </div>
-    </div>
+    <!-- La llista de la compra: tot es pinta des de pintarCompra() -->
+    <div id="plan-compra" style="display: none;"></div>
   </div>
 </div>
 
@@ -3048,6 +3170,24 @@ function tancarNovetats() {
       <button onclick="setmanaSelectorApat(1)" aria-label="Setmana següent"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
     </div>
     <div id="apat-picker-cos"></div>
+  </div>
+</div>
+
+<!-- Demanar un text curt (una quantitat, un ingredient, les racions). La mateixa
+     caixa que els dos fulls de sobre, perquè el prompt() del navegador surt amb
+     l'aspecte del sistema i no amb el de l'app. -->
+<div class="plat-picker" id="text-picker" onclick="if (event.target === this) tancarDemanarText(null)">
+  <div class="plat-picker-caixa">
+    <div class="plat-picker-cap">
+      <span class="plat-picker-titol" id="text-picker-titol"></span>
+      <button class="avis-reordenar-x" onclick="tancarDemanarText(null)" aria-label="Tancar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <input type="text" id="text-picker-camp" autocomplete="off"
+      onkeydown="if (event.key === 'Enter') { event.preventDefault(); tancarDemanarText(this.value); }">
+    <div class="text-picker-pista" id="text-picker-pista"></div>
+    <div class="text-picker-peu">
+      <button class="text-picker-boto" id="text-picker-boto" onclick="tancarDemanarText(document.getElementById('text-picker-camp').value)"></button>
+    </div>
   </div>
 </div>
 
@@ -3956,6 +4096,61 @@ async function dbComptarMenusDeRecepta(receptaId) {
   if (error) { console.error(error); return 0; }
   return count || 0;
 }
+// Els plats de més d'una setmana de cop: la llista de la compra pot saltar de
+// setmana (un dissabte, tres dies són dissabte, diumenge i dilluns)
+async function dbLlegirMenusDeSetmanes(setmanes) {
+  const { data, error } = await sb.from('menus').select('*').in('setmana', setmanes);
+  if (error) { gestionarError(error, 'No s\'han pogut carregar els menús'); return null; }
+  return data;
+}
+
+// ── Llista de la compra (una llista per usuària, i una fila per línia) ──
+async function dbLlegirCompra() {
+  const { data, error } = await sb.from('compra_llista').select('*').maybeSingle();
+  if (error) { gestionarError(error, 'No s\'ha pogut carregar la llista de la compra'); return { error: true }; }
+  return data;   // null si encara no n'hi ha
+}
+async function dbDesarCompra(dades) {
+  const { data, error } = await sb.from('compra_llista').upsert(dades).select().single();
+  if (error) { gestionarError(error, 'No s\'ha pogut desar la llista de la compra'); return null; }
+  return data;
+}
+async function dbLlegirItemsCompra() {
+  const { data, error } = await sb.from('compra_items').select('*');
+  if (error) { gestionarError(error, 'No s\'ha pogut carregar la llista de la compra'); return null; }
+  return data;
+}
+async function dbAfegirItemsCompra(files) {
+  if (!files.length) return [];
+  const { data, error } = await sb.from('compra_items').insert(files).select();
+  if (error) { gestionarError(error, 'No s\'ha pogut desar la llista de la compra'); return null; }
+  return data;
+}
+async function dbActualitzarItemCompra(id, dades) {
+  if (!id) return false;
+  const { error } = await sb.from('compra_items').update(dades).eq('id', id);
+  if (error) { gestionarError(error, 'No s\'han pogut desar els canvis'); return false; }
+  return true;
+}
+async function dbActualitzarTotsItemsCompra(dades) {
+  const { error } = await sb.from('compra_items').update(dades).not('id', 'is', null);
+  if (error) { gestionarError(error, 'No s\'han pogut desar els canvis'); return false; }
+  return true;
+}
+async function dbEsborrarItemsCompra(ids) {
+  if (!ids.length) return true;
+  const { error } = await sb.from('compra_items').delete().in('id', ids);
+  if (error) { gestionarError(error, 'No s\'han pogut desar els canvis'); return false; }
+  return true;
+}
+// Quantes línies de la llista de la compra surten d'una recepta (per avisar abans d'esborrar-la)
+async function dbComptarCompraDeRecepta(receptaId) {
+  const { count, error } = await sb.from('compra_items')
+    .select('id', { count: 'exact', head: true })
+    .contains('origen', JSON.stringify([{ recepta: receptaId }]));
+  if (error) { console.error(error); return 0; }
+  return count || 0;
+}
 
 // Categories — font única de veritat; afegir aquí per reflectir-ho a tot arreu
 const CAT_OPCIONS = ['Untables', 'Untables dolços', 'Cremes', 'Currys', 'Barretes', 'Boletes energètiques', 'Altres'];
@@ -4742,7 +4937,12 @@ function mostrarPanell(id) {
     // Càrrega mandrosa de les idees el primer cop que s'obre la pestanya
     if (id === 'idees' && !ideesCarregades) carregarIdees();
     // Els menús: es carreguen el primer cop i es repinten en tornar-hi
-    if (id === 'planificacio') { if (menusCarregats) pintarSetmana(); else carregarMenus(); }
+    if (id === 'planificacio') {
+      if (menusCarregats) pintarSetmana(); else carregarMenus();
+      // La llista de la compra es torna a mirar cada cop que hi tornes: potser
+      // has canviat el menú mentrestant
+      if (subPestanyaPlan === 'compra') carregarCompra();
+    }
   }
 }
 
@@ -6259,13 +6459,17 @@ function tancarEdicio(nomId) {
 async function eliminarRecepta(nomId, nomOriginal) {
   const idRecepta = idDe(nomOriginal);
 
-  // Si la recepta surt en algun menú, avisem abans: allà hi quedarà el nom, però ja no s'hi podrà entrar
+  // Si la recepta surt en algun menú, avisem abans: allà hi quedarà el nom, però ja no s'hi podrà entrar.
+  // I si els seus ingredients són a la llista de la compra, també: se n'aniran.
   let avisMenus = '';
   if (idRecepta) {
-    const quants = await dbComptarMenusDeRecepta(idRecepta);
+    const [quants, aLaCompra] = await Promise.all([
+      dbComptarMenusDeRecepta(idRecepta), dbComptarCompraDeRecepta(idRecepta),
+    ]);
     if (quants) {
       avisMenus = `\n\nAtenció: surt en ${quants} ${quants === 1 ? 'plat' : 'plats'} dels teus menús. `
-                + `Hi quedarà el nom escrit, però ja no s'hi podrà entrar.`;
+                + `Hi quedarà el nom escrit, però ja no s'hi podrà entrar`
+                + (aLaCompra ? `, i els seus ingredients se n'aniran de la llista de la compra.` : `.`);
     }
   }
 
@@ -9537,12 +9741,16 @@ async function anarASetmanaActual() {
   await carregarMenus();
 }
 
+let subPestanyaPlan = 'menus';
 function canviarSubPestanya(quina) {
   const esMenus = quina === 'menus';
+  subPestanyaPlan = quina;
   document.getElementById('plan-menus').style.display  = esMenus ? 'block' : 'none';
   document.getElementById('plan-compra').style.display = esMenus ? 'none'  : 'block';
   document.getElementById('plan-tab-menus').classList.toggle('actiu', esMenus);
   document.getElementById('plan-tab-compra').classList.toggle('actiu', !esMenus);
+  // El subtítol de la capçalera és de qui mana: cada sub-pestanya hi posa el seu
+  if (esMenus) pintarSetmana(); else carregarCompra();
 }
 
 // ── La graella setmanal ──
@@ -9560,7 +9768,7 @@ function pintarSetmana() {
   if (cont) cont.innerHTML = DIES_SETMANA.map(pintarDia).join('');
 
   const sub = document.getElementById('subtitol-planificacio');
-  if (sub) {
+  if (sub && subPestanyaPlan === 'menus') {
     const n = menusSetmana.length;
     sub.textContent = esperantMenus ? 'Carregant...'
                     : !n            ? 'Cap plat aquesta setmana encara'
@@ -9859,7 +10067,7 @@ async function canviarRacionsPlat(id, delta) {
 async function escriureRacionsPlat(id) {
   const p = menusSetmana.find(x => x.id === id);
   if (!p) return;
-  const resposta = prompt('Quantes racions?', p.racions || '');
+  const resposta = await demanarText({ titol: 'Quantes racions?', valor: p.racions || '', boto: 'Desa' });
   if (resposta === null) return;
   const n = parseInt(resposta, 10);
   if (isNaN(n) || n < 1) { mostrarToast('❌ Escriu un número més gran que zero'); return; }
@@ -9902,6 +10110,34 @@ function tancarCercadorPlat() {
   document.getElementById('plat-picker').classList.remove('visible');
   destiPlatNou = null;
 }
+
+// ── Demanar un text curt ──
+// Substitueix el prompt() del navegador, que surt amb l'aspecte del sistema.
+// S'espera com el prompt: `const text = await demanarText({...})`, i torna null
+// si es cancel·la (la creu, tocar fora o la tecla Escape).
+let respondreDemanarText = null;
+function demanarText({ titol, valor = '', exemple = '', boto = 'Desa', pista = '' }) {
+  return new Promise(resol => {
+    respondreDemanarText = resol;
+    document.getElementById('text-picker-titol').textContent = titol;
+    document.getElementById('text-picker-boto').textContent  = boto;
+    document.getElementById('text-picker-pista').textContent = pista;
+    const camp = document.getElementById('text-picker-camp');
+    camp.value = valor;
+    camp.placeholder = exemple;
+    document.getElementById('text-picker').classList.add('visible');
+    setTimeout(() => { camp.focus(); camp.select(); }, 60);
+  });
+}
+function tancarDemanarText(resposta) {
+  document.getElementById('text-picker').classList.remove('visible');
+  const resol = respondreDemanarText;
+  respondreDemanarText = null;
+  if (resol) resol(resposta);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && respondreDemanarText) tancarDemanarText(null);
+});
 function pintarResultatsPlat(text) {
   const cont = document.getElementById('plat-resultats');
   if (!cont) return;
@@ -10083,6 +10319,535 @@ async function enviarAApat(dia, apat) {
   // tancava sol, i la Judy va trobar que despistava (16-09-2026). Es tanca
   // amb la creu o tocant fora, com sempre.
   if (fet) pintarSelectorApat();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLANIFICACIÓ: LLISTA DE LA COMPRA
+// ══════════════════════════════════════════════════════════════
+// Es fa a partir dels plats del menú d'uns dies concrets (per defecte, tres des
+// d'avui). Les dates es desen fixes: una llista feta «des de demà» és la mateixa
+// llista demà i passat demà. Les línies viuen a Supabase, i cada cop que s'obre
+// es torna a calcular el que tocaria i es FUSIONA amb el que hi ha desat: així
+// les marques de «ja ho tinc» no es perden quan el menú canvia.
+//
+// Cada línia és un «ítem» que només sap d'on ve pel seu «origen». Avui hi entren
+// els plats del menú i les línies escrites a mà; una recepta solta hi cabria
+// sense tocar la fusió ni la pantalla.
+
+const COMPRA_DIES_DEFECTE = 3;
+const COMPRA_OPCIONS_DIES = [3, 5, 7];
+const COMPRA_CK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
+
+let compra            = null;   // la fila de compra_llista: { user_id, des_de, dies, avis }
+let compraItems       = [];     // les línies, tal com són a la taula
+let compraPlats       = [];     // els plats del menú dels dies de la llista
+let compraCarregant   = false;
+let compraTriaOberta  = false;
+let compraLiniaOberta = null;   // id de la línia desplegada
+
+// ── Dates ──
+function avuiData() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function dataDeIso(iso) {
+  const [a, m, d] = iso.split('-').map(Number);
+  return new Date(a, m - 1, d);
+}
+// Les dates que cobreix la llista
+function diesDeCompra() {
+  const inici = dataDeIso(compra.des_de);
+  return Array.from({ length: compra.dies }, (_, i) => sumarDies(inici, i));
+}
+// «dimecres 16» o, amb el mes, «dimecres 16 de setembre»
+function nomDeData(d, ambMes) {
+  return DIES_SETMANA[(d.getDay() + 6) % 7] + ' ' + d.getDate() + (ambMes ? ' ' + deMes(d.getMonth()) : '');
+}
+// «Del dimecres 16 al divendres 18 de setembre»; el primer mes només si canvia
+function textPeriodeCompra() {
+  const dies   = diesDeCompra();
+  const primer = dies[0], ultim = dies[dies.length - 1];
+  return 'Del ' + nomDeData(primer, primer.getMonth() !== ultim.getMonth()) + ' al ' + nomDeData(ultim, true);
+}
+function compraHaPassat() {
+  const dies = diesDeCompra();
+  return dies[dies.length - 1] < avuiData();
+}
+// Els menús es guarden per setmana i nom de dia; la data del plat es dedueix
+function dataDePlat(p) {
+  return sumarDies(dataDeIso(p.setmana), Math.max(0, DIES_SETMANA.indexOf(p.dia)));
+}
+
+// ── Càrrega ──
+async function carregarCompra() {
+  if (compraCarregant) return;
+  compraCarregant = true;
+  pintarCompra();
+  try {
+    let fila = await dbLlegirCompra();
+    if (fila && fila.error) { compra = null; return; }
+    let primeraVegada = false;
+    if (!fila) {
+      // La primera vegada: tres dies des d'avui, sense avís (no hi ha res amb què comparar)
+      fila = await dbDesarCompra({ des_de: isoData(avuiData()), dies: COMPRA_DIES_DEFECTE, avis: '' });
+      if (!fila) { compra = null; return; }
+      primeraVegada = true;
+    }
+    compra = fila;
+    const items = await dbLlegirItemsCompra();
+    if (items === null) { compra = null; return; }
+    compraItems = items;
+    await regenerarCompra({ avisar: !primeraVegada });
+  } finally {
+    compraCarregant = false;
+    pintarCompra();
+  }
+}
+
+// ── Normalitzar: perquè «Tomàquets» i «tomàquet, picat» siguin la mateixa línia ──
+// El que va després de la coma o entre parèntesis és com es prepara, no què és.
+function nomNetIngredient(nom) {
+  return String(nom || '').replace(/\([^)]*\)/g, ' ').split(/[,;:]/)[0].replace(/\s+/g, ' ').trim();
+}
+// La clau d'agrupar: minúscules, sense accents i amb un singular aproximat,
+// paraula per paraula. No serà perfecte (rave/raves no hi cauen), però com
+// que els dos costats passen pel mateix sedàs, el que importa és que coincideixin.
+function clauIngredient(nom) {
+  const net = nomNetIngredient(nom).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return net.split(' ').map(w => {
+    if (w.length < 3 || !w.endsWith('s')) return w;
+    if (w.endsWith('ques')) return w.slice(0, -4) + 'ca';   // fruites seques → fruita seca
+    if (w.endsWith('gues')) return w.slice(0, -4) + 'ga';   // pastanagues → pastanaga
+    if (w.endsWith('ns'))   return w.slice(0, -2);          // cigrons → cigro, pans → pa
+    if (w.endsWith('es'))   return w.slice(0, -2) + 'a';    // cebes → ceba, patates → patata
+    return w.slice(0, -1);                                  // tomaquets → tomaquet, ous → ou
+  }).join(' ');
+}
+
+// ── Sumar: les unitats que es poden convertir entre elles ──
+const COMPRA_FAMILIES = {
+  g: ['pes', 1], kg: ['pes', 1000],
+  ml: ['volum', 1], cl: ['volum', 10], dl: ['volum', 100], l: ['volum', 1000],
+};
+// La suma es presenta en la unitat que es diria: 1500 g són 1,5 kg
+function unitatPerEnsenyar(familia, base) {
+  if (familia === 'pes') return base >= 1000 ? ['kg', base / 1000] : ['g', base];
+  return base >= 1000 ? ['l', base / 1000] : ['ml', base];
+}
+
+// El cor: dels plats a les línies. Escala cada ingredient per les racions del
+// plat, agrupa per ingredient i unitat, i suma el que es pot sumar.
+function calcularCompra(plats) {
+  const grups = new Map();
+  for (const p of plats) {
+    const r = receptaDePlat(p);
+    if (!r) continue;   // recepta esborrada: no en sabem els ingredients
+    const base    = parseInt(r['Racions']) || 0;
+    const racions = parseInt(p.racions) || 0;
+    // Sense racions a la recepta no hi ha factor: es queda tal com és, en silenci
+    const factor  = (base && racions) ? racions / base : 1;
+
+    for (const ing of getIngredientsParsed(r)) {
+      const nom  = nomNetIngredient(ing.n);
+      const clau = clauIngredient(nom);
+      if (!clau) continue;
+      const q   = (ing.q === null || ing.q === undefined) ? null : ing.q * factor;
+      const u   = unitatCanonica(ing.u);
+      const fam = COMPRA_FAMILIES[u];
+      // Unitats no combinables (cullerades i gots) van a línies separades
+      const key = clau + '|' + (q === null ? '' : (fam ? fam[0] : u));
+      let g = grups.get(key);
+      if (!g) {
+        g = { nom: nom.toLowerCase(), clau, quantitat: null, unitat: q === null ? '' : u,
+              familia: fam ? fam[0] : null, base: 0, origen: [] };
+        grups.set(key, g);
+      }
+      if (q !== null) {
+        if (fam) g.base += q * fam[1];
+        else     g.quantitat = (g.quantitat || 0) + q;
+      }
+      g.origen.push({
+        plat: p.id, recepta: r['_id'], nom: nomDePlat(p), dia: p.dia,
+        racions: racions || null, q: q === null ? null : Math.round(q * 100) / 100, u,
+      });
+    }
+  }
+  const linies = [];
+  for (const g of grups.values()) {
+    if (g.familia && g.base) {
+      const [u, q] = unitatPerEnsenyar(g.familia, g.base);
+      g.unitat = u; g.quantitat = Math.round(q * 100) / 100;
+    }
+    delete g.familia; delete g.base;
+    linies.push(g);
+  }
+  // Una línia sense quantitat sobra si l'ingredient ja en té una amb quantitat
+  const ambQuantitat = new Set(linies.filter(l => l.quantitat !== null).map(l => l.clau));
+  return linies.filter(l => l.quantitat !== null || !ambQuantitat.has(l.clau));
+}
+
+// ── La fusió: el que tocaria, contra el que hi ha desat ──
+// Es comparen per ingredient + unitat. Les que ja hi eren conserven la marca;
+// les noves entren amb un «nou»; les que ja no surten de cap plat se'n van.
+// Les escrites a mà no es toquen mai, i les que has retocat es queden.
+function clauItem(it) { return it.clau + '|' + (it.unitat || ''); }
+function mateixaQuantitat(a, b) {
+  if (a === null || b === null) return a === b;
+  return Math.abs(Number(a) - Number(b)) < 0.005;
+}
+
+async function regenerarCompra({ avisar = true } = {}) {
+  const dies     = diesDeCompra();
+  const setmanes = [...new Set(dies.map(d => isoData(dillunsDe(d))))];
+  const files    = await dbLlegirMenusDeSetmanes(setmanes);
+  if (files === null) return false;
+  const inici = isoData(dies[0]), fi = isoData(dies[dies.length - 1]);
+  compraPlats = files.filter(p => { const d = isoData(dataDePlat(p)); return d >= inici && d <= fi; });
+
+  const linies  = calcularCompra(compraPlats);
+  const desades = new Map(compraItems.filter(it => !it.manual).map(it => [clauItem(it), it]));
+  const noves = [], aTreure = [], canvis = [], vistes = new Set();
+
+  for (const l of linies) {
+    const k = clauItem(l);
+    vistes.add(k);
+    const it = desades.get(k);
+    if (!it) {
+      noves.push({ nom: l.nom, clau: l.clau, quantitat: l.quantitat, unitat: l.unitat, origen: l.origen, nou: avisar });
+      continue;
+    }
+    const c = {};
+    if (!it.editat && !mateixaQuantitat(it.quantitat, l.quantitat)) c.quantitat = l.quantitat;
+    if (JSON.stringify(it.origen) !== JSON.stringify(l.origen)) c.origen = l.origen;
+    if (Object.keys(c).length) canvis.push([it, c]);
+  }
+  for (const [k, it] of desades) {
+    if (vistes.has(k)) continue;
+    // Retocada a mà i sense cap plat al darrere: es queda, com si l'haguessis escrita tu
+    if (it.editat && !it.tret) { if (it.origen.length) canvis.push([it, { origen: [] }]); continue; }
+    aTreure.push(it);
+  }
+
+  // Què ha canviat al menú, per explicar-ho: es dedueix dels orígens d'abans i d'ara
+  const abans = new Map(), ara = new Map();
+  compraItems.forEach(it => (it.origen || []).forEach(o => abans.set(o.plat, o)));
+  linies.forEach(l => l.origen.forEach(o => ara.set(o.plat, o)));
+  const esborrades = new Set(compraPlats.filter(receptaEsborrada).map(p => p.id));
+  const afegits  = [...ara.values()].filter(o => !abans.has(o.plat));
+  const trets    = [...abans.values()].filter(o => !ara.has(o.plat) && !esborrades.has(o.plat));
+  const sensePlat = [...abans.values()].filter(o => !ara.has(o.plat) && esborrades.has(o.plat));
+  const racions  = [...ara.values()].filter(o => abans.has(o.plat) && abans.get(o.plat).racions !== o.racions);
+
+  if (noves.length) {
+    const inserides = await dbAfegirItemsCompra(noves);
+    if (inserides === null) return false;
+    compraItems.push(...inserides);
+  }
+  for (const [it, c] of canvis) {
+    Object.assign(it, c);
+    await dbActualitzarItemCompra(it.id, c);
+  }
+  if (aTreure.length) {
+    await dbEsborrarItemsCompra(aTreure.map(it => it.id));
+    compraItems = compraItems.filter(it => !aTreure.includes(it));
+  }
+  if (avisar) {
+    const text = textAvisCompra(afegits, trets, racions, sensePlat);
+    if (text) {
+      compra.avis = text;
+      await dbDesarCompra({ user_id: compra.user_id, des_de: compra.des_de, dies: compra.dies, avis: text });
+    }
+  }
+  return true;
+}
+
+function textAvisCompra(afegits, trets, racions, sensePlat) {
+  const n = afegits.length + trets.length + racions.length + sensePlat.length;
+  if (!n) return '';
+  if (n > 1) return 'Hi ha canvis al menú d\'aquests dies i la llista s\'ha actualitzat.';
+  const b = o => `<b>${escHTML(o.nom)}</b>`;
+  if (afegits.length)  return `Has afegit ${b(afegits[0])} al menú de ${afegits[0].dia}, els ingredients ja estan afegits a la llista de la compra.`;
+  if (trets.length)    return `Has tret ${b(trets[0])} del menú de ${trets[0].dia} i els seus ingredients ja no hi són.`;
+  if (sensePlat.length) return `La recepta ${b(sensePlat[0])} s'ha esborrat i els seus ingredients ja no hi són.`;
+  return `Has canviat les racions de ${b(racions[0])} i les quantitats s'han actualitzat.`;
+}
+
+// ── La pantalla ──
+// La unitat es desa en singular («cullerada») i es diu en plural quan toca.
+// Les mètriques no canvien: 300 g, 2 kg.
+function unitatEnPlural(u, q) {
+  if (!u || COMPRA_FAMILIES[u] || !(q > 1)) return u;
+  return u.endsWith('a') ? u.slice(0, -1) + 'es' : u + 's';
+}
+function quantitatAmbUnitat(q, u) {
+  if (q === null || q === undefined) return '';
+  const n = Number(q);
+  return formatQuantity(n, u) + (u ? ' ' + unitatEnPlural(u, n) : '');
+}
+function quantitatCompraText(it) { return quantitatAmbUnitat(it.quantitat, it.unitat); }
+
+function pintarCompra() {
+  const cont = document.getElementById('plan-compra');
+  const sub  = document.getElementById('subtitol-planificacio');
+  if (!cont) return;
+  const posarSubtitol = t => { if (sub && subPestanyaPlan === 'compra') sub.textContent = t; };
+
+  if (!compra) {
+    posarSubtitol(compraCarregant ? 'Carregant...' : '');
+    cont.innerHTML = compraCarregant ? '' : `
+      <div class="compra-buida">
+        <i class="ti ti-basket" aria-hidden="true"></i>
+        No s'ha pogut carregar la llista de la compra.
+        <br><button onclick="carregarCompra()">Torna-ho a provar</button>
+      </div>`;
+    return;
+  }
+
+  const visibles = compraItems.filter(it => !it.tret);
+  const ordre    = (a, b) => a.nom.localeCompare(b.nom, 'ca');
+  const ambQ     = visibles.filter(it => it.quantitat !== null && it.quantitat !== undefined).sort(ordre);
+  const senseQ   = visibles.filter(it => it.quantitat === null || it.quantitat === undefined).sort(ordre);
+  const fets     = visibles.filter(it => it.fet).length;
+  const nPlats   = compraPlats.length;
+  const plural   = (n, un, molts) => n === 1 ? un : molts;
+
+  posarSubtitol(compraCarregant ? 'Carregant...'
+              : !nPlats ? `Cap plat en ${compra.dies} dies`
+              : `${nPlats} ${plural(nPlats, 'plat', 'plats')} en ${compra.dies} dies`);
+
+  let html = `
+    <div class="compra-periode">
+      <div>
+        <div class="compra-periode-text">${textPeriodeCompra()}</div>
+        <div class="compra-periode-dies">${compra.dies} dies · ${nPlats ? nPlats + ' ' + plural(nPlats, 'plat', 'plats') : 'cap plat'}</div>
+      </div>
+      <button class="compra-canvia" onclick="obrirTriaCompra()">
+        <i class="ti ti-${compraTriaOberta ? 'chevron-up' : 'calendar'}" aria-hidden="true"></i>
+        ${compraTriaOberta ? 'Tanca' : 'Canvia els dies'}
+      </button>
+    </div>
+    ${compraTriaOberta ? triaCompraHTML() : ''}`;
+
+  if (compraHaPassat()) {
+    const dies = diesDeCompra();
+    html += avisCompraHTML('Aquests dies ja han passat',
+      `La llista és del ${nomDeData(dies[0])} al ${nomDeData(dies[dies.length - 1])}. Pots seguir-la fent servir o fer-ne una de nova.`,
+      'Fes-ne una de nova des d\'avui', 'novaCompraDesDAvui()');
+  }
+  if (compra.avis) {
+    html += avisCompraHTML('La llista s\'ha actualitzat', compra.avis, 'Entesos', 'tancarAvisCompra()');
+  }
+
+  if (!visibles.length && !nPlats) {
+    html += `
+      <div class="compra-buida">
+        <i class="ti ti-basket" aria-hidden="true"></i>
+        Aquests dies no tens cap plat al menú, i per això la llista és buida. Posa-hi plats o tria uns altres dies.
+        <br><button onclick="canviarSubPestanya('menus')">Anar als menús</button>
+      </div>`;
+  } else {
+    html += `
+      <div class="compra-progres">
+        <span class="compra-progres-num">${fets} de ${visibles.length}</span>
+        <button class="ck-reinicia" onclick="desmarcarTotCompra()">Desmarca-ho tot</button>
+      </div>
+      <div class="ck-bar-track"><div class="ck-bar" style="width:${visibles.length ? Math.round(fets / visibles.length * 100) : 0}%"></div></div>
+      ${ambQ.map(liniaCompraHTML).join('')}
+      ${senseQ.length ? '<div class="compra-seccio">Sense quantitat</div>' + senseQ.map(liniaCompraHTML).join('') : ''}`;
+  }
+
+  const senseRecepta = compraPlats.filter(receptaEsborrada).map(nomDePlat);
+  if (senseRecepta.length) {
+    const n = senseRecepta.length;
+    html += `<div class="compra-peu">${n} ${plural(n, 'plat sense recepta no hi aporta res', 'plats sense recepta no hi aporten res')}: ${escHTML(senseRecepta.join(', '))}.</div>`;
+  }
+  html += `
+    <button class="btn-afegir-plat" onclick="afegirItemCompra()">
+      <i class="ti ti-plus" aria-hidden="true"></i> Afegir un altre ingredient
+    </button>`;
+
+  cont.innerHTML = html;
+}
+
+function avisCompraHTML(titol, text, boto, accio) {
+  return `
+    <div class="avis-reordenar avis-compra">
+      <i class="ti ti-basket" aria-hidden="true"></i>
+      <div class="avis-reordenar-cos">
+        <div class="avis-reordenar-titol">${titol}</div>
+        <div class="avis-reordenar-text">${text}</div>
+        <button class="avis-reordenar-ok" onclick="${accio}">${boto}</button>
+      </div>
+    </div>`;
+}
+
+function triaCompraHTML() {
+  const avui   = avuiData();
+  const dema   = sumarDies(avui, 1);
+  const dilluns = sumarDies(dillunsDe(avui), 7);   // el dilluns vinent
+  const opcions = [
+    { iso: isoData(avui),    text: 'Avui' },
+    { iso: isoData(dema),    text: 'Demà' },
+    { iso: isoData(dilluns), text: 'Dilluns ' + dilluns.getDate() },
+  ];
+  const unAltre = !opcions.some(o => o.iso === compra.des_de);
+  return `
+    <div class="compra-tria">
+      <div class="compra-tria-etiq">Quants dies</div>
+      <div class="compra-tria-fila">
+        ${COMPRA_OPCIONS_DIES.map(n => `<button class="compra-pill${n === compra.dies ? ' actiu' : ''}"
+            onclick="canviarPeriodeCompra('${compra.des_de}', ${n})">${n} dies</button>`).join('')}
+      </div>
+      <div class="compra-tria-etiq">Des de</div>
+      <div class="compra-tria-fila">
+        ${opcions.map(o => `<button class="compra-pill${o.iso === compra.des_de ? ' actiu' : ''}"
+            onclick="canviarPeriodeCompra('${o.iso}', ${compra.dies})">${o.text}</button>`).join('')}
+        <label class="compra-pill data${unAltre ? ' actiu' : ''}">
+          <i class="ti ti-calendar" aria-hidden="true"></i>${unAltre ? nomDeData(dataDeIso(compra.des_de)) : 'Un altre dia'}
+          <input type="date" value="${compra.des_de}" aria-label="Un altre dia"
+                 onclick="if (this.showPicker) try { this.showPicker(); } catch (e) {}"
+                 onchange="if (this.value) canviarPeriodeCompra(this.value, ${compra.dies})">
+        </label>
+      </div>
+    </div>`;
+}
+
+function liniaCompraHTML(it) {
+  const oberta = compraLiniaOberta === it.id;
+  const quant  = quantitatCompraText(it);
+  return `
+    <div class="compra-linia${it.fet ? ' fet' : ''}${oberta ? ' oberta' : ''}">
+      <div class="compra-linia-cap" onclick="marcarItemCompra('${it.id}')">
+        <span class="ck-circle">${COMPRA_CK_SVG}</span>
+        <span class="compra-nom">${escHTML(it.nom)}${it.nou ? '<span class="compra-nou">nou</span>' : ''}</span>
+        <span class="compra-dreta" onclick="event.stopPropagation(); obrirLiniaCompra('${it.id}')">
+          ${quant ? `<span class="compra-quant">${escHTML(quant)}</span>` : ''}
+          <i class="ti ti-chevron-down" aria-hidden="true"></i>
+        </span>
+      </div>
+      ${oberta ? detallLiniaCompraHTML(it) : ''}
+    </div>`;
+}
+
+// La línia oberta: d'on surt (plat, racions i quantitat de cadascun) i les accions
+function detallLiniaCompraHTML(it) {
+  const origen = (it.origen || []).map(o => {
+    const q = o.q === null ? '' : ' · ' + quantitatAmbUnitat(o.q, o.u);
+    return `<b>${escHTML(o.nom)}</b>${o.racions ? ' · ' + o.racions + ' rac.' : ''}${q}`;
+  });
+  if (it.manual) origen.unshift('Afegit a mà');
+  else if (it.editat) origen.unshift('Quantitat canviada a mà');
+  return `
+    <div class="compra-origen">${origen.join('<br>')}</div>
+    <div class="compra-accions">
+      <button onclick="canviarQuantitatCompra('${it.id}')"><i class="ti ti-pencil" aria-hidden="true"></i> Canvia la quantitat</button>
+      <button onclick="treureItemCompra('${it.id}')"><i class="ti ti-x" aria-hidden="true"></i> Treu-la</button>
+    </div>`;
+}
+
+// ── Accions ──
+function obrirTriaCompra() { compraTriaOberta = !compraTriaOberta; pintarCompra(); }
+function obrirLiniaCompra(id) { compraLiniaOberta = compraLiniaOberta === id ? null : id; pintarCompra(); }
+
+async function marcarItemCompra(id) {
+  const it = compraItems.find(x => x.id === id);
+  if (!it) return;
+  it.fet = !it.fet;
+  pintarCompra();
+  await dbActualitzarItemCompra(id, { fet: it.fet });
+}
+async function desmarcarTotCompra() {
+  if (!compraItems.some(it => it.fet)) return;
+  compraItems.forEach(it => { it.fet = false; });
+  pintarCompra();
+  await dbActualitzarTotsItemsCompra({ fet: false });
+}
+async function tancarAvisCompra() {
+  compra.avis = '';
+  compraItems.forEach(it => { it.nou = false; });
+  pintarCompra();
+  await dbDesarCompra({ user_id: compra.user_id, des_de: compra.des_de, dies: compra.dies, avis: '' });
+  await dbActualitzarTotsItemsCompra({ nou: false });
+}
+
+async function canviarPeriodeCompra(desDe, dies) {
+  if (!compra || (desDe === compra.des_de && dies === compra.dies)) { compraTriaOberta = false; pintarCompra(); return; }
+  const fila = await dbDesarCompra({ user_id: compra.user_id, des_de: desDe, dies, avis: '' });
+  if (!fila) return;
+  compra = fila;
+  compraTriaOberta  = false;
+  compraLiniaOberta = null;
+  // Amb uns altres dies, el «nou» de l'última fusió ja no vol dir res
+  if (compraItems.some(it => it.nou)) {
+    compraItems.forEach(it => { it.nou = false; });
+    await dbActualitzarTotsItemsCompra({ nou: false });
+  }
+  await regenerarCompra({ avisar: false });
+  pintarCompra();
+}
+function novaCompraDesDAvui() { canviarPeriodeCompra(isoData(avuiData()), compra.dies); }
+
+// «600 g», «1,5 kg», «3», o res (sense quantitat). Torna null si no s'entén.
+function llegirQuantitatCompra(text) {
+  const t = String(text || '').trim();
+  if (!t) return { quantitat: null, unitat: '' };
+  const m = t.match(/^(\d+(?:\s+|\s*\+\s*)\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+[.,]\d+|\d+)\s*(.*)$/);
+  if (!m) return null;
+  const q = parseFractionStr(m[1]);
+  const u = m[2].trim();
+  if (q === null) return null;
+  if (u && !unitatCanonica(u)) return null;
+  return { quantitat: q, unitat: unitatCanonica(u) };
+}
+async function canviarQuantitatCompra(id) {
+  const it = compraItems.find(x => x.id === id);
+  if (!it) return;
+  const resposta = await demanarText({
+    titol: 'Canvia la quantitat', valor: quantitatCompraText(it), exemple: it.nom, boto: 'Desa',
+    pista: 'Escriu-la com «600 g», «1,5 kg» o «3». Buida, vol dir sense quantitat.',
+  });
+  if (resposta === null) return;
+  const llegida = llegirQuantitatCompra(resposta);
+  if (!llegida) { mostrarToast('❌ Escriu la quantitat com «600 g», «1,5 kg» o «3»'); return; }
+  Object.assign(it, llegida, { editat: true });
+  pintarCompra();
+  await dbActualitzarItemCompra(id, { quantitat: it.quantitat, unitat: it.unitat, editat: true });
+}
+// Treure una línia: si l'has escrita tu, se'n va del tot; si ve del menú, es
+// queda amagada perquè la fusió no la torni a posar
+async function treureItemCompra(id) {
+  const it = compraItems.find(x => x.id === id);
+  if (!it) return;
+  compraLiniaOberta = null;
+  if (it.manual) {
+    compraItems = compraItems.filter(x => x.id !== id);
+    pintarCompra();
+    await dbEsborrarItemsCompra([id]);
+  } else {
+    it.tret = true;
+    pintarCompra();
+    await dbActualitzarItemCompra(id, { tret: true });
+  }
+}
+async function afegirItemCompra() {
+  const resposta = await demanarText({
+    titol: 'Afegir un altre ingredient', exemple: 'p. ex. 2 llimones, o paper de cuina', boto: 'Afegeix',
+  });
+  if (resposta === null || !resposta.trim()) return;
+  const ing = parseIngredientLine(resposta);
+  if (!ing || !ing.n.trim()) return;
+  const nom = nomNetIngredient(ing.n).toLowerCase();
+  const fila = {
+    nom, clau: clauIngredient(nom),
+    quantitat: ing.q === null ? null : ing.q, unitat: unitatCanonica(ing.u),
+    manual: true, origen: [],
+  };
+  const inserides = await dbAfegirItemsCompra([fila]);
+  if (inserides === null) return;
+  compraItems.push(...inserides);
+  pintarCompra();
 }
 </script>
 
