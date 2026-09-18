@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 188 · 17-09-2026                                     ║
+  ║  VERSIÓ 195 · 18-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -630,6 +630,33 @@
   .ck-ing.fet { color: var(--text-fet); }
   .ck-ing.fet .ck-circle { background: var(--cook-check-bg); border-color: var(--cook-check-bg); color: var(--cook-check-mark); }
   .ck-ing.fet .ck-circle svg { display: block; }
+
+  /* ── Equivalències sense bàscula ──
+     La icona només surt a les línies en pes amb equivalència i a les de volum. Té la
+     seva pròpia zona tocable (32 px) sense fer créixer la línia (els marges
+     negatius), i al mode cuinar se'n va a tocar del marge dret, sempre al
+     mateix lloc: la resta de la línia segueix marcant i desmarcant. */
+  .eq-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; margin: -6px 0 -6px 2px; padding: 0;
+    border: none; background: none; border-radius: 8px;
+    color: var(--accent); cursor: pointer; flex-shrink: 0;
+  }
+  .eq-btn i { font-size: 17px; }
+  .eq-btn:hover { background: rgba(245,247,73,0.08); }
+  .ck-list.cuinant .eq-btn { margin-left: auto; }
+  .ck-ing.fet .eq-btn { color: rgba(245,247,73,0.45); }   /* s'apaga amb la línia, però segueix funcionant */
+  /* El requadre: el de sempre (.novetats-modal), amb aquest contingut a dins */
+  .eq-cos { text-align: center; }
+  .eq-titol { font-size: 15px; color: var(--text-dim); margin-bottom: 14px; }
+  .eq-principal { display: flex; align-items: baseline; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .eq-uns { font-size: 17px; color: var(--text-dim); }
+  .eq-num { font-family: 'Bricolage Grotesque', sans-serif; font-size: 46px; font-weight: 500; color: var(--accent); line-height: 1; }
+  .eq-nom { font-size: 19px; color: var(--text-dim); }
+  .eq-obe { font-size: 15px; color: var(--accent); margin-bottom: 12px; }
+  .eq-sep { color: var(--text-muted); margin: 0 1px; }   /* els espais ja hi són al text */
+  .eq-peu { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
   .card-instruccions ol { margin: 0; padding-left: 18px; }
   .card-instruccions li { font-size: 13px; color: var(--text-dim); line-height: 1.65; margin-bottom: 4px; }
   .card-etiquetes { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -2345,7 +2372,7 @@
   .novetats-btn {
     display: inline-block; padding: 9px 28px; border-radius: 10px;
     background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
-    font-size: 13px; cursor: pointer; transition: background 0.2s;
+    font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; transition: background 0.2s;
   }
   .novetats-btn:hover { background: rgba(245,247,73,0.06); }
   .novetats-btn-final { background: var(--accent); color: var(--bg); }
@@ -2696,6 +2723,23 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     EQUIVALÈNCIA SENSE BÀSCULA (s'obre des de la icona d'una línia d'ingredient)
+══════════════════════════════════════ -->
+<div class="novetats-overlay" id="equivalencia-overlay" onclick="if (event.target === this) tancarEquivalencia()">
+  <div class="novetats-modal">
+    <div class="eq-cos">
+      <div class="eq-titol" id="equivalencia-titol"></div>
+      <div class="eq-principal" id="equivalencia-principal"></div>
+      <div class="eq-obe" id="equivalencia-obe"></div>
+      <div class="eq-peu" id="equivalencia-peu"></div>
+    </div>
+    <div class="novetats-btn-wrap">
+      <button class="novetats-btn" onclick="tancarEquivalencia()">Entesos!</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 // BENVINGUDA — Modifica aquí!
@@ -2893,9 +2937,10 @@ function tancarBenvinguda() {
 // Canvia VERSIO_NOVETATS i la llista per mostrar
 // el modal la pròxima vegada que l'usuària obri l'app.
 // ══════════════════════════════════════════════
-const VERSIO_NOVETATS = '2.7';
+const VERSIO_NOVETATS = '2.8';
 const NOVETATS = [
-  { titol: 'La icona del receptari', desc: 'l\'hem canviada perquè es vegi bé a la pantalla d\'inici del mòbil. Si en obrir l\'app el mòbil et demana permís per actualitzar-la, o t\'avisa que no ve de la botiga d\'aplicacions, és normal i som nosaltres: hi pots dir que sí amb tota tranquil·litat. I si ja hi has dit que no, tampoc passa res — només vol dir que et quedes amb la icona d\'abans.' },
+  { titol: 'Ja pots demanar la llista de la compra!', desc: 'Si vas a Planificació, la trobaràs al costat dels Menús. Tria quins dies vols, i es farà sola amb els plats que hi tinguis: sumarà les quantitats, hi pots marcar el que ja tens, canviar-ne alguna o afegir-hi el que vulguis a mà. I si canvies el menú, la llista s\'actualitza i t\'ho diu.' },
+  { titol: 'Nova funció per si un dia no tens bàscula', desc: 'Obre una recepta i, al costat dels ingredients que van en grams o en ml, hi veuràs una bàscula petita. Toca-la i t\'ho passa a gots, cullerades o unitats. Està en proves: si algun dia et diu una cosa rara, no te la creguis i explica-m\'ho, que ho arreglo.' },
 ];
 
 // A partir de quantes obertures ensenyem les novetats a una usuària nova
@@ -2937,7 +2982,7 @@ function mostrarNovetats() {
   desarLocal(clauNovetats(), VERSIO_NOVETATS);
   const llista = document.getElementById('novetats-llista');
   llista.innerHTML = NOVETATS.map(n =>
-    `<div class="novetats-item"><div class="novetats-dot"></div><div class="novetats-text"><strong>${n.titol}:</strong> ${n.desc}</div></div>`
+    `<div class="novetats-item"><div class="novetats-dot"></div><div class="novetats-text"><strong>${n.titol}</strong><br>${n.desc}</div></div>`
   ).join('');
   document.getElementById('novetats-versio').textContent = 'Versió ' + VERSIO_NOVETATS;
   document.getElementById('novetats-overlay').classList.add('visible');
@@ -4933,6 +4978,345 @@ function renderScaledIngredientPlain(ing, factor) {
   return parts.join(' ');
 }
 
+// ══════════════════════════════════════════════
+// EQUIVALÈNCIES SENSE BÀSCULA
+// ══════════════════════════════════════════════
+// Quan una recepta dona un ingredient en grams (o quilos), això el passa a
+// mesures de casa: unitats comptables («uns 40 anacards»), cullerades soperes
+// rases (~15 ml) i gots de 250 ml. Els líquids en ml (cl, dl, l) també, i
+// sense taula: 250 ml són un got sigui el que sigui. Només en aquest sentit,
+// del pes o el volum cap a les mesures; mai al revés. I davant del dubte,
+// silenci: si no hi ha dada segura, no es diu res.
+//
+// La taula ve d'equivalencies.csv, a la carpeta del projecte, que és on es
+// cura. Per afegir-hi un ingredient: una línia més aquí, amb els sinònims dels
+// tres idiomes separats per «|». Els grams són per unitat, per cullerada i per
+// got; el que no se sap, es deixa fora. «genere» serveix per dir «uns» o
+// «unes». Una «barrera» és una entrada que captura el match i calla: la nou
+// moscada no és cap nou, i si no hi fos, «nou» la pescaria.
+// «comptaFins» (decidit el 18-09-2026): fins a tantes unitats es compten
+// («uns 12 pistatxos»); si en surten més, es parla en gots, perquè ningú no
+// compta 140 pistatxos. Si tampoc no arriba a un quart de got, es compten igual.
+const EQUIVALENCIES = [
+  // Fruita seca (pelada)
+  { id:'anacard',   noms:'anacard|anacardo|cashew',                          genere:'m', unitat:5,   cullerada:9,  got:140 },
+  { id:'ametlla',   noms:'ametlla|almendra|almond',                          genere:'f', unitat:1.2,               got:150, comptaFins:15 },
+  { id:'avellana',  noms:'avellana|hazelnut',                                genere:'f', unitat:1.3,               got:140, comptaFins:15 },
+  { id:'nou',       noms:'nou|anou|nuez|walnut',                             genere:'f', unitat:5,                 got:105, comptaFins:15 },
+  { id:'pistatxo',  noms:'pistatxo|festuc|festucs|pistacho|pistachio',       genere:'m', unitat:0.7,               got:125, comptaFins:15 },
+  { id:'cacauet',   noms:'cacauet|cacahuete|mani|peanut',                    genere:'m', unitat:0.8,               got:150, comptaFins:15 },
+  { id:'pinyons',   noms:'pinyons|pinyó|piñones|piñón|pine nuts|pine nut',                cullerada:9,  got:140 },
+  // Llavors
+  { id:'sesam',     noms:'llavors de sèsam|sèsam|semillas de sésamo|sésamo|ajonjolí|sesame seeds|sesame',        cullerada:9 },
+  { id:'xia',       noms:'llavors de xia|xia|chia|chía|semillas de chía|chia seeds',                            cullerada:11 },
+  { id:'lli',       noms:'llavors de lli|lli|semillas de lino|lino|linaza|flax seeds|flaxseed|flax',            cullerada:10 },  // mòltes, ~7
+  { id:'canem',     noms:'llavors de cànem|cànem|cors de cànem|semillas de cáñamo|cáñamo|hemp seeds|hemp hearts|hemp', cullerada:10 },
+  { id:'girasol',   noms:'pipes de gira-sol|llavors de gira-sol|pipas de girasol|semillas de girasol|sunflower seeds', cullerada:8 },
+  { id:'carbassa',  noms:'pipes de carbassa|llavors de carbassa|pipas de calabaza|semillas de calabaza|pumpkin seeds', cullerada:9 },
+  // Fruita dessecada
+  { id:'datil',     noms:'dàtil|datil|dátil|date',                           genere:'m', unitat:7 },   // el normal (deglet nour)
+  { id:'medjool',   noms:'dàtil medjool|dátil medjool|medjool date|medjool', genere:'m', unitat:24 },
+  { id:'orellana',  noms:'orellana|albercoc sec|orejón|albaricoque seco|dried apricot', genere:'f', unitat:8 },
+  { id:'pruna',     noms:'pruna seca|pruna|ciruela pasa|prune|dried plum',   genere:'f', unitat:10 },  // sense pinyol
+  { id:'panses',    noms:'panses|pansa|pasas|pasa|raisins|raisin',                       cullerada:10, got:150 },
+  { id:'gerds',     noms:'gerds|gerd|frambuesas|frambuesa|raspberries|raspberry',                      got:125 },
+  // Cremes, olis i greixos
+  { id:'crema_cacauet', noms:"crema de cacauet|mantega de cacauet|crema de cacahuete|mantequilla de cacahuete|peanut butter", cullerada:16 },
+  { id:'crema_ametlla', noms:"crema d'ametlles|crema d'ametlla|crema de almendras|mantequilla de almendras|almond butter",   cullerada:16 },
+  { id:'tahina',    noms:'tahina|tahin|tahini|tahín',                                    cullerada:15 },
+  { id:'oli_coco',  noms:'oli de coco|aceite de coco|coconut oil',                       cullerada:13 },
+  { id:'oli',       noms:"oli|oli d'oliva|oli de gira-sol|aceite|aceite de oliva|aceite de girasol|oil|olive oil|sunflower oil", cullerada:13 },
+  { id:'mantega',   noms:'mantega|mantequilla|butter',                                   cullerada:14 },
+  { id:'mel',       noms:'mel|miel|honey',                                               cullerada:21 },
+  // Farines, cereals i sucres
+  { id:'farina',    noms:'farina|farina de blat|harina|harina de trigo|flour|wheat flour', cullerada:8,  got:130 },  // «farina» a seques és de blat
+  { id:'farina_ametlla', noms:"farina d'ametlla|harina de almendra|almond flour|almond meal", cullerada:7, got:100 },
+  { id:'fajol',     noms:'farina de fajol|fajol|fajol en pols|harina de trigo sarraceno|trigo sarraceno|alforfón|buckwheat flour|buckwheat', cullerada:8, got:125 },
+  { id:'farina_civada', noms:'farina de civada|harina de avena|oat flour',               cullerada:6,  got:95 },
+  { id:'sucre',     noms:'sucre|azúcar|sugar',                                           cullerada:12, got:210 },  // blanc
+  { id:'arros',     noms:'arròs|arroz|rice',                                             cullerada:13, got:200 },  // cru
+  { id:'civada',    noms:'flocs de civada|civada|copos de avena|avena|oats|rolled oats|oatmeal', cullerada:6, got:90 },
+  { id:'cacau',     noms:'cacau en pols|cacau|cacao en polvo|cacao|cocoa powder|cocoa',  cullerada:6 },  // les fonts van de 5 a 8
+  { id:'pesols',    noms:'pèsols|pèsol|guisantes|guisante|peas',                         cullerada:10, got:150 },
+  { id:'pa_ratllat', noms:'pa ratllat|pan rallado|breadcrumbs',                         cullerada:7,  got:110 },
+  // Lactis i begudes
+  { id:'iogurt',    noms:'iogurt|iogurt natural|iogurt grec|yogur|yogurt|yoghurt', genere:'m', unitat:125, cullerada:18 },  // 1 unitat = pot de 125 g
+  { id:'beguda',    noms:"beguda vegetal|llet|aigua|beguda de civada|beguda d'ametlla|beguda d'ametlles|beguda de soja|beguda d'arròs|leche|agua|bebida de avena|bebida de almendra|bebida de soja|bebida de arroz|milk|water|oat milk|almond milk|soy milk|rice milk", got:250 },
+  // Barreres: capturen el match i callen
+  { id:'nou_moscada', noms:'nou moscada|nuez moscada|nutmeg',          barrera:true },
+  { id:'nou_pecana',  noms:'nou pecana|nou pacana|nuez pecana|pecan',  barrera:true },
+  { id:'nibs_cacau',  noms:'nibs de cacau|nibs de cacao|cacao nibs',   barrera:true },
+];
+
+// Les convencions que la lletra petita del requadre comunica
+const EQ_GOT_ML = 250;
+const EQ_CULLERADA_ML = 15;   // sopera
+// Sostre de les cullerades (decidit el 18-09-2026): passades de vint, si hi ha
+// got, callen i el got parla sol. Si la cullerada és l'única mesura de
+// l'ingredient (oli, mel, cacau...), no hi ha sostre: val més «23 cullerades» que res.
+const EQ_MAX_CULLERADES = 20;
+
+// La xarxa de seguretat per als compostos que la taula no preveu. Un cap de
+// compost és una paraula que, seguida de «de», fa una altra cosa: «farina de
+// cigrons» no és farina de blat, «llet de coco» no és una beguda vegetal.
+// Si el sinònim guanyador acaba en un cap i el segueix un «de», o si el
+// precedeix un cap amb el seu «de» («crema de dàtils» → dàtils), el match es
+// descarta. Els compostos que sí que sabem tenen entrada pròpia o són sinònims
+// (farina d'ametlla, beguda de civada, oli de coco...) i, com que són més
+// llargs, guanyen abans d'arribar aquí.
+const EQ_CAPS_COMPOST = new Set(['farina','harina','sucre','azucar','oli','aceite','crema','beguda','bebida','llet','leche','suc','zumo','jugo','mantega','mantequilla']);
+// En anglès el cap va darrere («coconut flour», «cashew milk»)
+const EQ_CAPS_ANGLES = new Set(['flour','milk','oil','juice','butter','sugar','cream','meal','drink']);
+// I «en gra» ho canvia tot: el fajol en gra no és farina de fajol
+const EQ_CUES_GRA = [['en','gra'], ['en','grano'], ['en','grans']];
+
+// Un text passat a paraules comparables: sense accents, en minúscules, i cada
+// paraula amb les seves formes en singular, perquè «ametlles» i «ametlla»
+// (o «pistatxos» i «festuc») es trobin vinguin com vinguin.
+function _eqParaules(text) {
+  const net = _senseAccents(String(text || '').toLowerCase()).replace(/[’‘`´]/g, "'");
+  return net.split(/[^a-z0-9]+/).filter(Boolean).map(p => {
+    const formes = new Set(_variantsSingular(p));
+    formes.add(_senseAccents(singularitzaParaula(p)));
+    return { p, formes };
+  });
+}
+function _eqMateixaParaula(a, b) {
+  for (const f of a.formes) if (b.formes.has(f)) return true;
+  return false;
+}
+
+// L'índex de sinònims, fet una sola vegada
+let _eqIndex = null;
+function _eqSinonims() {
+  if (_eqIndex) return _eqIndex;
+  _eqIndex = [];
+  for (const e of EQUIVALENCIES) {
+    for (const s of e.noms.split('|')) {
+      const paraules = _eqParaules(s);
+      if (paraules.length) _eqIndex.push({ entrada: e, paraules });
+    }
+  }
+  return _eqIndex;
+}
+
+// Busca l'entrada de la taula que correspon a un nom d'ingredient. Torna
+// { entrada } si n'hi ha una de bona, o { silenci: motiu } si no: 'cap' (no
+// hi és a la taula), 'barrera' o 'compost' (la xarxa de seguretat l'ha
+// descartat). El motiu servirà per apuntar-ho als pendents.
+function trobarEquivalencia(nomIngredient) {
+  const nom = _eqParaules(nomIngredient);
+  if (!nom.length) return { silenci: 'cap' };
+
+  // Candidats: cada sinònim que aparegui sencer, paraula per paraula
+  let millor = null;
+  for (const sin of _eqSinonims()) {
+    const n = sin.paraules.length;
+    for (let i = 0; i + n <= nom.length; i++) {
+      let hi = true;
+      for (let j = 0; j < n; j++) {
+        if (!_eqMateixaParaula(nom[i + j], sin.paraules[j])) { hi = false; break; }
+      }
+      // Guanya el sinònim més llarg; a igual llargada, el que surt abans al nom
+      if (hi && (!millor || n > millor.n || (n === millor.n && i < millor.i))) {
+        millor = { entrada: sin.entrada, i, n, paraules: sin.paraules };
+      }
+    }
+  }
+  if (!millor) return { silenci: 'cap' };
+  if (millor.entrada.barrera) return { silenci: 'barrera' };
+
+  const abans   = nom.slice(0, millor.i).map(x => x.p);
+  const despres = nom.slice(millor.i + millor.n).map(x => x.p);
+  const primera = millor.paraules[0].p;
+  const ultima  = millor.paraules[millor.n - 1].p;
+  const esDe = w => w === 'de' || w === 'd' || w === 'del' || w === 'of';
+
+  // «farina de X», «llet de X»: el cap és nostre però el compost, no
+  if (EQ_CAPS_COMPOST.has(ultima) && despres.length && esDe(despres[0])) return { silenci: 'compost' };
+  // «crema de X», «suc de X» davant d'una cosa que sí que tenim
+  if (abans.length >= 2 && esDe(abans[abans.length - 1]) && EQ_CAPS_COMPOST.has(abans[abans.length - 2])) return { silenci: 'compost' };
+  // Anglès: «cashew milk», «coconut flour»
+  if (despres.length && EQ_CAPS_ANGLES.has(despres[0])) return { silenci: 'compost' };
+  if (millor.n === 1 && EQ_CAPS_ANGLES.has(primera) && abans.length) return { silenci: 'compost' };
+  // «fajol en gra»
+  if (EQ_CUES_GRA.some(c => c.every((w, k) => despres[k] === w))) return { silenci: 'compost' };
+
+  return { entrada: millor.entrada };
+}
+
+// ── Els textos ──────────────────────────────────────────────────────
+// Tot amb espais no separables: «1 got i mig» no es parteix mai de línia.
+// (El 160 és l'espai no separable; escrit així perquè es vegi, que el caràcter
+// és invisible i qualsevol editor el podria canviar per un espai normal.)
+const NBSP = String.fromCharCode(160);
+
+// Nombre d'unitats comptables, dit com ho diria una persona: fins a 20, exacte;
+// fins a 100, de cinc en cinc; més enllà, de deu en deu.
+function _eqArrodoneixUnitats(n) {
+  if (n < 20)  return Math.round(n);
+  if (n < 100) return Math.round(n / 5) * 5;
+  return Math.round(n / 10) * 10;
+}
+
+// Cullerades o gots, amb mitges: «mitja cullerada», «1 got i mig», «2 cullerades i mitja».
+// Amb «ambQuarts» (els gots, decidit el 18-09-2026), fins a dos va per quarts:
+// «un quart de got», «tres quarts de got», «1 got i quart», «1 got i tres quarts».
+// Si no, la mesura balla massa i deixa de servir. De dos a deu, per meitats;
+// a partir de deu, sencers.
+function _eqMesura(x, singular, plural, mig, ambQuarts) {
+  if (x < (ambQuarts ? 0.2 : 0.4)) return null;              // menys d'un quart (o de mig): no val la pena dir-ho
+  const pas = (ambQuarts && x < 2) ? 4 : (x < 10 ? 2 : 1);
+  const r = Math.round(x * pas) / pas;
+  const enters = Math.floor(r);
+  const fraccio = r - enters;
+  const tros = fraccio === 0.5 ? mig
+             : fraccio === 0.25 ? 'quart'
+             : fraccio === 0.75 ? 'tres' + NBSP + 'quarts'
+             : '';
+  if (enters === 0) {
+    if (fraccio === 0.5) return { num: mig, nom: singular };
+    return { num: (fraccio === 0.25 ? 'un' + NBSP + 'quart' : 'tres' + NBSP + 'quarts') + NBSP + 'de', nom: singular };
+  }
+  return { num: String(enters), nom: (enters === 1 ? singular : plural) + (tros ? NBSP + 'i' + NBSP + tros : '') };
+}
+// Les cullerades, amb el sostre: si hi ha got i en surten més de vint, res.
+function _eqCullerades(x, hiHaGot) {
+  if (hiHaGot && Math.round(x) > EQ_MAX_CULLERADES) return null;
+  return _eqMesura(x, 'cullerada', 'cullerades', 'mitja');
+}
+// El «uns/unes» del davant només té sentit a partir de dos: «unes 7 cullerades»,
+// però «1 got» i «mitja cullerada» van sols.
+function _eqAmbQuant(m, quant) {
+  return { quant: /^\d+$/.test(m.num) && m.num !== '1' ? quant : '', ...m };
+}
+
+// El nom de l'ingredient en plural: la primera paraula sempre («dàtils
+// medjool»), i les que la segueixen només si concorden («prunes seques»).
+function _eqNomPlural(nom) {
+  return nom.split(' ').map((w, i) => (i === 0 || /a$/.test(w)) ? pluralitzaParaula(w) : w).join(' ');
+}
+
+// Construeix el que el requadre ha d'ensenyar per a un ingredient escalat,
+// o null si no hi ha res a dir. Per a línies en pes (g, kg) cal que
+// l'ingredient sigui a la taula; per a línies en volum (ml, cl, dl, l) no cal
+// res: un mil·lilitre és un mil·lilitre sigui quin sigui el líquid (decidit el
+// 18-09-2026, ampliant el que es va tancar al juliol).
+//   principal:    { quant:'uns', num:'40', nom:'anacards' }
+//   alternatives: ['22 cullerades', '1 got i mig']       (text, sense la principal)
+//   peu:          ['mesures orientatives', '1 anacard: 5 g', 'cullerada: sopera rasa', 'got: 250 ml']
+//   titol:        '200 g anacards'                       (la línia de la fitxa, ja escalada)
+const EQ_ML_PER_UNITAT = { ml: 1, cl: 10, dl: 100, l: 1000 };
+function equivalenciaPerIngredient(ing, factor) {
+  if (!ing || ing.q === null || ing.q === undefined || !ing.n) return null;
+  const canonica = unitatCanonica(ing.u);
+  const titol = renderScaledIngredientPlain(ing, factor || 1);
+
+  // Líquids: gots i cullerades, directament dels mil·lilitres. Els gots manen si
+  // n'hi ha almenys tres quarts; si no, les cullerades («100 ml» → «unes 7 cullerades»).
+  if (EQ_ML_PER_UNITAT[canonica]) {
+    const ml = ing.q * (factor || 1) * EQ_ML_PER_UNITAT[canonica];
+    if (!(ml > 0)) return null;
+    const gots = _eqMesura(ml / EQ_GOT_ML, 'got', 'gots', 'mig', true);
+    const cull = _eqCullerades(ml / EQ_CULLERADA_ML, !!gots);
+    const mesures = [];
+    if (gots) mesures.push(_eqAmbQuant(gots, 'uns'));
+    if (cull) mesures.push(_eqAmbQuant(cull, 'unes'));
+    if (ml / EQ_GOT_ML < 0.75) mesures.reverse();
+    if (!mesures.length) return null;
+    // La lletra petita només explica les mesures que es veuen
+    const peu = ['mesures' + NBSP + 'orientatives'];
+    if (cull) peu.push('cullerada:' + NBSP + EQ_CULLERADA_ML + NBSP + 'ml');
+    if (gots) peu.push('got:' + NBSP + EQ_GOT_ML + NBSP + 'ml');
+    return {
+      entrada: null, grams: null, titol,
+      principal: mesures[0],
+      alternatives: mesures.slice(1).map(m => m.num + NBSP + m.nom),
+      peu,
+    };
+  }
+
+  if (canonica !== 'g' && canonica !== 'kg') return null;
+  const grams = ing.q * (factor || 1) * (canonica === 'kg' ? 1000 : 1);
+  if (!(grams > 0)) return null;
+
+  const trobat = trobarEquivalencia(ing.n);
+  if (!trobat.entrada) return null;
+  const e = trobat.entrada;
+  const nomSingular = e.noms.split('|')[0];
+
+  const nUnitats = e.unitat ? _eqArrodoneixUnitats(grams / e.unitat) : 0;
+  // Una sola: «1 anacard», sense «uns» al davant
+  const unitats = nUnitats < 1 ? null : nUnitats === 1
+    ? { quant: '', num: '1', nom: nomSingular }
+    : { quant: e.genere === 'f' ? 'unes' : 'uns', num: String(nUnitats), nom: _eqNomPlural(nomSingular) };
+  const gotsM = e.got ? _eqMesura(grams / e.got, 'got', 'gots', 'mig', true) : null;
+  const gots = gotsM ? _eqAmbQuant(gotsM, 'uns') : null;
+
+  const mesures = [];
+  let cull = null;
+  if (e.comptaFins && nUnitats > e.comptaFins && gots) {
+    // Massa unitats per comptar-les: només els gots, i prou
+    mesures.push(gots);
+  } else {
+    if (unitats) mesures.push(unitats);
+    if (e.cullerada) {
+      cull = _eqCullerades(grams / e.cullerada, !!gots);
+      if (cull) mesures.push(_eqAmbQuant(cull, 'unes'));
+    }
+    if (gots) mesures.push(gots);
+  }
+  if (!mesures.length) return null;
+
+  const principal = mesures[0];
+  const alternatives = mesures.slice(1).map(m => m.num + NBSP + m.nom);
+  // La lletra petita explica només les mesures que es veuen; cada tros és
+  // indivisible: la línia només es trenca als puntets
+  const peu = ['mesures' + NBSP + 'orientatives'];
+  if (e.unitat) peu.push(('1 ' + nomSingular + ': ' + e.unitat.toLocaleString('ca-ES', { maximumFractionDigits: 1 }) + ' g').replace(/ /g, NBSP));
+  if (cull)     peu.push('cullerada:' + NBSP + 'sopera' + NBSP + 'rasa');
+  if (gots)     peu.push('got:' + NBSP + EQ_GOT_ML + NBSP + 'ml');
+
+  // El títol és la mateixa línia que es veu a la fitxa, escalada («200 g anacards»):
+  // el parser ja va treure el «de», i així no cal endevinar-lo en cap idioma.
+  return { entrada: e, grams, titol, principal, alternatives, peu };
+}
+
+// ── El requadre ─────────────────────────────────────────────────────
+// S'obre des de la icona de la bàscula d'una línia de la fitxa. Les racions
+// es llegeixen del que hi ha a la pantalla en aquell moment, i així el que
+// diu el requadre sempre quadra amb la línia de sota.
+function mostrarEquivalencia(nomId, nom, idx) {
+  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+  if (!r) return;
+  const ing = getIngredientsParsed(r)[idx];
+  const base = parseInt(r['Racions']) || 1;
+  const valEl = document.getElementById('det-racions-val-' + nomId);
+  const actual = (valEl && parseInt(valEl.textContent)) || base;
+  const eq = equivalenciaPerIngredient(ing, actual / base);
+  if (!eq) return;
+
+  document.getElementById('equivalencia-titol').textContent = eq.titol;
+  const p = eq.principal;
+  document.getElementById('equivalencia-principal').innerHTML =
+    (p.quant ? `<span class="eq-uns">${p.quant}</span>` : '')
+    + `<span class="eq-num">${escHTML(p.num)}</span><span class="eq-nom">${escHTML(p.nom)}</span>`;
+  // Els espais normals al voltant del puntet són l'únic lloc on la línia pot saltar:
+  // cada tros porta espais no separables i no es parteix mai pel mig.
+  const sep = ' <span class="eq-sep">·</span> ';
+  const obe = document.getElementById('equivalencia-obe');
+  obe.innerHTML = eq.alternatives.length ? 'o bé ' + eq.alternatives.map(escHTML).join(sep) : '';
+  obe.style.display = eq.alternatives.length ? '' : 'none';
+  document.getElementById('equivalencia-peu').innerHTML = eq.peu.map(escHTML).join(sep);
+  document.getElementById('equivalencia-overlay').classList.add('visible');
+}
+function tancarEquivalencia() {
+  document.getElementById('equivalencia-overlay').classList.remove('visible');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') tancarEquivalencia();
+});
+
 // Construeix el HTML de la previsualització del parser
 function buildIngPreviewHTML(parsed, onCancel, onConfirm) {
   const rows = parsed.map((ing, i) => {
@@ -5325,9 +5709,14 @@ function obrirDetall(nom, desDePopstate, origen) {
       ${ingParsed.map((ing, idx) => {
         const fet = ckEstat.marcats.has(idx) ? ' fet' : '';
         const ingHTML = renderScaledIngredient(ing, 1);
+        // La bàscula, només si la línia és en pes (i la sabem convertir) o en volum.
+        // Va fora del .ck-txt perquè canviar les racions només repinta el text.
+        const eqHTML = equivalenciaPerIngredient(ing, 1)
+          ? `<button class="eq-btn" onclick="event.stopPropagation(); mostrarEquivalencia('${nomId}','${nomEsc}',${idx})" aria-label="Sense bàscula"><i class="ti ti-scale" aria-hidden="true"></i></button>`
+          : '';
         return `<div class="ck-ing${fet}" id="det-ck-ing-${nomId}-${idx}" onclick="toggleIngredient('${nomId}','${nomEsc}',${idx})">
           <span class="ck-circle">${ckSvg}</span>
-          <span class="ck-txt">${ingHTML}</span>
+          <span class="ck-txt">${ingHTML}</span>${eqHTML}
         </div>`;
       }).join('')}
     </div>
