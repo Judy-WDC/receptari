@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 195 · 18-09-2026                                     ║
+  ║  VERSIÓ 196 · 21-09-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 186 (index-receptes-Supabase-186.html) i la següent, la 196.
+  l'última és la 195 (index-receptes-Supabase-195.html) i la següent, la 205.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 3, a la versió 175; la següent, la 4, toca a la versió 200.
 
@@ -4112,10 +4112,14 @@ function ideaDeDB(r) {
     'Recepta':    r.recepta   || '',
   };
 }
-// Cada recepta té un identificador propi: el busquem a partir del nom que fa servir l'app
-function idDe(nom) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
-  return r ? r['_id'] : null;
+// Cada recepta té un identificador propi (_id, el de Supabase), i des de la v196
+// és el que la identifica a tota l'app: als diccionaris d'estat (mode cuinar,
+// racions, fotos, targetes desplegades), als identificadors del DOM i a les
+// crides dels botons. El nom és una dada que es mostra, no una clau: canviar-lo
+// no trenca res. Es compara com a text perquè als onclick sempre arriba així.
+function receptaPerId(id) {
+  const clau = String(id);
+  return receptes.find(x => String(x['_id']) === clau) || null;
 }
 function idIdea(titol) {
   const i = idees.find(x => (x['Títol'] || '') === titol);
@@ -5286,12 +5290,12 @@ function equivalenciaPerIngredient(ing, factor) {
 // S'obre des de la icona de la bàscula d'una línia de la fitxa. Les racions
 // es llegeixen del que hi ha a la pantalla en aquell moment, i així el que
 // diu el requadre sempre quadra amb la línia de sota.
-function mostrarEquivalencia(nomId, nom, idx) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+function mostrarEquivalencia(id, idx) {
+  const r = receptaPerId(id);
   if (!r) return;
   const ing = getIngredientsParsed(r)[idx];
   const base = parseInt(r['Racions']) || 1;
-  const valEl = document.getElementById('det-racions-val-' + nomId);
+  const valEl = document.getElementById('det-racions-val-' + id);
   const actual = (valEl && parseInt(valEl.textContent)) || base;
   const eq = equivalenciaPerIngredient(ing, actual / base);
   if (!eq) return;
@@ -5451,7 +5455,7 @@ function tornarInici() {
 }
 
 // ── Recepta del dia ──
-let receptaDiaNom = '';
+let receptaDiaId = null;   // l'_id de la que toca avui; null mentre no n'hi ha cap
 
 // Quina recepta li ha tocat, avui, a aquesta usuària. Es queda apuntada tot el
 // dia: si no, com que abans es triava per la POSICIÓ dins la llista, n'hi havia
@@ -5520,7 +5524,7 @@ function actualitzarReceptaDia() {
   // Encara no hi ha cap recepta: la targeta ho diu i convida a afegir-ne, en
   // comptes de quedar-se dient "Connectant amb el receptari…" per sempre
   if (!r) {
-    receptaDiaNom = '';
+    receptaDiaId = null;
     if (!usuariaId) return;   // abans d'iniciar la sessió, es queda com estava
     // Sense cap recepta no hi ha res de què faltar la foto: el quadrat no hi surt
     if (fotoBox) fotoBox.style.display = 'none';
@@ -5532,20 +5536,21 @@ function actualitzarReceptaDia() {
     return;
   }
 
-  receptaDiaNom = r['Nom de la recepta'] || '';
+  receptaDiaId = r['_id'];
+  const nom = r['Nom de la recepta'] || '';
   const cat = r['Categoria'] || '';
   const val = parseInt(r['Valoracio']) || 0;
   const stars = '★'.repeat(val) + '☆'.repeat(5 - val);
 
-  nomEl.textContent = receptaDiaNom;
+  nomEl.textContent = nom;
   metaEl.innerHTML =
     escHTML(cat) + (cat && val ? ' · ' : '') + (val ? `<span class="stars">${stars}</span>` : '');
 
   // La foto local mana sobre la del servidor, igual que a la resta de l'app
-  const fotoRD = (receptaDiaNom in fotosLocals)
-    ? fotosLocals[receptaDiaNom]
+  const fotoRD = (receptaDiaId in fotosLocals)
+    ? fotosLocals[receptaDiaId]
     : (r['Foto'] || '');
-  pintarFotoReceptaDia(receptaDiaNom, fotoRD);
+  pintarFotoReceptaDia(nom, fotoRD);
 
   if (loading) loading.style.display = 'none';
   nomEl.style.display = '';
@@ -5554,7 +5559,7 @@ function actualitzarReceptaDia() {
 
 function obrirReceptaDia() {
   // Si encara no n'hi ha cap, la targeta porta on toca: a afegir-ne
-  if (receptaDiaNom) obrirDetall(receptaDiaNom);
+  if (receptaDiaId) obrirDetall(receptaDiaId);
   else if (usuariaId) anarA('scan');
 }
 
@@ -5593,8 +5598,12 @@ function recuperarAncora(panell) {
 
 window.addEventListener('popstate', function(e) {
   const estat = e.state;
-  if (estat && estat.panell === 'detall' && estat.receptaNom) {
-    obrirDetall(estat.receptaNom, true, estat.origen);
+  if (estat && estat.panell === 'detall' && (estat.receptaId || estat.receptaNom)) {
+    // Les entrades d'abans de la v196 duien el nom; una pestanya que ja fos
+    // oberta en arribar la versió nova encara en pot tenir alguna a l'historial
+    const id = estat.receptaId
+      || (receptes.find(x => x['Nom de la recepta'] === estat.receptaNom) || {})['_id'];
+    if (id) obrirDetall(id, true, estat.origen);
   } else if (estat && estat.panell === 'apat' && estat.dia && estat.apat) {
     apatObert = { dia: estat.dia, apat: estat.apat };
     mostrarPanell('apat');
@@ -5617,9 +5626,11 @@ let origenDetall = 'receptari';
 // L'origen el diu qui obre la fitxa. Les portes que no diuen res venen del
 // receptari, que són la majoria. Quan es reobre la mateixa fitxa per repintar-la
 // (desDePopstate) no s'hi toca: si no, definir les racions et canviaria el rètol.
-function obrirDetall(nom, desDePopstate, origen) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+function obrirDetall(id, desDePopstate, origen) {
+  const r = receptaPerId(id);
   if (!r) return;
+  id = String(r['_id']);   // sempre com a text: és com viatja pels onclick i pels Sets
+  const nom = r['Nom de la recepta'] || '';
 
   if (origen) origenDetall = origen;
   else if (!desDePopstate) origenDetall = 'receptari';
@@ -5632,14 +5643,14 @@ function obrirDetall(nom, desDePopstate, origen) {
       if (diaObert) recordarAncora('planificacio', 'dia-' + diaObert);
       else ancoraTornada = null;
     } else if (document.getElementById('panell-cerca').classList.contains('actiu')) {
-      recordarAncora('cerca', 'card-' + nom.replace(/[^a-zA-Z0-9]/g, '_'));
+      recordarAncora('cerca', 'card-' + id);
     } else {
       ancoraTornada = null;
     }
   }
 
   // Reinicia les racions al valor original cada cop que s'obre el detall
-  delete racionsActual[nom];
+  delete racionsActual[id];
 
   const cat        = r['Categoria'] || '';
   const ing        = r['Ingredients'] || '';
@@ -5650,11 +5661,9 @@ function obrirDetall(nom, desDePopstate, origen) {
   const instruccions = r['Instruccions'] || '';
   const comentaris = r['Comentaris'] || '';
   const valoracio  = parseInt(r['Valoracio']) || 0;
-  const foto       = (nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '');
-  const nomId      = nom.replace(/[^a-zA-Z0-9]/g, '_');
-  const nomEsc     = nom.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const foto       = (id in fotosLocals) ? fotosLocals[id] : (r['Foto'] || '');
 
-  const starsHTML = starsInteractiusHTML(nom, valoracio);
+  const starsHTML = starsInteractiusHTML(id, valoracio);
 
   const heroHTML = foto
     ? `<img class="detall-hero" src="${escHTML(foto)}" alt="${escHTML(nom)}">`
@@ -5662,7 +5671,7 @@ function obrirDetall(nom, desDePopstate, origen) {
 
   const ingParsed = getIngredientsParsed(r);
   const racionsBase = parseInt(r['Racions']) || 0;
-  const ckEstat = cookState[nom] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
+  const ckEstat = cookState[id] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
   const ckTotal = ingParsed.length;
   const ckFets = ingParsed.filter((_, i) => ckEstat.marcats.has(i)).length;
   const ckPct = ckTotal ? Math.round(ckFets / ckTotal * 100) : 0;
@@ -5671,24 +5680,24 @@ function obrirDetall(nom, desDePopstate, origen) {
   // Stepper o píndola segons si la recepta té racions definides
   let racionsHTML = '';
   if (racionsBase > 0) {
-    racionsHTML = `<div class="racions-stepper${ckEstat.actiu ? ' cuinant' : ''}" id="det-racions-stepper-${nomId}">
-      <button class="racions-btn" onclick="canviarRacions('${nomId}','${nomEsc}',-1)" aria-label="Menys racions">−</button>
+    racionsHTML = `<div class="racions-stepper${ckEstat.actiu ? ' cuinant' : ''}" id="det-racions-stepper-${id}">
+      <button class="racions-btn" onclick="canviarRacions('${id}',-1)" aria-label="Menys racions">−</button>
       <div class="racions-valor-wrap">
-        <span class="racions-valor" id="det-racions-val-${nomId}" onclick="editarRacionsInline('${nomId}','${nomEsc}')">${racionsBase}</span>
+        <span class="racions-valor" id="det-racions-val-${id}" onclick="editarRacionsInline('${id}')">${racionsBase}</span>
         <div class="racions-label">racions</div>
       </div>
-      <button class="racions-btn" onclick="canviarRacions('${nomId}','${nomEsc}',1)" aria-label="Més racions">+</button>
+      <button class="racions-btn" onclick="canviarRacions('${id}',1)" aria-label="Més racions">+</button>
     </div>`;
   } else {
-    racionsHTML = `<div id="det-racions-wrap-${nomId}">
-      <div class="racions-pindola" id="det-racions-pindola-${nomId}" onclick="mostrarInlineRacions('${nomId}','${nomEsc}')">
+    racionsHTML = `<div id="det-racions-wrap-${id}">
+      <div class="racions-pindola" id="det-racions-pindola-${id}" onclick="mostrarInlineRacions('${id}')">
         <div class="racions-pindola-icon"><i class="ti ti-plus" aria-hidden="true"></i></div>
         <span class="racions-pindola-text">Afegir racions</span>
       </div>
-      <div class="racions-inline-form" id="det-racions-form-${nomId}">
-        <input type="number" class="racions-inline-input" id="det-racions-input-${nomId}" min="1" max="99" placeholder="4">
+      <div class="racions-inline-form" id="det-racions-form-${id}">
+        <input type="number" class="racions-inline-input" id="det-racions-input-${id}" min="1" max="99" placeholder="4">
         <span class="racions-inline-label">racions</span>
-        <button class="racions-inline-btn" onclick="desarRacionsInline('${nomId}','${nomEsc}')">Desar</button>
+        <button class="racions-inline-btn" onclick="desarRacionsInline('${id}')">Desar</button>
       </div>
     </div>`;
   }
@@ -5698,23 +5707,23 @@ function obrirDetall(nom, desDePopstate, origen) {
       <div class="detall-seccio-label">Ingredients</div>
       ${racionsHTML}
     </div>
-    <div class="ck-progress" id="det-ck-prog-wrap-${nomId}" style="${ckEstat.actiu ? '' : 'display:none'}">
+    <div class="ck-progress" id="det-ck-prog-wrap-${id}" style="${ckEstat.actiu ? '' : 'display:none'}">
       <div class="ck-progress-top">
-        <span class="ck-progress-text"><span id="det-ck-prog-${nomId}">${ckFets}</span>/${ckTotal} marcats</span>
-        <button class="ck-reinicia" id="det-ck-reinicia-${nomId}" style="${ckFets ? '' : 'display:none'}" onclick="reiniciarCook('${nomId}','${nomEsc}')">Desmarca-ho tot</button>
+        <span class="ck-progress-text"><span id="det-ck-prog-${id}">${ckFets}</span>/${ckTotal} marcats</span>
+        <button class="ck-reinicia" id="det-ck-reinicia-${id}" style="${ckFets ? '' : 'display:none'}" onclick="reiniciarCook('${id}')">Desmarca-ho tot</button>
       </div>
-      <div class="ck-bar-track"><div class="ck-bar" id="det-ck-bar-${nomId}" style="width:${ckPct}%"></div></div>
+      <div class="ck-bar-track"><div class="ck-bar" id="det-ck-bar-${id}" style="width:${ckPct}%"></div></div>
     </div>
-    <div class="ck-list${ckEstat.actiu ? ' cuinant' : ''}" id="det-ck-list-${nomId}">
+    <div class="ck-list${ckEstat.actiu ? ' cuinant' : ''}" id="det-ck-list-${id}">
       ${ingParsed.map((ing, idx) => {
         const fet = ckEstat.marcats.has(idx) ? ' fet' : '';
         const ingHTML = renderScaledIngredient(ing, 1);
         // La bàscula, només si la línia és en pes (i la sabem convertir) o en volum.
         // Va fora del .ck-txt perquè canviar les racions només repinta el text.
         const eqHTML = equivalenciaPerIngredient(ing, 1)
-          ? `<button class="eq-btn" onclick="event.stopPropagation(); mostrarEquivalencia('${nomId}','${nomEsc}',${idx})" aria-label="Sense bàscula"><i class="ti ti-scale" aria-hidden="true"></i></button>`
+          ? `<button class="eq-btn" onclick="event.stopPropagation(); mostrarEquivalencia('${id}',${idx})" aria-label="Sense bàscula"><i class="ti ti-scale" aria-hidden="true"></i></button>`
           : '';
-        return `<div class="ck-ing${fet}" id="det-ck-ing-${nomId}-${idx}" onclick="toggleIngredient('${nomId}','${nomEsc}',${idx})">
+        return `<div class="ck-ing${fet}" id="det-ck-ing-${id}-${idx}" onclick="toggleIngredient('${id}',${idx})">
           <span class="ck-circle">${ckSvg}</span>
           <span class="ck-txt">${ingHTML}</span>${eqHTML}
         </div>`;
@@ -5730,18 +5739,18 @@ function obrirDetall(nom, desDePopstate, origen) {
   const instrHTML = instruccions
     ? `<div class="detall-seccio detall-instruccions">
          <div class="detall-seccio-label">Instruccions</div>
-         <div class="ck-progress" id="det-ck-instr-prog-wrap-${nomId}" style="${ckEstat.actiu ? '' : 'display:none'}">
+         <div class="ck-progress" id="det-ck-instr-prog-wrap-${id}" style="${ckEstat.actiu ? '' : 'display:none'}">
            <div class="ck-progress-top">
-             <span class="ck-progress-text"><span id="det-ck-instr-prog-${nomId}">${ckPassosFets}</span>/${ckPassosTotal} passos fets</span>
-             <button class="ck-reinicia" id="det-ck-instr-reinicia-${nomId}" style="${ckPassosFets ? '' : 'display:none'}" onclick="reiniciarPassos('${nomId}','${nomEsc}')">Desmarca-ho tot</button>
+             <span class="ck-progress-text"><span id="det-ck-instr-prog-${id}">${ckPassosFets}</span>/${ckPassosTotal} passos fets</span>
+             <button class="ck-reinicia" id="det-ck-instr-reinicia-${id}" style="${ckPassosFets ? '' : 'display:none'}" onclick="reiniciarPassos('${id}')">Desmarca-ho tot</button>
            </div>
-           <div class="ck-bar-track"><div class="ck-bar" id="det-ck-instr-bar-${nomId}" style="width:${ckPassosPct}%"></div></div>
+           <div class="ck-bar-track"><div class="ck-bar" id="det-ck-instr-bar-${id}" style="width:${ckPassosPct}%"></div></div>
          </div>
-         <div class="ck-list${ckEstat.actiu ? ' cuinant' : ''}" id="det-ck-instr-list-${nomId}">
+         <div class="ck-list${ckEstat.actiu ? ' cuinant' : ''}" id="det-ck-instr-list-${id}">
            ${passos.map((pas, idx) => {
              const fet = ckEstat.marcatsInstr.has(idx) ? ' fet' : '';
              const safe = escHTML(pas);
-             return `<div class="ck-ing${fet}" id="det-ck-pas-${nomId}-${idx}" onclick="togglePas('${nomId}','${nomEsc}',${idx})">
+             return `<div class="ck-ing${fet}" id="det-ck-pas-${id}-${idx}" onclick="togglePas('${id}',${idx})">
                <span class="ck-circle">${ckSvg}</span>
                <span class="ck-txt">${safe}</span>
              </div>`;
@@ -5785,7 +5794,7 @@ function obrirDetall(nom, desDePopstate, origen) {
         <span class="detall-header-text">${origenDetall === 'menus' ? 'Tornar als menús' : 'Tornar al receptari'}</span>
       </button>
       <div class="detall-header-icons">
-        <button onclick="detallEditar('${nomId}','${nomEsc}')" title="Editar recepta" aria-label="Editar recepta">
+        <button onclick="detallEditar('${id}')" title="Editar recepta" aria-label="Editar recepta">
           <i class="ti ti-edit" aria-hidden="true"></i>
         </button>
       </div>
@@ -5797,32 +5806,32 @@ function obrirDetall(nom, desDePopstate, origen) {
           <div class="detall-nom">${escHTML(nom)}</div>
           <div class="detall-meta">
             <span class="badge-cat" style="${badgeStyle(cat)}">${escHTML(cat)}</span>
-            <div class="card-stars" id="detall-stars" data-nom="${escHTML(nom)}" aria-label="Valoració: ${valoracio} de 5">${starsHTML}</div>
+            <div class="card-stars" id="detall-stars" data-id="${escHTML(String(id))}" aria-label="Valoració: ${valoracio} de 5">${starsHTML}</div>
             ${fontHTML}
             ${llibreHTML}
             ${etHTML}
-            <button class="btn-enviar-menus-meta btn-compartir-meta" onclick="compartirRecepta('${nomEsc}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
+            <button class="btn-enviar-menus-meta btn-compartir-meta" onclick="compartirRecepta('${id}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
               <i class="ti ti-share-2" aria-hidden="true"></i>
             </button>
-            <button class="btn-cuinar-detall-meta js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
+            <button class="btn-cuinar-detall-meta js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${id}')" title="Mode cuinar" aria-label="Mode cuinar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
             </button>
-            <button class="btn-enviar-menus-meta" onclick="obrirSelectorApat('${nomEsc}')" title="Enviar als menús" aria-label="Enviar als menús">
+            <button class="btn-enviar-menus-meta" onclick="obrirSelectorApat('${id}')" title="Enviar als menús" aria-label="Enviar als menús">
               <i class="ti ti-calendar-plus" aria-hidden="true"></i>
             </button>
           </div>
         </div>
         <div class="detall-title-actions">
-          <button onclick="compartirRecepta('${nomEsc}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
+          <button onclick="compartirRecepta('${id}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
             <i class="ti ti-share-2" aria-hidden="true"></i>
           </button>
-          <button class="js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${nomId}','${nomEsc}')" title="Mode cuinar" aria-label="Mode cuinar">
+          <button class="js-ck-toggle${ckEstat.actiu ? ' actiu' : ''}" onclick="toggleCookMode('${id}')" title="Mode cuinar" aria-label="Mode cuinar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
           </button>
-          <button onclick="obrirSelectorApat('${nomEsc}')" title="Enviar als menús" aria-label="Enviar als menús">
+          <button onclick="obrirSelectorApat('${id}')" title="Enviar als menús" aria-label="Enviar als menús">
             <i class="ti ti-calendar-plus" aria-hidden="true"></i>
           </button>
-          <button onclick="detallEditar('${nomId}','${nomEsc}')" title="Editar recepta" aria-label="Editar recepta">
+          <button onclick="detallEditar('${id}')" title="Editar recepta" aria-label="Editar recepta">
             <i class="ti ti-edit" aria-hidden="true"></i>
           </button>
         </div>
@@ -5830,9 +5839,9 @@ function obrirDetall(nom, desDePopstate, origen) {
       <div class="detall-dos-cols">
         <div class="detall-col-ing">
           ${ingSecHTML}
-          <button class="detall-btn-cuinar${ckEstat.actiu ? ' actiu' : ''}" id="det-ck-btn-${nomId}" onclick="toggleCookMode('${nomId}','${nomEsc}')">
+          <button class="detall-btn-cuinar${ckEstat.actiu ? ' actiu' : ''}" id="det-ck-btn-${id}" onclick="toggleCookMode('${id}')">
             <i class="ti ti-soup" aria-hidden="true"></i>
-            <span id="det-ck-btn-text-${nomId}">${ckEstat.actiu ? 'Sortir del mode cuinar' : 'Mode cuinar'}</span>
+            <span id="det-ck-btn-text-${id}">${ckEstat.actiu ? 'Sortir del mode cuinar' : 'Mode cuinar'}</span>
           </button>
         </div>
         <div class="detall-col-instr">
@@ -5854,7 +5863,7 @@ function obrirDetall(nom, desDePopstate, origen) {
   window.scrollTo(0, 0);
 
   if (!desDePopstate) {
-    history.pushState({ panell: 'detall', receptaNom: nom, origen: origenDetall }, '', '');
+    history.pushState({ panell: 'detall', receptaId: id, origen: origenDetall }, '', '');
   }
 }
 
@@ -5883,20 +5892,20 @@ let receptes = [];
 // es manté estable mentre filtres o cerques dins d'aquella visita.
 let ordreReceptari = new Map();
 function barrejarReceptari() { ordreReceptari = new Map(); }
-function clauOrdreReceptari(nom) {
-  if (!ordreReceptari.has(nom)) ordreReceptari.set(nom, Math.random());
-  return ordreReceptari.get(nom);
+function clauOrdreReceptari(id) {
+  if (!ordreReceptari.has(id)) ordreReceptari.set(id, Math.random());
+  return ordreReceptari.get(id);
 }
-// Previsualització optimista de fotos acabades de pujar (clau: nom de recepta → dataURL)
-// Es buida en recarregar, quan ja arriba l'URL definitiu de Drive des del full.
+// Previsualització optimista de fotos acabades de pujar (clau: _id de la recepta → dataURL)
+// Es buida en recarregar, quan ja arriba l'URL definitiu des de Supabase.
 const fotosLocals = {};
 let catActiva = 'totes';
 let etiquetaActiva = new Set();
-let oberts = new Set();
-// Estat del mode cuinar, per recepta: { actiu: bool, marcats: Set d'índexs }
+let oberts = new Set();   // _id de les targetes desplegades
+// Estat del mode cuinar, per recepta (clau: _id): { actiu: bool, marcats: Set d'índexs }
 const cookState = {};
 let wakeLock = null;
-const cuinantActius = new Set(); // noms de receptes amb mode cuinar actiu
+const cuinantActius = new Set(); // _id de les receptes amb mode cuinar actiu
 let carregant = false; // guard per evitar crides simultànies
 let darreraCarrega = 0; // quan vam demanar les dades per última vegada
 
@@ -5908,10 +5917,10 @@ const COOK_KEY = () => 'cookstate_' + (usuariaActiva || 'anonima');
 
 function desarCookState() {
   const pla = {};
-  for (const nom in cookState) {
-    const e = cookState[nom];
+  for (const id in cookState) {
+    const e = cookState[id];
     if (!e.actiu) continue; // només guardem receptes amb el mode cuinar actiu
-    pla[nom] = { marcats: [...e.marcats], marcatsInstr: [...(e.marcatsInstr || new Set())] };
+    pla[id] = { marcats: [...e.marcats], marcatsInstr: [...(e.marcatsInstr || new Set())] };
   }
   if (Object.keys(pla).length) desarSessio(COOK_KEY(), JSON.stringify(pla));
   else esborrarSessio(COOK_KEY());
@@ -5922,7 +5931,7 @@ function desarCookState() {
 // d'engegarReceptari(), que és el moment en què ja ho sabem.
 function restaurarCookState() {
   // Si abans hi havia una altra sessió oberta, el que cuinava no ha de sobreviure
-  for (const nom in cookState) delete cookState[nom];
+  for (const id in cookState) delete cookState[id];
   cuinantActius.clear();
   // El que hi pugui haver a la memòria permanent d'abans del canvi se'n va:
   // si no, el «cuinant» vell tornaria a sortir un cop i prou
@@ -5932,13 +5941,15 @@ function restaurarCookState() {
     // Aquí el try ja només és per si el que hi ha desat està malmès
     try {
       const pla = JSON.parse(raw);
-      for (const nom in pla) {
-        cookState[nom] = {
+      // (Les claus desades abans de la v196 eren noms: no casen amb cap _id i
+      // la neteja de carregar() se les emporta soles.)
+      for (const id in pla) {
+        cookState[id] = {
           actiu: true,
-          marcats: new Set(pla[nom].marcats || []),
-          marcatsInstr: new Set(pla[nom].marcatsInstr || []),
+          marcats: new Set(pla[id].marcats || []),
+          marcatsInstr: new Set(pla[id].marcatsInstr || []),
         };
-        cuinantActius.add(nom);
+        cuinantActius.add(id);
       }
     } catch (e) { /* dades corruptes: les ignorem */ }
   }
@@ -6095,11 +6106,11 @@ async function carregar() {
     construirFiltres();
     aplicar();
     actualitzarReceptaDia();
-    // Neteja estats de cuinar de receptes que ja no existeixen (esborrades o reanomenades)
-    const nomsActuals = new Set(receptes.map(r => r['Nom de la recepta']));
+    // Neteja estats de cuinar de receptes que ja no existeixen (esborrades)
+    const idsActuals = new Set(receptes.map(r => String(r['_id'])));
     let netejat = false;
-    for (const nom in cookState) {
-      if (!nomsActuals.has(nom)) { delete cookState[nom]; cuinantActius.delete(nom); netejat = true; }
+    for (const id in cookState) {
+      if (!idsActuals.has(id)) { delete cookState[id]; cuinantActius.delete(id); netejat = true; }
     }
     if (netejat) { gestionarWakeLock(); desarCookState(); }
     desarCacheReceptes(); // còpia local per obrir a l'instant la propera vegada
@@ -6185,13 +6196,12 @@ function filtrar(cat) {
   aplicar();
 }
 
-function toggle(nom) {
-  const estaObert = oberts.has(nom);
-  if (estaObert) oberts.delete(nom);
-  else oberts.add(nom);
+function toggle(id) {
+  const estaObert = oberts.has(id);
+  if (estaObert) oberts.delete(id);
+  else oberts.add(id);
 
-  const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
-  const card = document.getElementById('card-' + nomId);
+  const card = document.getElementById('card-' + id);
   if (card) {
     const accordion = card.querySelector('.card-accordion');
     const arrow = card.querySelector('.card-arrow');
@@ -6216,20 +6226,20 @@ function toggle(nom) {
 // MODE CUINAR
 // ══════════════════════════════════════════════
 
-function toggleCookMode(nomId, nom) {
-  const estat = cookState[nom] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
+function toggleCookMode(id) {
+  const estat = cookState[id] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
   if (!estat.marcatsInstr) estat.marcatsInstr = new Set();
   estat.actiu = !estat.actiu;
   if (!estat.actiu) { estat.marcats = new Set(); estat.marcatsInstr = new Set(); } // en sortir, es neteja tot
-  cookState[nom] = estat;
+  cookState[id] = estat;
 
   // Actualitza elements de la card (accordion)
-  const card = document.getElementById('card-' + nomId);
-  const btn     = document.getElementById('ck-btn-' + nomId);
-  const llista   = document.getElementById('ck-list-' + nomId);
-  const progWrap = document.getElementById('ck-prog-wrap-' + nomId);
-  const llistaInstr  = document.getElementById('ck-instr-list-' + nomId);
-  const progInstrWrap = document.getElementById('ck-instr-prog-wrap-' + nomId);
+  const card = document.getElementById('card-' + id);
+  const btn     = document.getElementById('ck-btn-' + id);
+  const llista   = document.getElementById('ck-list-' + id);
+  const progWrap = document.getElementById('ck-prog-wrap-' + id);
+  const llistaInstr  = document.getElementById('ck-instr-list-' + id);
+  const progInstrWrap = document.getElementById('ck-instr-prog-wrap-' + id);
 
   if (btn)    btn.classList.toggle('actiu', estat.actiu);
   if (llista) llista.classList.toggle('cuinant', estat.actiu);
@@ -6238,7 +6248,7 @@ function toggleCookMode(nomId, nom) {
   if (progInstrWrap) progInstrWrap.style.display = estat.actiu ? '' : 'none';
 
   // Sincronitza el botó inferior de la card
-  const btnInferior = document.getElementById('card-accio-cuinar-' + nomId);
+  const btnInferior = document.getElementById('card-accio-cuinar-' + id);
   if (btnInferior) btnInferior.classList.toggle('actiu', estat.actiu);
 
   if (!estat.actiu && card) {
@@ -6246,12 +6256,12 @@ function toggleCookMode(nomId, nom) {
   }
 
   // Actualitza elements de la pàgina de detall (det-)
-  const detBtn     = document.getElementById('det-ck-btn-' + nomId);
-  const detBtnText = document.getElementById('det-ck-btn-text-' + nomId);
-  const detLlista  = document.getElementById('det-ck-list-' + nomId);
-  const detProgWrap = document.getElementById('det-ck-prog-wrap-' + nomId);
-  const detLlistaInstr  = document.getElementById('det-ck-instr-list-' + nomId);
-  const detProgInstrWrap = document.getElementById('det-ck-instr-prog-wrap-' + nomId);
+  const detBtn     = document.getElementById('det-ck-btn-' + id);
+  const detBtnText = document.getElementById('det-ck-btn-text-' + id);
+  const detLlista  = document.getElementById('det-ck-list-' + id);
+  const detProgWrap = document.getElementById('det-ck-prog-wrap-' + id);
+  const detLlistaInstr  = document.getElementById('det-ck-instr-list-' + id);
+  const detProgInstrWrap = document.getElementById('det-ck-instr-prog-wrap-' + id);
 
   if (detBtn)     detBtn.classList.toggle('actiu', estat.actiu);
   if (detBtnText) detBtnText.textContent = estat.actiu ? 'Sortir del mode cuinar' : 'Mode cuinar';
@@ -6262,7 +6272,7 @@ function toggleCookMode(nomId, nom) {
   if (detProgInstrWrap) detProgInstrWrap.style.display = estat.actiu ? '' : 'none';
 
   // Desactiva/activa el stepper de racions
-  const detStepper = document.getElementById('det-racions-stepper-' + nomId);
+  const detStepper = document.getElementById('det-racions-stepper-' + id);
   if (detStepper) detStepper.classList.toggle('cuinant', estat.actiu);
 
   if (!estat.actiu) {
@@ -6270,112 +6280,112 @@ function toggleCookMode(nomId, nom) {
     if (detPanell) detPanell.querySelectorAll('.ck-ing.fet').forEach(el => el.classList.remove('fet'));
   }
 
-  actualitzarProgresCook(nomId, nom);
+  actualitzarProgresCook(id);
 
   // Manteniment de pantalla encesa
-  if (estat.actiu) cuinantActius.add(nom);
-  else cuinantActius.delete(nom);
+  if (estat.actiu) cuinantActius.add(id);
+  else cuinantActius.delete(id);
   gestionarWakeLock();
   desarCookState();
 }
 
-function toggleIngredient(nomId, nom, idx) {
-  const estat = cookState[nom];
+function toggleIngredient(id, idx) {
+  const estat = cookState[id];
   if (!estat || !estat.actiu) return;
   if (estat.marcats.has(idx)) estat.marcats.delete(idx);
   else estat.marcats.add(idx);
 
-  const row = document.getElementById('ck-ing-' + nomId + '-' + idx);
+  const row = document.getElementById('ck-ing-' + id + '-' + idx);
   if (row) row.classList.toggle('fet', estat.marcats.has(idx));
-  const detRow = document.getElementById('det-ck-ing-' + nomId + '-' + idx);
+  const detRow = document.getElementById('det-ck-ing-' + id + '-' + idx);
   if (detRow) detRow.classList.toggle('fet', estat.marcats.has(idx));
-  actualitzarProgresCook(nomId, nom);
+  actualitzarProgresCook(id);
   desarCookState();
 }
 
-function togglePas(nomId, nom, idx) {
-  const estat = cookState[nom];
+function togglePas(id, idx) {
+  const estat = cookState[id];
   if (!estat || !estat.actiu) return;
   if (!estat.marcatsInstr) estat.marcatsInstr = new Set();
   if (estat.marcatsInstr.has(idx)) estat.marcatsInstr.delete(idx);
   else estat.marcatsInstr.add(idx);
 
-  const row = document.getElementById('ck-pas-' + nomId + '-' + idx);
+  const row = document.getElementById('ck-pas-' + id + '-' + idx);
   if (row) row.classList.toggle('fet', estat.marcatsInstr.has(idx));
-  const detRow = document.getElementById('det-ck-pas-' + nomId + '-' + idx);
+  const detRow = document.getElementById('det-ck-pas-' + id + '-' + idx);
   if (detRow) detRow.classList.toggle('fet', estat.marcatsInstr.has(idx));
-  actualitzarProgresCook(nomId, nom);
+  actualitzarProgresCook(id);
   desarCookState();
 }
 
-function reiniciarCook(nomId, nom) {
-  const estat = cookState[nom];
+function reiniciarCook(id) {
+  const estat = cookState[id];
   if (!estat) return;
   estat.marcats = new Set();
   // Desmarca només els ingredients (no els passos)
-  const llistaCard = document.getElementById('ck-list-' + nomId);
+  const llistaCard = document.getElementById('ck-list-' + id);
   if (llistaCard) llistaCard.querySelectorAll('.ck-ing.fet').forEach(el => el.classList.remove('fet'));
-  const llistaDet = document.getElementById('det-ck-list-' + nomId);
+  const llistaDet = document.getElementById('det-ck-list-' + id);
   if (llistaDet) llistaDet.querySelectorAll('.ck-ing.fet').forEach(el => el.classList.remove('fet'));
-  actualitzarProgresCook(nomId, nom);
+  actualitzarProgresCook(id);
   desarCookState();
 }
 
-function reiniciarPassos(nomId, nom) {
-  const estat = cookState[nom];
+function reiniciarPassos(id) {
+  const estat = cookState[id];
   if (!estat) return;
   estat.marcatsInstr = new Set();
-  const llistaCard = document.getElementById('ck-instr-list-' + nomId);
+  const llistaCard = document.getElementById('ck-instr-list-' + id);
   if (llistaCard) llistaCard.querySelectorAll('.ck-ing.fet').forEach(el => el.classList.remove('fet'));
-  const llistaDet = document.getElementById('det-ck-instr-list-' + nomId);
+  const llistaDet = document.getElementById('det-ck-instr-list-' + id);
   if (llistaDet) llistaDet.querySelectorAll('.ck-ing.fet').forEach(el => el.classList.remove('fet'));
-  actualitzarProgresCook(nomId, nom);
+  actualitzarProgresCook(id);
   desarCookState();
 }
 
-function actualitzarProgresCook(nomId, nom) {
-  const estat = cookState[nom] || { marcats: new Set(), marcatsInstr: new Set() };
+function actualitzarProgresCook(id) {
+  const estat = cookState[id] || { marcats: new Set(), marcatsInstr: new Set() };
   const fets = estat.marcats.size;
   const fetsInstr = (estat.marcatsInstr || new Set()).size;
 
   // ── INGREDIENTS ──
   // Card (accordion)
-  const llista = document.getElementById('ck-list-' + nomId);
+  const llista = document.getElementById('ck-list-' + id);
   const total = llista ? llista.querySelectorAll('.ck-ing').length : 0;
-  const progEl = document.getElementById('ck-prog-' + nomId);
-  const barEl  = document.getElementById('ck-bar-' + nomId);
-  const resetEl = document.getElementById('ck-reinicia-' + nomId);
+  const progEl = document.getElementById('ck-prog-' + id);
+  const barEl  = document.getElementById('ck-bar-' + id);
+  const resetEl = document.getElementById('ck-reinicia-' + id);
   if (progEl) progEl.textContent = fets;
   if (barEl)  barEl.style.width = (total ? Math.round(fets / total * 100) : 0) + '%';
   if (resetEl) resetEl.style.display = fets > 0 ? '' : 'none';
 
   // Detall (det-)
-  const detLlista = document.getElementById('det-ck-list-' + nomId);
+  const detLlista = document.getElementById('det-ck-list-' + id);
   const detTotal = detLlista ? detLlista.querySelectorAll('.ck-ing').length : 0;
-  const detProgEl = document.getElementById('det-ck-prog-' + nomId);
-  const detBarEl  = document.getElementById('det-ck-bar-' + nomId);
-  const detResetEl = document.getElementById('det-ck-reinicia-' + nomId);
+  const detProgEl = document.getElementById('det-ck-prog-' + id);
+  const detBarEl  = document.getElementById('det-ck-bar-' + id);
+  const detResetEl = document.getElementById('det-ck-reinicia-' + id);
   if (detProgEl) detProgEl.textContent = fets;
   if (detBarEl)  detBarEl.style.width = (detTotal ? Math.round(fets / detTotal * 100) : 0) + '%';
   if (detResetEl) detResetEl.style.display = fets > 0 ? '' : 'none';
 
   // ── INSTRUCCIONS ──
   // Card (accordion)
-  const llistaI = document.getElementById('ck-instr-list-' + nomId);
+  const llistaI = document.getElementById('ck-instr-list-' + id);
   const totalI = llistaI ? llistaI.querySelectorAll('.ck-ing').length : 0;
-  const progElI = document.getElementById('ck-instr-prog-' + nomId);
-  const barElI  = document.getElementById('ck-instr-bar-' + nomId);
-  const resetElI = document.getElementById('ck-instr-reinicia-' + nomId);
+  const progElI = document.getElementById('ck-instr-prog-' + id);
+  const barElI  = document.getElementById('ck-instr-bar-' + id);
+  const resetElI = document.getElementById('ck-instr-reinicia-' + id);
   if (progElI) progElI.textContent = fetsInstr;
   if (barElI)  barElI.style.width = (totalI ? Math.round(fetsInstr / totalI * 100) : 0) + '%';
   if (resetElI) resetElI.style.display = fetsInstr > 0 ? '' : 'none';
 
   // Detall (det-)
-  const detLlistaI = document.getElementById('det-ck-instr-list-' + nomId);
+  const detLlistaI = document.getElementById('det-ck-instr-list-' + id);
   const detTotalI = detLlistaI ? detLlistaI.querySelectorAll('.ck-ing').length : 0;
-  const detProgElI = document.getElementById('det-ck-instr-prog-' + nomId);
-  const detBarElI  = document.getElementById('det-ck-instr-bar-' + nomId);
-  const detResetElI = document.getElementById('det-ck-instr-reinicia-' + nomId);
+  const detProgElI = document.getElementById('det-ck-instr-prog-' + id);
+  const detBarElI  = document.getElementById('det-ck-instr-bar-' + id);
+  const detResetElI = document.getElementById('det-ck-instr-reinicia-' + id);
   if (detProgElI) detProgElI.textContent = fetsInstr;
   if (detBarElI)  detBarElI.style.width = (detTotalI ? Math.round(fetsInstr / detTotalI * 100) : 0) + '%';
   if (detResetElI) detResetElI.style.display = fetsInstr > 0 ? '' : 'none';
@@ -6409,35 +6419,34 @@ document.addEventListener('visibilitychange', () => {
 // SELECTOR DE RACIONS — interacció
 // ══════════════════════════════════════════════
 
-// Estat temporal de racions per recepta (es reinicia en sortir del detall)
+// Estat temporal de racions per recepta (clau: _id; es reinicia en sortir del detall)
 const racionsActual = {};
 
-function getRacionsActual(nom) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+function getRacionsActual(id) {
+  const r = receptaPerId(id);
   if (!r) return 1;
   const base = parseInt(r['Racions']) || 0;
   if (!base) return 0;
-  return racionsActual[nom] || base;
+  return racionsActual[id] || base;
 }
 
-function canviarRacions(nomId, nom, delta) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+function canviarRacions(id, delta) {
+  const r = receptaPerId(id);
   if (!r) return;
   const base = parseInt(r['Racions']) || 1;
-  const actual = racionsActual[nom] || base;
+  const actual = racionsActual[id] || base;
   const nou = Math.max(1, Math.min(99, actual + delta));
-  racionsActual[nom] = nou;
+  racionsActual[id] = nou;
 
   // Actualitza el display del valor
-  const valEl = document.getElementById('det-racions-val-' + nomId);
+  const valEl = document.getElementById('det-racions-val-' + id);
   if (valEl) valEl.textContent = nou;
 
   // Recalcula i repinta els ingredients
   const factor = nou / base;
   const ingParsed = getIngredientsParsed(r);
-  const listEl = document.getElementById('det-ck-list-' + nomId);
+  const listEl = document.getElementById('det-ck-list-' + id);
   if (listEl) {
-    const ckEstat = cookState[nom] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
     listEl.querySelectorAll('.ck-ing').forEach((el, idx) => {
       if (idx < ingParsed.length) {
         const ingHTML = renderScaledIngredient(ingParsed[idx], factor);
@@ -6448,8 +6457,8 @@ function canviarRacions(nomId, nom, delta) {
   }
 }
 
-function editarRacionsInline(nomId, nom) {
-  const valEl = document.getElementById('det-racions-val-' + nomId);
+function editarRacionsInline(id) {
+  const valEl = document.getElementById('det-racions-val-' + id);
   if (!valEl) return;
   const actual = parseInt(valEl.textContent) || 4;
   const input = document.createElement('input');
@@ -6467,17 +6476,17 @@ function editarRacionsInline(nomId, nom) {
     const nou = Math.max(1, Math.min(99, parseInt(input.value) || actual));
     const span = document.createElement('span');
     span.className = 'racions-valor';
-    span.id = 'det-racions-val-' + nomId;
+    span.id = 'det-racions-val-' + id;
     span.textContent = nou;
-    span.onclick = () => editarRacionsInline(nomId, nom);
+    span.onclick = () => editarRacionsInline(id);
     parent.replaceChild(span, input);
 
-    racionsActual[nom] = nou;
-    const r = receptes.find(x => x['Nom de la recepta'] === nom);
+    racionsActual[id] = nou;
+    const r = receptaPerId(id);
     const base = parseInt(r?.['Racions']) || 1;
     const factor = nou / base;
     const ingParsed = getIngredientsParsed(r);
-    const listEl = document.getElementById('det-ck-list-' + nomId);
+    const listEl = document.getElementById('det-ck-list-' + id);
     if (listEl) {
       listEl.querySelectorAll('.ck-ing').forEach((el, idx) => {
         if (idx < ingParsed.length) {
@@ -6496,34 +6505,35 @@ function editarRacionsInline(nomId, nom) {
   });
 }
 
-function mostrarInlineRacions(nomId, nom) {
-  const pindola = document.getElementById('det-racions-pindola-' + nomId);
-  const form = document.getElementById('det-racions-form-' + nomId);
+function mostrarInlineRacions(id) {
+  const pindola = document.getElementById('det-racions-pindola-' + id);
+  const form = document.getElementById('det-racions-form-' + id);
   if (pindola) pindola.style.display = 'none';
   if (form) {
     form.classList.add('visible');
-    const input = document.getElementById('det-racions-input-' + nomId);
+    const input = document.getElementById('det-racions-input-' + id);
     if (input) { input.focus(); }
   }
 }
 
-async function desarRacionsInline(nomId, nom) {
-  const input = document.getElementById('det-racions-input-' + nomId);
+async function desarRacionsInline(id) {
+  const input = document.getElementById('det-racions-input-' + id);
   const val = parseInt(input?.value);
   if (!val || val < 1) { mostrarToast('⚠️ Indica un número vàlid de racions'); return; }
+  const r = receptaPerId(id);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
 
   // Desem primer: si la base de dades no ho accepta, aquí no ha passat res.
   // (dbActualitzarRecepta ja ensenya el seu propi avís si falla)
-  if (!await dbActualitzarRecepta(idDe(nom), { racions: numOnull(val) })) return;
+  if (!await dbActualitzarRecepta(r['_id'], { racions: numOnull(val) })) return;
 
   // Un cop desat de debò, ho reflectim a la còpia local
-  const idx = receptes.findIndex(x => x['Nom de la recepta'] === nom);
-  if (idx !== -1) receptes[idx]['Racions'] = String(val);
+  r['Racions'] = String(val);
 
   mostrarToast(`✅ Racions definides: ${val}`);
 
   // Reobre el detall per repintar amb el stepper actiu
-  obrirDetall(nom, true);
+  obrirDetall(id, true);
 }
 
 function resetSorpren() {
@@ -6576,7 +6586,7 @@ function aplicar() {
 
   // Ordre aleatori, estable durant aquesta visita al receptari
   resultat.sort((a, b) =>
-    clauOrdreReceptari(a['Nom de la recepta'] || '') - clauOrdreReceptari(b['Nom de la recepta'] || ''));
+    clauOrdreReceptari(String(a['_id'])) - clauOrdreReceptari(String(b['_id'])));
 
   const comptador = document.getElementById('comptador');
   comptador.textContent = resultat.length === receptes.length
@@ -6595,6 +6605,7 @@ function aplicar() {
   }
 
   llista.innerHTML = resultat.map(r => {
+    const id         = String(r['_id']);
     const nom        = r['Nom de la recepta'] || '';
     const cat        = r['Categoria'] || '';
     const ing        = r['Ingredients'] || '';
@@ -6605,15 +6616,14 @@ function aplicar() {
     const instruccions = r['Instruccions'] || '';
     const comentaris = r['Comentaris'] || '';
     const valoracio  = parseInt(r['Valoracio']) || 0;
-    const foto       = (nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '');
+    const foto       = (id in fotosLocals) ? fotosLocals[id] : (r['Foto'] || '');
     const fotoSrc    = foto ? foto : PLACEHOLDER_IMG;
-    const obert      = oberts.has(nom);
-    const nomId      = nom.replace(/[^a-zA-Z0-9]/g, '_');
-    const starsHTML  = starsInteractiusHTML(nom, valoracio);
+    const obert      = oberts.has(id);
+    const starsHTML  = starsInteractiusHTML(id, valoracio);
     const instrHTML  = instruccions
       ? (() => {
           const passos = instruccions.split('\n').filter(Boolean);
-          const estatI = cookState[nom] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
+          const estatI = cookState[id] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
           if (!estatI.marcatsInstr) estatI.marcatsInstr = new Set();
           const totalP = passos.length;
           const fetsP = passos.filter((_, i) => estatI.marcatsInstr.has(i)).length;
@@ -6621,18 +6631,18 @@ function aplicar() {
           const ckSvgI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
           return `<div class="card-section card-instruccions">
             <div class="card-section-label">Instruccions</div>
-            <div class="ck-progress" id="ck-instr-prog-wrap-${nomId}" style="${estatI.actiu ? '' : 'display:none'}">
+            <div class="ck-progress" id="ck-instr-prog-wrap-${id}" style="${estatI.actiu ? '' : 'display:none'}">
               <div class="ck-progress-top">
-                <span class="ck-progress-text"><span id="ck-instr-prog-${nomId}">${fetsP}</span>/${totalP} passos fets</span>
-                <button class="ck-reinicia" id="ck-instr-reinicia-${nomId}" style="${fetsP ? '' : 'display:none'}" onclick="event.stopPropagation(); reiniciarPassos('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Desmarca-ho tot</button>
+                <span class="ck-progress-text"><span id="ck-instr-prog-${id}">${fetsP}</span>/${totalP} passos fets</span>
+                <button class="ck-reinicia" id="ck-instr-reinicia-${id}" style="${fetsP ? '' : 'display:none'}" onclick="event.stopPropagation(); reiniciarPassos('${id}')">Desmarca-ho tot</button>
               </div>
-              <div class="ck-bar-track"><div class="ck-bar" id="ck-instr-bar-${nomId}" style="width:${pctP}%"></div></div>
+              <div class="ck-bar-track"><div class="ck-bar" id="ck-instr-bar-${id}" style="width:${pctP}%"></div></div>
             </div>
-            <div class="ck-list${estatI.actiu ? ' cuinant' : ''}" id="ck-instr-list-${nomId}">
+            <div class="ck-list${estatI.actiu ? ' cuinant' : ''}" id="ck-instr-list-${id}">
               ${passos.map((pas, idx) => {
                 const fet = estatI.marcatsInstr.has(idx) ? ' fet' : '';
                 const safe = escHTML(pas);
-                return `<div class="ck-ing${fet}" id="ck-pas-${nomId}-${idx}" onclick="event.stopPropagation(); togglePas('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',${idx})">
+                return `<div class="ck-ing${fet}" id="ck-pas-${id}-${idx}" onclick="event.stopPropagation(); togglePas('${id}',${idx})">
                   <span class="ck-circle">${ckSvgI}</span>
                   <span class="ck-txt">${safe}</span>
                 </div>`;
@@ -6655,11 +6665,11 @@ function aplicar() {
            <p style="font-size:13px;color:var(--text-dim);line-height:1.65;margin:0;white-space:pre-line">${escHTML(comentaris)}</p>
          </div>`
       : '';
-    return `<div class="card" id="card-${nomId}" ${vistaTipus === 'grid' ? `onclick="obrirDetall('${nom.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"` : ''}>
+    return `<div class="card" id="card-${id}" ${vistaTipus === 'grid' ? `onclick="obrirDetall('${id}')"` : ''}>
       <div class="card-img-wrap">
         <img class="card-img" src="${escHTML(fotoSrc)}" alt="${escHTML(nom)}" loading="lazy">
       </div>
-      <div class="card-header" ${vistaTipus === 'grid' ? '' : `onclick="toggle('${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')"`} >
+      <div class="card-header" ${vistaTipus === 'grid' ? '' : `onclick="toggle('${id}')"`} >
         ${foto ? `<img class="card-thumb" src="${escHTML(foto)}" alt="" loading="lazy">` : ''}
         <span class="card-nom">${escHTML(nom)}</span>
         <div class="card-dreta">
@@ -6676,12 +6686,12 @@ function aplicar() {
               <div class="ingredients-label" style="margin-bottom:0;">Ingredients</div>
               <div class="card-top-right">
                 <div class="card-stars" aria-label="Valoració: ${valoracio} de 5">${starsHTML}</div>
-                <button class="btn-cuinar${(cookState[nom] && cookState[nom].actiu) ? ' actiu' : ''}" id="ck-btn-${nomId}" title="Mode cuinar" aria-label="Mode cuinar"
-                  onclick="event.stopPropagation(); toggleCookMode('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                <button class="btn-cuinar${(cookState[id] && cookState[id].actiu) ? ' actiu' : ''}" id="ck-btn-${id}" title="Mode cuinar" aria-label="Mode cuinar"
+                  onclick="event.stopPropagation(); toggleCookMode('${id}')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
                 </button>
                 <button class="btn-editar" title="Editar recepta"
-                  onclick="event.stopPropagation(); obrirEdicio('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                  onclick="event.stopPropagation(); obrirEdicio('${id}')">
                   <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -6693,23 +6703,23 @@ function aplicar() {
             ${(() => {
               const ingParsedCard = getIngredientsParsed(r);
               const ingArr = ingParsedCard.map(i => renderScaledIngredient(i, 1));
-              const estat = cookState[nom] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
+              const estat = cookState[id] || { actiu: false, marcats: new Set(), marcatsInstr: new Set() };
               const total = ingArr.length;
               const fets = ingArr.filter((_, i) => estat.marcats.has(i)).length;
               const pct = total ? Math.round(fets / total * 100) : 0;
               const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
               return `
-              <div class="ck-progress" id="ck-prog-wrap-${nomId}" style="${estat.actiu ? '' : 'display:none'}">
+              <div class="ck-progress" id="ck-prog-wrap-${id}" style="${estat.actiu ? '' : 'display:none'}">
                 <div class="ck-progress-top">
-                  <span class="ck-progress-text"><span id="ck-prog-${nomId}">${fets}</span>/${total} marcats</span>
-                  <button class="ck-reinicia" id="ck-reinicia-${nomId}" style="${fets ? '' : 'display:none'}" onclick="event.stopPropagation(); reiniciarCook('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Desmarca-ho tot</button>
+                  <span class="ck-progress-text"><span id="ck-prog-${id}">${fets}</span>/${total} marcats</span>
+                  <button class="ck-reinicia" id="ck-reinicia-${id}" style="${fets ? '' : 'display:none'}" onclick="event.stopPropagation(); reiniciarCook('${id}')">Desmarca-ho tot</button>
                 </div>
-                <div class="ck-bar-track"><div class="ck-bar" id="ck-bar-${nomId}" style="width:${pct}%"></div></div>
+                <div class="ck-bar-track"><div class="ck-bar" id="ck-bar-${id}" style="width:${pct}%"></div></div>
               </div>
-              <div class="ck-list${estat.actiu ? ' cuinant' : ''}" id="ck-list-${nomId}">
+              <div class="ck-list${estat.actiu ? ' cuinant' : ''}" id="ck-list-${id}">
                 ${ingArr.map((item, idx) => {
                   const fet = estat.marcats.has(idx) ? ' fet' : '';
-                  return `<div class="ck-ing${fet}" id="ck-ing-${nomId}-${idx}" onclick="event.stopPropagation(); toggleIngredient('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',${idx})">
+                  return `<div class="ck-ing${fet}" id="ck-ing-${id}-${idx}" onclick="event.stopPropagation(); toggleIngredient('${id}',${idx})">
                     <span class="ck-circle">${checkSvg}</span>
                     <span class="ck-txt">${item}</span>
                   </div>`;
@@ -6719,20 +6729,20 @@ function aplicar() {
             ${instrHTML}
             ${comHTML}
             ${etHTML}
-            ${font ? `<p class="card-font" id="vista-font-${nomId}">
+            ${font ? `<p class="card-font" id="vista-font-${id}">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               ${escHTML(font)}${url ? ` · <a href="${escHTML(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:12px;">ves-hi</a>` : ''}
             </p>` : ''}
-            ${llibre ? `<p class="card-llibre" id="vista-llibre-${nomId}">
+            ${llibre ? `<p class="card-llibre" id="vista-llibre-${id}">
               <i class="ti ti-book-2" aria-hidden="true"></i>
               ${escHTML(llibre)}
             </p>` : ''}
             <div class="card-accions-inferiors" onclick="event.stopPropagation()">
-              <button class="card-accio-btn" onclick="obrirDetall('${nom.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">Obrir</button>
-              <button class="card-accio-btn${(cookState[nom] && cookState[nom].actiu) ? ' actiu' : ''}" id="card-accio-cuinar-${nomId}" onclick="toggleCookMode('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Mode cuinar</button>
-              <button class="card-accio-btn" onclick="obrirEdicio('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Editar</button>
+              <button class="card-accio-btn" onclick="obrirDetall('${id}')">Obrir</button>
+              <button class="card-accio-btn${(cookState[id] && cookState[id].actiu) ? ' actiu' : ''}" id="card-accio-cuinar-${id}" onclick="toggleCookMode('${id}')">Mode cuinar</button>
+              <button class="card-accio-btn" onclick="obrirEdicio('${id}')">Editar</button>
             </div>
-            ${formulariEdicioHTML(r, nomId)}
+            ${formulariEdicioHTML(r, id)}
           </div>
         </div>
       </div>
@@ -6743,10 +6753,12 @@ function aplicar() {
 // El formulari d'edició d'una recepta. Es pinta a dos llocs: dins la targeta
 // del receptari i, des del 17-09-2026, dins la fitxa de la recepta (en lloc del
 // contingut). Els dos fan servir les mateixes funcions de desar, foto i
-// etiquetes, que troben els camps per l'identificador: a la fitxa el
-// identificador porta el sufix «_det» perquè no xoqui amb el de la targeta,
-// que pot ser al DOM al mateix temps.
-function formulariEdicioHTML(r, nomId, alDetall) {
+// etiquetes, que troben els camps per l'identificador del DOM (domId): a la
+// targeta és l'_id de la recepta tal qual; a la fitxa porta el sufix «_det»
+// perquè no xoqui amb el de la targeta, que pot ser al DOM al mateix temps.
+// De domId se'n treu sempre l'_id amb idDeDom().
+function formulariEdicioHTML(r, domId, alDetall) {
+  const id           = String(r['_id']);
   const nom          = r['Nom de la recepta'] || '';
   const cat          = r['Categoria'] || '';
   const ing          = r['Ingredients'] || '';
@@ -6756,25 +6768,24 @@ function formulariEdicioHTML(r, nomId, alDetall) {
   const etiquetes    = r['Etiquetes'] || '';
   const instruccions = r['Instruccions'] || '';
   const comentaris   = r['Comentaris'] || '';
-  const foto         = (nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '');
-  const nomEsc       = nom.replace(/'/g, "\'").replace(/"/g, '&quot;');
+  const foto         = (id in fotosLocals) ? fotosLocals[id] : (r['Foto'] || '');
   const catSelect    = ['', ...CAT_OPCIONS, '__nova__'].map(c => {
     if (c === '__nova__') return `<option value="__nova__">+ Nova categoria…</option>`;
     return `<option value="${escHTML(c)}"${c === cat ? ' selected' : ''}>${escHTML(c) || '— Sense categoria —'}</option>`;
   }).join('');
   // «Cancel·lar» a la targeta plega el formulari; a la fitxa, torna a la recepta
-  const cancelar = alDetall ? `cancelarEdicioDetall('${nomEsc}')` : `tancarEdicio('${nomId}')`;
+  const cancelar = alDetall ? `cancelarEdicioDetall('${id}')` : `tancarEdicio('${domId}')`;
   return `
-            <div class="card-edit-form" id="edit-form-${nomId}" onclick="event.stopPropagation()" style="margin-top:12px;">
+            <div class="card-edit-form" id="edit-form-${domId}" onclick="event.stopPropagation()" style="margin-top:12px;">
               <div class="card-edit-row">
                 <div class="card-edit-group">
                   <span class="card-edit-label">Nom</span>
-                  <input type="text" id="edit-nom-${nomId}" value="${escHTML(nom)}">
+                  <input type="text" id="edit-nom-${domId}" value="${escHTML(nom)}">
                 </div>
                 <div class="card-edit-group">
                   <span class="card-edit-label">Categoria</span>
                   <div class="select-wrap cat-nova-wrap">
-                    <select id="edit-cat-${nomId}" onchange="handleCatSelect(this)">${catSelect}</select>
+                    <select id="edit-cat-${domId}" onchange="handleCatSelect(this)">${catSelect}</select>
                     <input class="cat-nova-input" type="text" placeholder="Nom de la categoria nova…" onkeydown="if(event.key==='Enter'){confirmarNovaCat(this);event.preventDefault()}" onblur="confirmarNovaCat(this)">
                   </div>
                 </div>
@@ -6782,25 +6793,25 @@ function formulariEdicioHTML(r, nomId, alDetall) {
               <div class="card-edit-group full">
                 <span class="card-edit-label">Foto de la recepta</span>
                 <div class="foto-edit">
-                  <div class="foto-preview" id="foto-preview-${nomId}" onclick="triarFotoSiBuit('${nomId}')">
+                  <div class="foto-preview" id="foto-preview-${domId}" onclick="triarFotoSiBuit('${domId}')">
                     ${foto ? `<img src="${escHTML(foto)}" alt="Foto de ${escHTML(nom)}">` : `<span class="foto-preview-buida">Encara no hi ha foto</span>`}
                   </div>
                   <div class="foto-edit-accions">
                     <div class="btn-foto" onclick="this.querySelector('input').click()">
-                      <input type="file" id="foto-input-${nomId}" accept="image/*" onchange="pujarFotoRecepta('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}', this)">
+                      <input type="file" id="foto-input-${domId}" accept="image/*" onchange="pujarFotoRecepta('${domId}', this)">
                       <i class="ti ti-photo-up" aria-hidden="true"></i> Puja una foto
                     </div>
-                    <div class="btn-foto" onclick="obrirCamera('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                    <div class="btn-foto" onclick="obrirCamera('${domId}')">
                       <i class="ti ti-camera" aria-hidden="true"></i> Fes una foto
                     </div>
-                    <button type="button" class="btn-foto-treure" id="foto-treure-${nomId}" style="${foto ? '' : 'display:none'}" onclick="treureFotoRecepta('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Treure</button>
+                    <button type="button" class="btn-foto-treure" id="foto-treure-${domId}" style="${foto ? '' : 'display:none'}" onclick="treureFotoRecepta('${domId}')">Treure</button>
                   </div>
-                  <div class="foto-estat" id="foto-estat-${nomId}"></div>
+                  <div class="foto-estat" id="foto-estat-${domId}"></div>
                 </div>
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Ingredients</span>
-                <textarea id="edit-ing-${nomId}" style="min-height:150px">${escHTML((() => {
+                <textarea id="edit-ing-${domId}" style="min-height:150px">${escHTML((() => {
                   const parsed = getIngredientsParsed(r);
                   if (parsed.length) return parsed.map(i => renderScaledIngredientPlain(i, 1)).join('\n');
                   return ing.split(' · ').join('\n');
@@ -6809,45 +6820,45 @@ function formulariEdicioHTML(r, nomId, alDetall) {
               <div class="card-edit-row">
                 <div class="card-edit-group">
                   <span class="card-edit-label">Racions</span>
-                  <input type="number" id="edit-racions-${nomId}" min="1" max="99" value="${r['Racions'] || ''}" placeholder="p.ex. 4" style="width:100%">
+                  <input type="number" id="edit-racions-${domId}" min="1" max="99" value="${r['Racions'] || ''}" placeholder="p.ex. 4" style="width:100%">
                 </div>
                 <div class="card-edit-group">
                   <span class="card-edit-label">Font</span>
-                  <input type="text" id="edit-font-${nomId}" value="${escHTML(font)}">
+                  <input type="text" id="edit-font-${domId}" value="${escHTML(font)}">
                 </div>
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Llibre <span style="font-weight:300;color:var(--text-muted)">(opcional)</span></span>
-                <input type="text" id="edit-llibre-${nomId}" list="dl-llibres" value="${escHTML(llibre)}" placeholder="p.ex. Simple, pàg. 142">
+                <input type="text" id="edit-llibre-${domId}" list="dl-llibres" value="${escHTML(llibre)}" placeholder="p.ex. Simple, pàg. 142">
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">URL</span>
-                <input type="text" id="edit-url-${nomId}" value="${escHTML(url)}" placeholder="https://...">
+                <input type="text" id="edit-url-${domId}" value="${escHTML(url)}" placeholder="https://...">
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Instruccions</span>
-                <textarea id="edit-instruccions-${nomId}" style="min-height:150px">${escHTML(instruccions)}</textarea>
+                <textarea id="edit-instruccions-${domId}" style="min-height:150px">${escHTML(instruccions)}</textarea>
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Comentaris</span>
-                <textarea id="edit-comentaris-${nomId}" placeholder="Notes, trucs, variacions…">${escHTML(comentaris)}</textarea>
+                <textarea id="edit-comentaris-${domId}" placeholder="Notes, trucs, variacions…">${escHTML(comentaris)}</textarea>
               </div>
               <div class="card-edit-group full">
                 <span class="card-edit-label">Etiquetes</span>
-                <input type="text" id="edit-etiquetes-${nomId}" value="${escHTML(etiquetes)}" placeholder="sopar ràpid, meal prep…"
-                  oninput="pintarEtiquetesSuggerides('edit-etiquetes-${nomId}','receptes')">
-                <div class="sug-etiq" id="sug-edit-etiquetes-${nomId}"></div>
+                <input type="text" id="edit-etiquetes-${domId}" value="${escHTML(etiquetes)}" placeholder="sopar ràpid, meal prep…"
+                  oninput="pintarEtiquetesSuggerides('edit-etiquetes-${domId}','receptes')">
+                <div class="sug-etiq" id="sug-edit-etiquetes-${domId}"></div>
               </div>
               <div class="card-edit-accions">
                 <button class="btn-edit-cancel" onclick="${cancelar}">Cancel·lar</button>
-                <button class="btn-edit-desar" id="edit-btn-${nomId}"
-                  onclick="desarEdicio('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                <button class="btn-edit-desar" id="edit-btn-${domId}"
+                  onclick="desarEdicio('${domId}')">
                   Desar canvis
                 </button>
               </div>
               <div style="border-top:1px solid var(--border-dim);padding-top:0.75rem;margin-top:0.25rem;">
                 <button class="btn-edit-eliminar"
-                  onclick="eliminarRecepta('${nomId}', '${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                  onclick="eliminarRecepta('${domId}')">
                   🗑 Eliminar recepta
                 </button>
               </div>
@@ -6859,7 +6870,7 @@ function sorprenMe() {
   if (!receptes.length) return;
   const idx     = Math.floor(Math.random() * receptes.length);
   const recepta = receptes[idx];
-  const nom     = recepta['Nom de la recepta'] || '';
+  const id      = String(recepta['_id']);
 
   // Amaguem totes les cards excepte la seleccionada
   catActiva = 'totes';
@@ -6868,18 +6879,17 @@ function sorprenMe() {
   document.getElementById('comptador').textContent = '';
 
   // Afegim la recepta a oberts ABANS de renderitzar perquè surti desplegada
-  oberts.add(nom);
+  oberts.add(id);
 
   // Renderitzem totes les cards al DOM
   aplicar();
 
   // Amaguem les que no són la sorpresa
   setTimeout(() => {
-    const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
     document.querySelectorAll('#llista .card').forEach(card => {
-      if (card.id !== 'card-' + nomId) card.style.display = 'none';
+      if (card.id !== 'card-' + id) card.style.display = 'none';
     });
-    const card = document.getElementById('card-' + nomId);
+    const card = document.getElementById('card-' + id);
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 50);
 
@@ -6892,16 +6902,15 @@ function sorprenMe() {
 
 // ── Edició de receptes ──
 
-function obrirEdicio(nomId, nom) {
+function obrirEdicio(id) {
   // Primer obrim la card si no estava oberta
-  const nomOriginal = nom;
-  if (!oberts.has(nomOriginal)) {
-    oberts.add(nomOriginal);
+  if (!oberts.has(id)) {
+    oberts.add(id);
     aplicar();
   }
-  const form = document.getElementById('edit-form-' + nomId);
+  const form = document.getElementById('edit-form-' + id);
   if (form) form.classList.add('visible');
-  prepararFormulariEdicio(nomId);
+  prepararFormulariEdicio(id);
 
   // Scroll perquè el formulari quedi visible
   // Si hi cap sencer a la pantalla → el centrem; si no → posem el principi a dalt
@@ -6922,18 +6931,18 @@ function obrirEdicio(nomId, nom) {
 }
 
 // El que cal fer un cop el formulari és al DOM, sigui a la targeta o a la fitxa
-function prepararFormulariEdicio(nomId) {
+function prepararFormulariEdicio(domId) {
   // Les etiquetes suggerides es pinten en obrir el formulari, no en dibuixar la
   // targeta: si no, es pintarien seixanta vegades sense que ningú les miri.
-  pintarEtiquetesSuggerides('edit-etiquetes-' + nomId, 'receptes');
+  pintarEtiquetesSuggerides('edit-etiquetes-' + domId, 'receptes');
 
   // Guarda el text original dels ingredients per detectar canvis al desar
-  const ingTextarea = document.getElementById('edit-ing-' + nomId);
+  const ingTextarea = document.getElementById('edit-ing-' + domId);
   if (ingTextarea) ingTextarea.dataset.original = ingTextarea.value;
 
   // Actualitza el select de categoria amb CAT_OPCIONS actual
   // (pot haver crescut des que es va renderitzar la targeta)
-  const sel = document.getElementById('edit-cat-' + nomId);
+  const sel = document.getElementById('edit-cat-' + domId);
   if (sel) {
     const catActual = sel.value;
     const opts = ['', ...CAT_OPCIONS, '__nova__'].map(c => {
@@ -6945,8 +6954,8 @@ function prepararFormulariEdicio(nomId) {
   }
 }
 
-function tancarEdicio(nomId) {
-  const form = document.getElementById('edit-form-' + nomId);
+function tancarEdicio(domId) {
+  const form = document.getElementById('edit-form-' + domId);
   if (form) form.classList.remove('visible');
 }
 
@@ -6955,20 +6964,25 @@ function tancarEdicio(nomId) {
 // fitxa es converteix en el formulari i, en desar o cancel·lar, torna a ser la
 // recepta. (Decisió de la Judy, 17-09-2026.)
 const SUFIX_EDICIO_DETALL = '_det';
-function esEdicioAlDetall(nomId) { return nomId.endsWith(SUFIX_EDICIO_DETALL); }
+function esEdicioAlDetall(domId) { return String(domId).endsWith(SUFIX_EDICIO_DETALL); }
+// L'_id de la recepta a partir de l'identificador del DOM d'un formulari d'edició
+function idDeDom(domId) {
+  domId = String(domId);
+  return esEdicioAlDetall(domId) ? domId.slice(0, -SUFIX_EDICIO_DETALL.length) : domId;
+}
 
-function detallEditar(nomId, nom) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+function detallEditar(id) {
+  const r = receptaPerId(id);
   if (!r) return;
+  id = String(r['_id']);
   const panell = document.getElementById('panell-detall');
-  const idDet  = nomId + SUFIX_EDICIO_DETALL;
-  const nomEsc = nom.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const idDet  = id + SUFIX_EDICIO_DETALL;
   // La fletxa de dalt, mentre s'edita, fa de «Cancel·lar»: torna a la recepta
   // sense desar. Abans se n'anava al receptari, i els canvis a mitges es
   // perdien sense que ho semblés. (Petició de la Judy, 17-09-2026.)
   panell.innerHTML = `
     <div class="detall-header">
-      <button class="detall-header-back" onclick="cancelarEdicioDetall('${nomEsc}')">
+      <button class="detall-header-back" onclick="cancelarEdicioDetall('${id}')">
         <i class="ti ti-arrow-left" aria-hidden="true"></i>
         <span class="detall-header-text">Tornar a la recepta</span>
       </button>
@@ -6980,12 +6994,15 @@ function detallEditar(nomId, nom) {
   prepararFormulariEdicio(idDet);
   window.scrollTo(0, 0);
 }
-function cancelarEdicioDetall(nom) {
-  obrirDetall(nom, true);
+function cancelarEdicioDetall(id) {
+  obrirDetall(id, true);
 }
 
-async function eliminarRecepta(nomId, nomOriginal) {
-  const idRecepta = idDe(nomOriginal);
+async function eliminarRecepta(domId) {
+  const id = idDeDom(domId);
+  const r  = receptaPerId(id);
+  const idRecepta   = r ? r['_id'] : null;
+  const nomOriginal = r ? (r['Nom de la recepta'] || '') : '';
 
   // Si la recepta surt en algun menú, avisem abans: allà hi quedarà el nom, però ja no s'hi podrà entrar.
   // I si els seus ingredients són a la llista de la compra, també: se n'aniran.
@@ -7013,14 +7030,15 @@ async function eliminarRecepta(nomId, nomOriginal) {
   if (!await dbEsborrarRecepta(idRecepta)) return;
 
   // Eliminem de la llista local i retirem la card del DOM amb animació
-  const idx = receptes.findIndex(r => r['Nom de la recepta'] === nomOriginal);
+  const idx = receptes.indexOf(r);
   if (idx !== -1) receptes.splice(idx, 1);
-  oberts.delete(nomOriginal);
-  delete cookState[nomOriginal];
-  cuinantActius.delete(nomOriginal);
+  oberts.delete(id);
+  delete cookState[id];
+  delete racionsActual[id];
+  cuinantActius.delete(id);
   gestionarWakeLock();
 
-  const card = document.getElementById('card-' + nomId);
+  const card = document.getElementById('card-' + id);
   if (card) {
     card.style.transition = 'opacity 0.3s, transform 0.3s';
     card.style.opacity = '0';
@@ -7028,46 +7046,51 @@ async function eliminarRecepta(nomId, nomOriginal) {
     setTimeout(() => { card.remove(); aplicar(); }, 310);
   }
   // Des de la fitxa: la recepta ja no hi és, així que se'n va cap on venia
-  if (esEdicioAlDetall(nomId)) { construirFiltres(); aplicar(); history.back(); }
+  if (esEdicioAlDetall(domId)) { construirFiltres(); aplicar(); history.back(); }
 
   mostrarToast(`🗑 "${nomOriginal}" eliminada del receptari`);
 }
 
-async function desarEdicio(nomId, nomOriginal) {
-  const ingTextarea = document.getElementById('edit-ing-' + nomId);
+async function desarEdicio(domId) {
+  const ingTextarea = document.getElementById('edit-ing-' + domId);
   const ingRaw = ingTextarea.value.trim();
   const ingOriginal = (ingTextarea.dataset.original || '').trim();
   const haCanviat = ingRaw !== ingOriginal;
 
-  if (!ingRaw) { confirmarDesarEdicio(nomId, nomOriginal, '[]'); return; }
+  if (!ingRaw) { confirmarDesarEdicio(domId, '[]'); return; }
 
   const parsed = parseAllIngredients(ingRaw);
   const ingJSON = serializeIngredients(parsed);
 
   if (!haCanviat) {
     // Els ingredients no s'han tocat: desa directament sense preview
-    const r = receptes.find(x => x['Nom de la recepta'] === nomOriginal);
+    const r = receptaPerId(idDeDom(domId));
     const ingExistent = r?.['Ingredients'] || '';
     // Si ja estaven en JSON, conserva'ls tal qual; si no, usa el parsing
     const ingFinal = ingExistent.trim().startsWith('[') ? ingExistent : ingJSON;
-    confirmarDesarEdicio(nomId, nomOriginal, ingFinal);
+    confirmarDesarEdicio(domId, ingFinal);
   } else {
     // Mostra la previsualització
     const html = buildIngPreviewHTML(
       parsed,
       `tancarPreviewIng()`,
-      `tancarPreviewIng(); confirmarDesarEdicio('${nomId}','${nomOriginal.replace(/'/g,"\\'")}', window._ingPreviewJSON)`
+      `tancarPreviewIng(); confirmarDesarEdicio('${domId}', window._ingPreviewJSON)`
     );
     window._ingPreviewJSON = ingJSON;
     document.body.insertAdjacentHTML('beforeend', html);
   }
 }
 
-async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
+async function confirmarDesarEdicio(domId, ingJSON) {
   if (!ingJSON && window._ingPreviewJSON) ingJSON = window._ingPreviewJSON;
 
+  const id = idDeDom(domId);
+  const r  = receptaPerId(id);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
+  const nomOriginal = r['Nom de la recepta'] || '';
+
   // Si s'ha canviat el nom, comprovem que el nou no xoqui amb cap altra recepta
-  const nomCampEdit = document.getElementById('edit-nom-' + nomId);
+  const nomCampEdit = document.getElementById('edit-nom-' + domId);
   const nomIntent = nomCampEdit.value.trim();
   if (nomNormalitzat(nomIntent) !== nomNormalitzat(nomOriginal) && existeixRecepta(nomIntent, nomOriginal)) {
     const decisio = await mostrarDialegDuplicat(nomIntent);
@@ -7076,24 +7099,22 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
     nomCampEdit.value = nomAmbDistintiu(nomIntent);
   }
 
-  const btn = document.getElementById('edit-btn-' + nomId);
+  const btn = document.getElementById('edit-btn-' + domId);
   btn.disabled = true;
   btn.textContent = 'Desant…';
 
-  const nomNou  = document.getElementById('edit-nom-' + nomId).value.trim();
-  const cat     = document.getElementById('edit-cat-' + nomId).value;
-  const font    = document.getElementById('edit-font-' + nomId).value.trim();
-  const llibre  = document.getElementById('edit-llibre-' + nomId).value.trim();
-  const url     = document.getElementById('edit-url-' + nomId).value.trim();
-  const etiquetes = normalitzarEtiquetes(document.getElementById('edit-etiquetes-' + nomId).value);
-  const instruccions = document.getElementById('edit-instruccions-' + nomId).value.trim();
-  const comentaris = document.getElementById('edit-comentaris-' + nomId).value.trim();
-  const racions = document.getElementById('edit-racions-' + nomId)?.value || '';
-
-  const idRecepta = idDe(nomOriginal);
+  const nomNou  = document.getElementById('edit-nom-' + domId).value.trim();
+  const cat     = document.getElementById('edit-cat-' + domId).value;
+  const font    = document.getElementById('edit-font-' + domId).value.trim();
+  const llibre  = document.getElementById('edit-llibre-' + domId).value.trim();
+  const url     = document.getElementById('edit-url-' + domId).value.trim();
+  const etiquetes = normalitzarEtiquetes(document.getElementById('edit-etiquetes-' + domId).value);
+  const instruccions = document.getElementById('edit-instruccions-' + domId).value.trim();
+  const comentaris = document.getElementById('edit-comentaris-' + domId).value.trim();
+  const racions = document.getElementById('edit-racions-' + domId)?.value || '';
 
   try {
-    const desat = await dbActualitzarRecepta(idRecepta, {
+    const desat = await dbActualitzarRecepta(r['_id'], {
       nom:          nomNou,
       categoria:    cat,
       ingredients:  ingJSON || '[]',
@@ -7118,35 +7139,28 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
     btn.disabled = false;
     btn.textContent = 'Desar canvis';
 
-    // Actualitzem la dada local per reflectir el canvi sense recarregar
-    const idx = receptes.findIndex(r => r['Nom de la recepta'] === nomOriginal);
-    if (idx !== -1) {
-      receptes[idx]['Nom de la recepta'] = nomNou;
-      receptes[idx]['Categoria']         = cat;
-      receptes[idx]['Ingredients']       = ingJSON || '[]';
-      receptes[idx]['Font']              = font;
-      receptes[idx]['Llibre']            = llibre;
-      receptes[idx]['URL']               = url;
-      receptes[idx]['Etiquetes']         = etiquetes;
-      receptes[idx]['Instruccions']      = instruccions;
-      receptes[idx]['Comentaris']        = comentaris;
-      if (racions) receptes[idx]['Racions'] = racions;
-    }
-
-    // Actualitzem el nom al Set d'oberts si ha canviat
-    if (nomNou !== nomOriginal) {
-      oberts.delete(nomOriginal);
-      oberts.add(nomNou);
-    }
+    // Actualitzem la dada local per reflectir el canvi sense recarregar.
+    // (El nom pot haver canviat i no passa res: tot el que apunta a la recepta
+    // —targeta desplegada, mode cuinar, racions, historial— ho fa per l'_id.)
+    r['Nom de la recepta'] = nomNou;
+    r['Categoria']         = cat;
+    r['Ingredients']       = ingJSON || '[]';
+    r['Font']              = font;
+    r['Llibre']            = llibre;
+    r['URL']               = url;
+    r['Etiquetes']         = etiquetes;
+    r['Instruccions']      = instruccions;
+    r['Comentaris']        = comentaris;
+    if (racions) r['Racions'] = racions;
 
     // El mode cuinar es reinicia en editar (els ingredients poden haver canviat)
-    delete cookState[nomOriginal];
-    delete racionsActual[nomOriginal];
-    cuinantActius.delete(nomOriginal);
+    delete cookState[id];
+    delete racionsActual[id];
+    cuinantActius.delete(id);
     gestionarWakeLock();
 
     // Des de la fitxa, la fitxa torna a ser la recepta, ja amb els canvis
-    if (esEdicioAlDetall(nomId)) obrirDetall(nomNou, true);
+    if (esEdicioAlDetall(domId)) obrirDetall(id, true);
 
     setTimeout(() => { construirFiltres(); aplicar(); }, 400);
   } catch (e) {
@@ -7157,42 +7171,41 @@ async function confirmarDesarEdicio(nomId, nomOriginal, ingJSON) {
 }
 
 // Genera les 5 estrelles clicables per a una recepta (usat a les cards i al detall)
-function starsInteractiusHTML(nom, valoracio) {
-  const nomJs = nom.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+function starsInteractiusHTML(id, valoracio) {
   return [1,2,3,4,5].map(i =>
-    `<span class="card-star${i <= valoracio ? '' : ' off'}" onclick="event.stopPropagation();valorar('${nomJs}',${i})" style="cursor:pointer">★</span>`
+    `<span class="card-star${i <= valoracio ? '' : ' off'}" onclick="event.stopPropagation();valorar('${id}',${i})" style="cursor:pointer">★</span>`
   ).join('');
 }
 
-async function valorar(nom, nova) {
-  const idx = receptes.findIndex(r => r['Nom de la recepta'] === nom);
-  if (idx === -1) return;
+async function valorar(id, nova) {
+  const r = receptaPerId(id);
+  if (!r) return;
+  id = String(r['_id']);
 
-  const actual = parseInt(receptes[idx]['Valoracio']) || 0;
+  const actual = parseInt(r['Valoracio']) || 0;
   const valoracio = nova === actual ? 0 : nova;
 
   // Les estrelles han de respondre al dit a l'instant, sense esperar la xarxa.
   // Per això es pinten primer i, si el desat falla, tornen on eren.
   const pintarEstrelles = v => {
-    const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
-    const starsEl = document.querySelector(`#card-${nomId} .card-stars`);
+    const starsEl = document.getElementById('card-' + id)?.querySelector('.card-stars');
     if (starsEl) {
-      starsEl.innerHTML = starsInteractiusHTML(nom, v);
+      starsEl.innerHTML = starsInteractiusHTML(id, v);
       starsEl.setAttribute('aria-label', `Valoració: ${v} de 5`);
     }
     // Si el panell de detall mostra aquesta recepta, sincronitzem també les seves estrelles
     const detallStarsEl = document.getElementById('detall-stars');
-    if (detallStarsEl && detallStarsEl.dataset.nom === nom) {
-      detallStarsEl.innerHTML = starsInteractiusHTML(nom, v);
+    if (detallStarsEl && detallStarsEl.dataset.id === id) {
+      detallStarsEl.innerHTML = starsInteractiusHTML(id, v);
       detallStarsEl.setAttribute('aria-label', `Valoració: ${v} de 5`);
     }
   };
 
-  receptes[idx]['Valoracio'] = String(valoracio);
+  r['Valoracio'] = String(valoracio);
   pintarEstrelles(valoracio);
 
-  if (!await dbActualitzarRecepta(idDe(nom), { valoracio: valoracio })) {
-    receptes[idx]['Valoracio'] = String(actual);
+  if (!await dbActualitzarRecepta(r['_id'], { valoracio: valoracio })) {
+    r['Valoracio'] = String(actual);
     pintarEstrelles(actual);
     return;
   }
@@ -7231,7 +7244,7 @@ function redimensionaImatge(file, maxDim, qualitat) {
 let cameraStream = null;
 let cameraFacingMode = 'environment';
 
-function obrirCamera(nomId, nom) {
+function obrirCamera(domId) {
   if (document.querySelector('.camera-overlay')) return;
   const overlay = document.createElement('div');
   overlay.className = 'camera-overlay';
@@ -7241,8 +7254,8 @@ function obrirCamera(nomId, nom) {
       <button class="camera-btn-close" onclick="tancarCamera()" aria-label="Tancar">
         <i class="ti ti-x" aria-hidden="true"></i>
       </button>
-      <button class="camera-btn-capture" onclick="capturarFoto('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')" aria-label="Fer foto"></button>
-      <button class="camera-btn-flip" onclick="canviarCamera('${nomId}','${nom.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')" aria-label="Girar càmera">
+      <button class="camera-btn-capture" onclick="capturarFoto('${domId}')" aria-label="Fer foto"></button>
+      <button class="camera-btn-flip" onclick="canviarCamera()" aria-label="Girar càmera">
         <i class="ti ti-switch-horizontal" aria-hidden="true"></i>
       </button>
     </div>
@@ -7278,7 +7291,7 @@ async function iniciarStream() {
   }
 }
 
-function canviarCamera(nomId, nom) {
+function canviarCamera() {
   cameraFacingMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
   iniciarStream();
 }
@@ -7289,7 +7302,7 @@ function tancarCamera() {
   if (overlay) overlay.remove();
 }
 
-async function capturarFoto(nomId, nom) {
+async function capturarFoto(domId) {
   const video = document.getElementById('camera-video');
   if (!video) return;
   const canvas = document.createElement('canvas');
@@ -7301,7 +7314,7 @@ async function capturarFoto(nomId, nom) {
     if (!blob) { mostrarToast('❌ Error en capturar la foto'); return; }
     const file = new File([blob], 'camera-foto.jpg', { type: 'image/jpeg' });
     const fakeInput = { files: [file], value: '' };
-    await pujarFotoRecepta(nomId, nom, fakeInput);
+    await pujarFotoRecepta(domId, fakeInput);
   }, 'image/jpeg', 0.92);
 }
 
@@ -7386,40 +7399,46 @@ function finalitzarCameraEscaner() {
 // (decisió del 26-08-2026): tocar-lo per canviar-la ja es va valorar i es va
 // deixar per a més endavant. La comprovació es fa aquí, en clicar, i no en
 // pintar el formulari, perquè el requadre canvia de contingut sense refer-lo.
-function triarFotoSiBuit(nomId) {
-  const prev = document.getElementById('foto-preview-' + nomId);
+function triarFotoSiBuit(domId) {
+  const prev = document.getElementById('foto-preview-' + domId);
   if (!prev || prev.querySelector('img')) return;
-  const input = document.getElementById('foto-input-' + nomId);
+  const input = document.getElementById('foto-input-' + domId);
   if (input) input.click();
 }
 
-async function pujarFotoRecepta(nomId, nom, input) {
+// domId és el del formulari on s'ha triat la foto (targeta o fitxa); la targeta
+// del receptari, que també s'actualitza, va sempre per l'_id pelat
+async function pujarFotoRecepta(domId, input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  const estat = document.getElementById('foto-estat-' + nomId);
+  const id = idDeDom(domId);
+  const r  = receptaPerId(id);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
+  const nom = r['Nom de la recepta'] || '';
+  const card = document.getElementById('card-' + id);
+  const estat = document.getElementById('foto-estat-' + domId);
   if (estat) estat.textContent = 'Processant la imatge…';
   try {
     const dataUrl = await redimensionaImatge(file, 1000, 0.82);
     // Previsualització immediata (optimista)
-    fotosLocals[nom] = dataUrl;
-    const prev = document.getElementById('foto-preview-' + nomId);
+    fotosLocals[id] = dataUrl;
+    const prev = document.getElementById('foto-preview-' + domId);
     if (prev) prev.innerHTML = `<img src="${dataUrl}" alt="Foto de ${escHTML(nom)}">`;
-    const treure = document.getElementById('foto-treure-' + nomId);
+    const treure = document.getElementById('foto-treure-' + domId);
     if (treure) treure.style.display = '';
-    const cardImg = document.querySelector('#card-' + nomId + ' .card-img');
+    const cardImg = card?.querySelector('.card-img');
     if (cardImg) cardImg.src = dataUrl;
-    const cardThumb = document.querySelector('#card-' + nomId + ' .card-thumb');
+    const cardThumb = card?.querySelector('.card-thumb');
     if (cardThumb) cardThumb.src = dataUrl;
-    else { const h = document.querySelector('#card-' + nomId + ' .card-header'); if (h) { const img = document.createElement('img'); img.className='card-thumb'; img.src=dataUrl; img.loading='lazy'; h.insertBefore(img, h.firstChild); } }
-    const cardFloat = document.querySelector('#card-' + nomId + ' .card-foto-float');
+    else { const h = card?.querySelector('.card-header'); if (h) { const img = document.createElement('img'); img.className='card-thumb'; img.src=dataUrl; img.loading='lazy'; h.insertBefore(img, h.firstChild); } }
+    const cardFloat = card?.querySelector('.card-foto-float');
     if (cardFloat) cardFloat.src = dataUrl;
-    else { const b = document.querySelector('#card-' + nomId + ' .card-body'); if (b) { const img = document.createElement('img'); img.className='card-foto-float'; img.src=dataUrl; img.loading='lazy'; b.querySelector('.card-top-row')?.after(img); } }
+    else { const b = card?.querySelector('.card-body'); if (b) { const img = document.createElement('img'); img.className='card-foto-float'; img.src=dataUrl; img.loading='lazy'; b.querySelector('.card-top-row')?.after(img); } }
     if (estat) estat.textContent = 'Desant la foto…';
     // Puja la foto al magatzem de Supabase i desa el seu enllaç a la recepta
-    const urlFoto = await dbPujarFoto(idDe(nom), dataUrl);
+    const urlFoto = await dbPujarFoto(r['_id'], dataUrl);
     if (!urlFoto) throw new Error('No s\'ha pogut desar la foto');
-    const ixFoto = receptes.findIndex(r => r['Nom de la recepta'] === nom);
-    if (ixFoto !== -1) receptes[ixFoto]['Foto'] = urlFoto;
+    r['Foto'] = urlFoto;
     if (estat) estat.textContent = '✅ Foto desada';
     mostrarToast('📷 Foto desada');
   } catch (e) {
@@ -7430,32 +7449,35 @@ async function pujarFotoRecepta(nomId, nom, input) {
   }
 }
 
-async function treureFotoRecepta(nomId, nom) {
+async function treureFotoRecepta(domId) {
+  const id = idDeDom(domId);
+  const r  = receptaPerId(id);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
   if (!await demanarConfirmacio({ titol: 'Treure la foto', text: 'Vols treure la foto d\'aquesta recepta?', boto: 'Treu-la' })) return;
-  const estat = document.getElementById('foto-estat-' + nomId);
+  const estat = document.getElementById('foto-estat-' + domId);
 
   // Aquí no cal fer veure que ja està fet: treiem la foto de debò primer i,
   // si no es pot, la imatge es queda on és i no hi ha res a desfer
   if (estat) estat.textContent = 'Traient la foto…';
-  const tret = await dbTreureFoto(idDe(nom)).catch(() => false);
+  const tret = await dbTreureFoto(r['_id']).catch(() => false);
   if (!tret) {
     if (estat) estat.textContent = '❌ No s\'ha pogut treure la foto';
     mostrarToast('❌ No s\'ha pogut treure la foto');
     return;
   }
 
-  fotosLocals[nom] = '';
-  const idx = receptes.findIndex(r => r['Nom de la recepta'] === nom);
-  if (idx !== -1) receptes[idx]['Foto'] = '';
-  const prev = document.getElementById('foto-preview-' + nomId);
+  fotosLocals[id] = '';
+  r['Foto'] = '';
+  const prev = document.getElementById('foto-preview-' + domId);
   if (prev) prev.innerHTML = `<span class="foto-preview-buida">Encara no hi ha foto</span>`;
-  const treure = document.getElementById('foto-treure-' + nomId);
+  const treure = document.getElementById('foto-treure-' + domId);
   if (treure) treure.style.display = 'none';
-  const cardImg = document.querySelector('#card-' + nomId + ' .card-img');
+  const card = document.getElementById('card-' + id);
+  const cardImg = card?.querySelector('.card-img');
   if (cardImg) cardImg.src = PLACEHOLDER_IMG;
-  const cardThumb = document.querySelector('#card-' + nomId + ' .card-thumb');
+  const cardThumb = card?.querySelector('.card-thumb');
   if (cardThumb) cardThumb.remove();
-  const cardFloat = document.querySelector('#card-' + nomId + ' .card-foto-float');
+  const cardFloat = card?.querySelector('.card-foto-float');
   if (cardFloat) cardFloat.remove();
   if (estat) estat.textContent = 'Foto treta';
   mostrarToast('Foto treta');
@@ -8688,8 +8710,8 @@ async function assegurarNomUsuaria() {
   return nom;
 }
 
-async function compartirRecepta(nom) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+async function compartirRecepta(id) {
+  const r = receptaPerId(id);
   if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
 
   const de = await assegurarNomUsuaria();
@@ -8945,7 +8967,7 @@ async function acceptarReceptaRebuda() {
     receptaRebuda = null;
     await carregar();
     mostrarToast(`✅ "${nom}" desada al receptari`);
-    obrirDetall(nom);
+    obrirDetall(nova.id);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Afegir-la al meu receptari'; }
     mostrarToast('❌ Error en desar: ' + e.message);
@@ -10079,12 +10101,16 @@ function amagarAutocomplete(suffix) {
 }
 
 // ── Salt des d'una idea cap a la recepta enllaçada al receptari ──
+// L'única porta que encara entra pel nom: el vincle d'una idea a la seva recepta
+// és un text amb el nom a la taula d'idees. Es resol a l'_id aquí mateix i a
+// partir d'aquí tot va per l'_id, com a la resta de l'app.
 function obrirReceptaPerNom(nom) {
-  const existeix = receptes.some(r => (r['Nom de la recepta'] || '') === nom);
-  if (!existeix) {
+  const r = receptes.find(x => (x['Nom de la recepta'] || '') === nom);
+  if (!r) {
     mostrarToast('La recepta enllaçada ja no existeix al receptari');
     return;
   }
+  const id = String(r['_id']);
 
   // Canvia al receptari
   mostrarPanell('cerca');
@@ -10102,13 +10128,12 @@ function obrirReceptaPerNom(nom) {
   document.querySelectorAll('.filtre').forEach(b => b.classList.toggle('actiu', b.dataset.cat === 'totes'));
 
   // Obre la card i renderitza
-  oberts.add(nom);
+  oberts.add(id);
   aplicar();
 
   // Desplaça fins a la recepta
   setTimeout(() => {
-    const nomId = nom.replace(/[^a-zA-Z0-9]/g, '_');
-    const card = document.getElementById('card-' + nomId);
+    const card = document.getElementById('card-' + id);
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 140);
 }
@@ -10194,7 +10219,7 @@ function inicialPlat(nom) {
 // al cercador de «Afegir plat», que ensenya receptes que encara no són enlloc.
 // La recepta pot ser null: és el cas d'un plat la recepta del qual s'ha esborrat.
 function miniRecepta(r, nom, classe) {
-  const foto = r ? ((nom in fotosLocals) ? fotosLocals[nom] : (r['Foto'] || '')) : '';
+  const foto = r ? ((String(r['_id']) in fotosLocals) ? fotosLocals[String(r['_id'])] : (r['Foto'] || '')) : '';
 
   if (foto) return `<img class="${classe}" src="${escHTML(foto)}" alt="">`;
 
@@ -10726,7 +10751,7 @@ function obrirReceptaDePlat(id) {
   if (!p) return;
   const r = receptaDePlat(p);
   if (!r) { mostrarToast('Aquesta recepta ja no és al receptari'); return; }
-  obrirDetall(r['Nom de la recepta'], false, 'menus');
+  obrirDetall(r['_id'], false, 'menus');
 }
 
 // ── Afegir un plat: cercador contra el receptari ──
@@ -10870,9 +10895,10 @@ async function afegirPlat(receptaId, opcions = {}) {
 
 let receptaAEnviar = null;   // { id, nom, racions } mentre el selector és obert
 
-async function obrirSelectorApat(nom) {
-  const r = receptes.find(x => x['Nom de la recepta'] === nom);
+async function obrirSelectorApat(id) {
+  const r = receptaPerId(id);
   if (!r) return;
+  id = String(r['_id']);
 
   // Des del receptari no hi ha context de setmana: agafem la que hi hagi oberta
   // a Planificació, que és l'única idea que té l'app de «la setmana que estic
@@ -10887,8 +10913,8 @@ async function obrirSelectorApat(nom) {
   // de sèrie: si l'has escalada a 6 perquè vénen convidats, va amb 6.
   receptaAEnviar = {
     id:      r['_id'],
-    nom:     nom,
-    racions: getRacionsActual(nom) || parseInt(r['Racions']) || null,
+    nom:     r['Nom de la recepta'] || '',
+    racions: getRacionsActual(id) || parseInt(r['Racions']) || null,
   };
 
   document.getElementById('apat-picker').classList.add('visible');
