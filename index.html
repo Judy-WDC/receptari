@@ -2663,7 +2663,7 @@
         <i class="ti ti-download" aria-hidden="true"></i>
         <span>
           <strong>Descarrega les teves receptes</strong>
-          <em id="btn-descarrega-nota">Un fitxer amb totes les receptes i idees, per llegir o imprimir. No inclou les fotografies.</em>
+          <em id="btn-descarrega-nota">S'obrirà el diàleg d'impressió: tria «Desa com a PDF». No inclou les fotografies.</em>
         </span>
       </button>
 
@@ -3858,8 +3858,8 @@ async function enviarAuth() {
 
 // ══════════════════════════════════════════════
 // DESCARREGAR UNA CÒPIA LLEGIBLE DEL RECEPTARI
-// Genera un únic fitxer HTML que s'obre amb doble clic,
-// es pot buscar amb Ctrl+F i imprimir o desar en PDF.
+// Genera el receptari en un iframe amagat i obre el diàleg
+// d'impressió perquè es pugui desar com a PDF.
 // ══════════════════════════════════════════════
 function escHtml(t) {
   return String(t == null ? '' : t)
@@ -3880,14 +3880,16 @@ function fitxaRecepta(r, i) {
   if (r['Llibre'])    dades.push(escHtml(r['Llibre']));
   if (r['URL'])       dades.push('<a href="' + escHtml(r['URL']) + '">' + escHtml(r['URL']) + '</a>');
 
-  const ings = getIngredientsParsed(r)
-    .map(ing => escHtml(renderScaledIngredientPlain(ing, 1)))
+  const ingsText = getIngredientsParsed(r)
+    .map(ing => renderScaledIngredientPlain(ing, 1))
     .filter(Boolean);
+  const ings = ingsText.map(escHtml);
+  const ingsDuesCol = ings.length > 1 && ingsText.every(t => t.length <= 40);
 
   let html = '<article id="r' + i + '">';
   html += '<h2>' + escHtml(r['Nom de la recepta'] || 'Sense nom') + '</h2>';
   if (dades.length) html += '<p class="meta">' + dades.join(' &middot; ') + '</p>';
-  if (ings.length) html += '<h3>Ingredients</h3><p class="cos">' + ings.join('<br>') + '</p>';
+  if (ings.length) html += '<h3>Ingredients</h3><p class="cos' + (ingsDuesCol ? ' dues-columnes' : '') + '">' + ings.join('<br>') + '</p>';
   if (r['Instruccions']) html += '<h3>Preparació</h3><p class="cos">' + liniesHtml(r['Instruccions']) + '</p>';
   if (r['Comentaris'] || r['Foto']) {
     html += '<div class="nota">';
@@ -3919,13 +3921,15 @@ async function descarregarReceptes() {
 
   const ara = new Date();
   const dataLlarga = ara.toLocaleDateString('ca-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  const dataCurta  = ara.toISOString().slice(0, 10);
 
   const recompte = [];
   if (receptes.length) recompte.push(receptes.length + (receptes.length === 1 ? ' recepta' : ' receptes'));
   if (idees.length)    recompte.push(idees.length + (idees.length === 1 ? ' idea' : ' idees'));
 
-  const index = receptes
+  const receptesOrdenades = [...receptes].sort((a, b) =>
+    (a['Nom de la recepta'] || '').localeCompare(b['Nom de la recepta'] || '', 'ca'));
+
+  const index = receptesOrdenades
     .map((r, i) => '<li><a href="#r' + i + '">' + escHtml(r['Nom de la recepta'] || 'Sense nom') + '</a></li>')
     .join('');
 
@@ -3944,13 +3948,14 @@ async function descarregarReceptes() {
     + 'nav li{font-size:13.5px;margin-bottom:4px;break-inside:avoid}'
     + 'nav a{color:#2c2c28;text-decoration:none}'
     + 'nav a:hover{text-decoration:underline}'
-    + 'article{margin-bottom:30px;padding-top:20px;border-top:1px solid #e2e0d8}'
-    + 'h2{color:#0B2027;font-size:19px;font-weight:600;margin:0 0 4px}'
+    + 'article{margin-bottom:30px;padding-top:20px}'
+    + 'h2{color:#0B2027;font-size:21px;font-weight:600;margin:0 0 4px}'
     + 'h3{color:#44443f;font-size:11px;letter-spacing:.08em;text-transform:uppercase;'
     + 'font-weight:600;margin:16px 0 6px}'
     + '.meta{color:#8a8a84;font-size:12px;margin:0}'
     + '.meta a{color:#8a8a84}'
     + '.cos{font-size:14px;margin:0;white-space:normal}'
+    + '.cos.dues-columnes{columns:2;column-gap:22px}'
     + '.nota{border-left:2px solid #d8d6cc;padding-left:12px;margin-top:14px;color:#6b6b66;font-size:13px}'
     + '.foto{font-size:11.5px;color:#8a8a84;word-break:break-all}'
     + '.foto a{color:#8a8a84}'
@@ -3963,21 +3968,30 @@ async function descarregarReceptes() {
     + '<p class="avis">Les fotografies no s\'inclouen en aquest fitxer. Cada recepta en conté l\'enllaç, '
     + 'que només funciona mentre el receptari segueixi actiu.</p>'
     + (index ? '<nav><h3>Índex</h3><ul>' + index + '</ul></nav>' : '')
-    + receptes.map(fitxaRecepta).join('')
+    + receptesOrdenades.map(fitxaRecepta).join('')
     + (idees.length ? '<div class="seccio"><h1>Idees</h1></div>' + idees.map(fitxaIdea).join('') : '')
     + '</body></html>';
 
-  const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'receptari-' + dataCurta + '.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.onload = () => {
+    const finestra = iframe.contentWindow;
+    const netejar = () => { if (iframe.parentNode) document.body.removeChild(iframe); };
+    finestra.addEventListener('afterprint', netejar);
+    finestra.focus();
+    finestra.print();
+    setTimeout(netejar, 60000);
+  };
+  iframe.srcdoc = doc;
+  document.body.appendChild(iframe);
 
   tancarConfigUrl();
-  mostrarToast('⬇️ Còpia descarregada');
+  mostrarToast('Tria «Desa com a PDF» al diàleg d\'impressió');
 }
 
 async function tancarSessio() {
