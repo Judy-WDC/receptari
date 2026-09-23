@@ -3908,10 +3908,10 @@ function fitxaIdea(idea) {
   const dades = [];
   if (idea['Etiquetes']) dades.push(escHtml(idea['Etiquetes']));
   if (idea['Recepta'])   dades.push('recepta: ' + escHtml(idea['Recepta']));
-  let html = '<article class="idea"><h2>' + escHtml(idea['Títol'] || 'Sense títol') + '</h2>';
-  if (dades.length) html += '<p class="meta">' + dades.join(' &middot; ') + '</p>';
-  if (idea['Comentari']) html += '<p class="cos">' + liniesHtml(idea['Comentari']) + '</p>';
-  return html + '</article>';
+  let html = '<div class="idea"><span class="idea-titol">' + escHtml(idea['Títol'] || 'Sense títol') + '</span>';
+  if (dades.length) html += '<span class="idea-meta"> — ' + dades.join(' &middot; ') + '</span>';
+  if (idea['Comentari']) html += '<p class="idea-comentari">' + liniesHtml(idea['Comentari']) + '</p>';
+  return html + '</div>';
 }
 
 async function descarregarReceptes() {
@@ -3960,6 +3960,10 @@ async function descarregarReceptes() {
     + '.foto{font-size:11.5px;color:#8a8a84;word-break:break-all}'
     + '.foto a{color:#8a8a84}'
     + '.seccio{border-top:2px solid #0B2027;margin-top:46px;padding-top:22px}'
+    + '.idea{margin-bottom:14px}'
+    + '.idea-titol{color:#0B2027;font-size:14px;font-weight:600}'
+    + '.idea-meta{color:#8a8a84;font-size:11.5px}'
+    + '.idea-comentari{color:#44443f;font-size:12px;margin:4px 0 0}'
     + '@media print{body{padding:0}nav{page-break-after:always}article{page-break-inside:avoid}}'
     + '</style></head><body>'
     + '<header><h1>El meu receptari</h1><p class="sub">'
