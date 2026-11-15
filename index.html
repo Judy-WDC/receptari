@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 196 · 21-09-2026                                     ║
+  ║  VERSIÓ 207 · 15-11-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
   que mana per decidir quan toca còpia. Cal actualitzar-lo aquí mateix.
 
   Còpia de seguretat cada 10 versions, amb el número al nom del fitxer:
-  l'última és la 195 (index-receptes-Supabase-195.html) i la següent, la 205.
+  l'última és la 205 (index-receptes-Supabase-205.html) i la següent, la 215.
   Documentació (funcionalitats-app-receptes) cada 25 versions: l'última va
   ser la número 3, a la versió 175; la següent, la 4, toca a la versió 200.
 
@@ -105,7 +105,7 @@
     cursor: pointer;
     color: var(--text-muted);
     font-family: 'Poppins', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 400;
     letter-spacing: 0.02em;
     transition: color 0.2s;
@@ -136,6 +136,7 @@
   header {
     text-align: center;
     margin-bottom: 2.5rem;
+    padding: 0 58px;
   }
 
   header h1 {
@@ -608,7 +609,7 @@
   .ck-progress-text { font-size: 11px; color: var(--text-muted); }
   .ck-reinicia {
     background: none; border: none; color: var(--text-muted);
-    font-family: 'Poppins', sans-serif; font-size: 11px; cursor: pointer;
+    font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer;
     padding: 0;
   }
   .ck-reinicia:hover { color: var(--text-dim); }
@@ -694,7 +695,7 @@
     line-height: 1; display: block;
   }
   .racions-label {
-    font-size: 11px; color: var(--text-muted);
+    font-size: 12px; color: var(--text-muted);
     letter-spacing: 0.04em; margin-top: 1px;
   }
   .racions-stepper.cuinant { opacity: 0.3; pointer-events: none; }
@@ -1115,7 +1116,7 @@
   .card-edit-group input[type=number],
   .card-edit-group select,
   .card-edit-group textarea {
-    font-size: 0.82rem; padding: 0.45rem 0.75rem;
+    font-size: 1rem; padding: 0.45rem 0.75rem;
     border: 1.5px solid var(--border-dim);
     border-radius: 8px; font-family: 'Poppins', sans-serif;
     background: var(--bg); color: var(--text);
@@ -1240,9 +1241,9 @@
   .btn-nova-idea {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 0.6rem 1.1rem; margin-bottom: 1.25rem;
-    background: var(--accent2); border: 1.5px solid var(--accent2);
+    background: var(--accent); border: 1.5px solid var(--accent);
     border-radius: 999px; font-family: 'Poppins', sans-serif;
-    font-size: 0.85rem; font-weight: 500; color: var(--text);
+    font-size: 0.85rem; font-weight: 500; color: var(--bg);
     cursor: pointer; transition: filter 0.15s, transform 0.1s;
   }
   .btn-nova-idea:hover { filter: brightness(1.08); }
@@ -1351,13 +1352,6 @@
     font-size: 13px; color: var(--text-muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .detall-header-icons { display: flex; gap: 10px; }
-  .detall-header-icons button {
-    background: none; border: none; cursor: pointer;
-    color: var(--text-muted); font-size: 18px; padding: 4px;
-    display: flex; align-items: center;
-  }
-  .detall-header-icons button:hover { color: var(--text); }
   .detall-hero {
     width: 100%; height: 240px; object-fit: cover;
     display: block; background: var(--surface2);
@@ -1401,6 +1395,11 @@
   .btn-compartir-meta { margin-left: auto; }
   .btn-compartir-meta ~ .btn-cuinar-detall-meta { margin-left: 0; }
   .btn-cuinar-detall-meta.actiu { background: var(--accent); color: var(--bg); }
+  /* Les icones van juntes: si no caben al costat de les etiquetes, baixen
+     totes alhora a la línia següent, en lloc de partir-se */
+  .detall-meta-accions {
+    display: flex; align-items: center; gap: 10px; margin-left: auto;
+  }
   /* ── Una recepta que t'han enviat ── */
   .rebuda-marca {
     display: flex; align-items: center; gap: 8px;
@@ -1534,9 +1533,9 @@
       background: var(--accent); color: var(--bg); border-color: var(--accent);
     }
     .detall-title-actions button svg { width: 18px; height: 18px; display: block; }
-    .detall-meta .btn-cuinar-detall-meta { display: none; }
-    .detall-meta .btn-compartir-meta { display: none; }  /* a l'ordinador ja és a dalt */
-    .detall-header-icons { display: none; }
+    /* Les quatre icones de la filera d'etiquetes són per al mòbil: a
+       l'ordinador ja són totes a dalt, al costat del títol */
+    .detall-meta-accions { display: none; }
     .detall-dos-cols {
       flex-direction: row; gap: 0;
       margin-top: 1rem; padding-top: 0;
@@ -1548,7 +1547,14 @@
       flex: 1; padding-left: 1.5rem;
     }
     .detall-contingut { max-width: 900px; }
-    .detall-hero { height: 300px; }
+    /* A l'ordinador la foto no va de banda a banda: fa l'amplada del text i
+       queda alineada amb ell. De banda a banda, d'una foto normal només se'n
+       veia una franja. */
+    .detall-hero, .detall-hero-placeholder {
+      width: calc(100% - 3rem); max-width: 852px;
+      margin: 0 auto; border-radius: 16px;
+    }
+    .detall-hero { height: 340px; }
     .detall-hero-placeholder { height: 220px; }
     .detall-btn-cuinar { max-width: 280px; }
     /* Nom de recepta més gran */
@@ -1658,7 +1664,9 @@
      d'ull, no una imatge per mirar. */
   .dia-resum.tires { display: flex; flex-direction: column; gap: 8px; }
   .resum-tira { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .resum-tira .apat-etiq { margin-right: 1px; }
+  /* «Dinar» i «Sopar» ocupen el mateix, perquè les rodones de les dues files
+     comencin al mateix lloc */
+  .resum-tira .apat-etiq { margin-right: 1px; min-width: 38px; }
   .tira-mini {
     width: 23px; height: 23px; border-radius: 50%; flex-shrink: 0;
     object-fit: cover; background: var(--surface2);
@@ -2110,7 +2118,6 @@
   /* Amb quatre botons a la barra, les etiquetes no s'han de partir mai */
   .bottom-nav-item span { white-space: nowrap; }
   @media (max-width: 380px) {
-    .bottom-nav-item { font-size: 0.65rem; }
     .bottom-nav-item i { font-size: 20px; }
   }
 
@@ -2333,10 +2340,14 @@
   .compte-opcio:hover strong { color: var(--accent); }
   .compte-opcio:disabled { cursor: default; opacity: 0.55; }
   .compte-opcio:disabled:hover strong { color: var(--text); }
-  /* Botó d'engranatge per canviar d'usuària */
+  /* Botó d'engranatge per canviar d'usuària: a la cantonada de dalt de tots
+     els panells (no forma part de la capçalera de cap d'ells). Es desplaça amb
+     la pàgina: quan era fix, quedava a sobre del que hi passava per sota. */
   .btn-config-url {
+    position: absolute; top: 10px; right: 10px; z-index: 90;
+    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
     background: none; border: none; color: var(--text-muted); cursor: pointer;
-    font-size: 16px; padding: 4px 6px; border-radius: 6px;
+    font-size: 18px; border-radius: 50%;
     transition: color 0.2s;
   }
   .btn-config-url:hover { color: var(--accent); }
@@ -2593,9 +2604,45 @@
     letter-spacing: 0.08em;
     opacity: 0.6;
   }
+
+  /* ══════════════════════════════════════
+     ZONES TOCABLES
+     Els botons petits es queden de la mida que tenen, però el dit hi troba
+     més lloc: un coixí invisible al voltant, fins als 44 px recomanats allà
+     on els veïns ho permeten. On n'hi ha un altre a tocar, el coixí arriba
+     només fins a mig camí, perquè no es trepitgin. La creu de treure un plat
+     ja tenia el seu coixí, a la seva pròpia regla. No canvia res del que es veu.
+     ══════════════════════════════════════ */
+  .btn-enviar-menus-meta, .btn-cuinar-detall-meta, .racions-btn,
+  #detall-stars .card-star, .eq-btn, .ck-reinicia, .setmana-nav button,
+  .apat-back, .avis-reordenar-x, .plat-rac button, .compra-canvia,
+  .card-top-right .btn-editar, .compte-tanca { position: relative; }
+
+  .btn-enviar-menus-meta::after, .btn-cuinar-detall-meta::after, .racions-btn::after,
+  #detall-stars .card-star::after, .eq-btn::after, .ck-reinicia::after,
+  .setmana-nav button::after, .apat-back::after, .avis-reordenar-x::after,
+  .plat-rac button::after, .compra-canvia::after,
+  .card-top-right .btn-editar::after, .compte-tanca::after {
+    content: ''; position: absolute;
+  }
+  .btn-enviar-menus-meta::after,
+  .btn-cuinar-detall-meta::after      { inset: -8px -5px; }
+  .racions-btn::after                 { inset: -5px; }
+  #detall-stars .card-star::after     { inset: -14px -1px; }
+  .eq-btn::after                      { inset: -6px; }
+  .ck-reinicia::after                 { inset: -14px -6px; }
+  .setmana-nav button::after          { inset: -6px; }
+  .apat-back::after                   { inset: -7px; }
+  .avis-reordenar-x::after            { inset: -13px; }
+  .plat-rac button::after             { inset: 0 -4px -12px; }
+  .compra-canvia::after               { inset: -13px -6px; }
+  .card-top-right .btn-editar::after  { inset: -10px; }
+  .compte-tanca::after                { inset: -12px; }
 </style>
 </head>
 <body>
+
+<button class="btn-config-url" onclick="obrirConfigUrl()" title="El teu compte" aria-label="El teu compte"><i class="ti ti-settings"></i></button>
 
 <!-- Suggeriments d'autocompletat per al camp "Llibre" (títols ja fets servir) -->
 <datalist id="dl-llibres"></datalist>
@@ -3095,7 +3142,6 @@ function tancarNovetats() {
   <header>
     <h1>Què vols cuinar avui?</h1>
     <p id="subtitol">Carregant...</p>
-    <button class="btn-config-url" onclick="obrirConfigUrl()" title="El teu compte" aria-label="El teu compte"><i class="ti ti-settings"></i></button>
   </header>
 
   <div class="container">
@@ -3106,7 +3152,7 @@ function tancarNovetats() {
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input type="text" id="cerca" placeholder="Cerca per nom o ingredient..." oninput="onCercaInput()" onkeydown="if(event.key==='Enter')this.blur()" />
+        <input type="text" id="cerca" placeholder="Cerca per nom o ingredient" oninput="onCercaInput()" onkeydown="if(event.key==='Enter')this.blur()" />
         <button class="btn-clear-cerca" id="btnClearCerca" onclick="netejarCerca()" aria-label="Esborrar cerca">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -3156,7 +3202,7 @@ function tancarNovetats() {
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
-      <input type="text" id="cerca-idees" placeholder="Cerca per títol, etiqueta o comentari..." oninput="onCercaIdeesInput()" onkeydown="if(event.key==='Enter')this.blur()" />
+      <input type="text" id="cerca-idees" placeholder="Cerca per títol o etiqueta" oninput="onCercaIdeesInput()" onkeydown="if(event.key==='Enter')this.blur()" />
       <button class="btn-clear-cerca" id="btnClearCercaIdees" onclick="netejarCercaIdees()" aria-label="Esborrar cerca">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
@@ -3258,7 +3304,7 @@ function tancarNovetats() {
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
       </svg>
-      <input type="text" id="plat-cerca" autocomplete="off" placeholder="Comença a escriure el nom d'una recepta…"
+      <input type="text" id="plat-cerca" autocomplete="off" placeholder="Escriu el nom d'una recepta…"
         oninput="pintarResultatsPlat(this.value)">
     </div>
     <div class="plat-picker-llista" id="plat-resultats"></div>
@@ -5811,11 +5857,6 @@ function obrirDetall(id, desDePopstate, origen) {
         <i class="ti ti-arrow-left" aria-hidden="true"></i>
         <span class="detall-header-text">${origenDetall === 'menus' ? 'Tornar als menús' : 'Tornar al receptari'}</span>
       </button>
-      <div class="detall-header-icons">
-        <button onclick="detallEditar('${id}')" title="Editar recepta" aria-label="Editar recepta">
-          <i class="ti ti-edit" aria-hidden="true"></i>
-        </button>
-      </div>
     </div>
     ${heroHTML}
     <div class="detall-contingut">
@@ -5828,6 +5869,7 @@ function obrirDetall(id, desDePopstate, origen) {
             ${fontHTML}
             ${llibreHTML}
             ${etHTML}
+            <div class="detall-meta-accions">
             <button class="btn-enviar-menus-meta btn-compartir-meta" onclick="compartirRecepta('${id}')" title="Enviar la recepta a algú" aria-label="Enviar la recepta a algú">
               <i class="ti ti-share-2" aria-hidden="true"></i>
             </button>
@@ -5837,6 +5879,10 @@ function obrirDetall(id, desDePopstate, origen) {
             <button class="btn-enviar-menus-meta" onclick="obrirSelectorApat('${id}')" title="Enviar als menús" aria-label="Enviar als menús">
               <i class="ti ti-calendar-plus" aria-hidden="true"></i>
             </button>
+            <button class="btn-enviar-menus-meta btn-editar-meta" onclick="detallEditar('${id}')" title="Editar recepta" aria-label="Editar recepta">
+              <i class="ti ti-edit" aria-hidden="true"></i>
+            </button>
+            </div>
           </div>
         </div>
         <div class="detall-title-actions">
