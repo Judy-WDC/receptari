@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 207 · 15-11-2026                                     ║
+  ║  VERSIÓ 208 · 18-11-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -8018,6 +8018,9 @@ function fusionarReceptes(receptes) {
     racions:      primer('racions'),
     ingredients:  unir('ingredients'),
     instruccions: unir('instruccions'),
+    // El text sense lloc de totes les fotos, junt, perquè vagi al final de tot
+    // i no enmig dels passos de la foto següent (v208)
+    sobrant:      receptes.flatMap(r => (r && r.sobrant) || []),
   };
 }
 
@@ -8026,7 +8029,7 @@ async function processarImatge(item) {
   const { idx, file } = item;
   setEstat(idx, 'Extraient text de la imatge…');
   setBadge(idx, 'processant', 'Escannejant…');
-  const recepta = await receptaDesDeImatge(file, idx);
+  const recepta = afegirTextSenseLloc(await receptaDesDeImatge(file, idx));
   omplirFormRecepta(idx, recepta);
   item.recepta = recepta; item.status = 'fet';
   setBadge(idx, 'fet', '✓ Escannejat');
@@ -8043,7 +8046,7 @@ async function processarGrupImatges(item) {
     setEstat(idx, `Llegint foto ${i + 1} de ${files.length}…`);
     receptes.push(await receptaDesDeImatge(files[i], idx));
   }
-  const recepta = fusionarReceptes(receptes);
+  const recepta = afegirTextSenseLloc(fusionarReceptes(receptes));
   omplirFormRecepta(idx, recepta);
   item.recepta = recepta; item.status = 'fet';
   setBadge(idx, 'fet', `✓ ${files.length} fotos unides`);
@@ -8198,7 +8201,25 @@ const VERBS_CUINA_EN = new Set([
   'roll','rub','saute','scatter','scoop','scrape','sear','season','separate','serve',
   'set','shape','shred','sieve','sift','simmer','slice','soak','spoon','spread',
   'sprinkle','squeeze','steam','stir','strain','stuff','sweat','taste','tip','toast',
-  'top','toss','transfer','turn','warm','wash','whisk','whip','wrap','zest'
+  'top','toss','transfer','turn','warm','wash','whisk','whip','wrap','zest',
+  // v208: els que faltaven a la foto dels Miso noodles («Start by making the
+  // broth», «Leave to simmer») i uns quants més d'habituals. A posta NO hi
+  // són «pat» ni «rest»: «pat of butter» o «rest of the…» obren ingredients.
+  'start','begin','leave','put','make','use','pulse','process','pop','squash',
+  'halve','quarter','soften','thicken','defrost','thaw','check','finish'
+]);
+
+// Verbs de cuina en català, en imperatiu de «tu» («Talla la ceba», «Posa
+// l'oli»), que és com escriuen molts llibres d'ara. L'imperatiu de vosaltres
+// (talleu, poseu) i l'infinitiu (tallar) ja els reconeix una regla a esVerbCuina.
+// Sense accents ni ç: esVerbCuina els treu abans de comparar («comença» → «comenca»).
+const VERBS_CUINA_CA = new Set([
+  'talla','posa','afegeix','barreja','tritura','renta','retira','escalfa','bull',
+  'remena','cou','fregeix','enforna','pela','pica','ratlla','fon','cobreix','deixa',
+  'escorre','serveix','reserva','decora','salpebra','sofregeix','aboca','unta',
+  'tapa','destapa','escalda','bat','mescla','incorpora','reparteix','guarda',
+  'refreda','empolvora','amassa','estira','torra','daura','omple','treu','esbandeix',
+  'sala','prepara','comenca','continua','abaixa','apuja','apaga','encen'
 ]);
 
 // Verbs de cuina en castellà: imperatiu de "tú" i altres formes habituals que
@@ -8210,7 +8231,12 @@ const VERBS_CUINA_ES = new Set([
   'incorpora','reserva','tamiza','reparte','decora','clava','unta','engrasa','amasa',
   'pela','corta','pica','trocea','ralla','derrite','funde','monta','cuece','hierve',
   'sofrie','frie','saltea','remueve','remoja','escurre','cuela','sirve','espolvorea',
-  'rellena','cubre','coloca','vaciamos','usa','coce','deja','pon','pica','trocea'
+  'rellena','cubre','coloca','vaciamos','usa','coce','deja','pon','pica','trocea',
+  // v208: més imperatius de «tú»
+  'lava','retira','tritura','sazona','salpimienta','cocina','enfria','tapa',
+  'destapa','aparta','escalda','licua','dora','rehoga','introduce','saca','mete',
+  'guarda','emplata','enciende','prepara','limpia','empieza','comienza','sigue',
+  'continua','tuesta','alina','extiende','forma','refrigera','congela'
 ]);
 
 // Un "verb de cuina": imperatiu de vosaltres (peleu, salteu-hi, tapeu-les...),
@@ -8221,8 +8247,9 @@ function esVerbCuina(paraula) {
   if (/^[a-zà-ú·ç]+(eu|iu)(-[a-zà-ú·]+)?$/.test(p)) return true;   // imperatiu (+pronom)
   if (/^[a-zà-ú·ç]{3,}(ar|er|re|ir)(-[a-zà-ú·]+)?$/.test(p)) return true; // infinitiu
   if (/^[a-zà-úñç]{2,}(amos|emos|imos)$/.test(p)) return true;     // castellà "nosotros" (precalentamos…)
-  const net = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); // "Preheat," / "Precalienta:" → net
-  if (net && (VERBS_CUINA_EN.has(net) || VERBS_CUINA_ES.has(net))) return true; // anglès o castellà
+  // El pronom enganxat fora abans de comparar: «Tritura-ho», «Posa-la», «Posa'l» → el verb sol (v208)
+  const net = p.split(/[-'’]/)[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, ''); // "Preheat," / "Precalienta:" → net
+  if (net && (VERBS_CUINA_EN.has(net) || VERBS_CUINA_ES.has(net) || VERBS_CUINA_CA.has(net))) return true; // anglès, castellà o català
   return false;
 }
 
@@ -8388,6 +8415,27 @@ function extraccioLocal(text, fontDefecte) {
     const m = lines[i].match(/^([1-9]\d?)[\.\)]?\s+(\S+)/);
     if (m && parseInt(m[1]) === 1 && esVerbCuina(m[2])) { idxPrimerPas = i; break; }
   }
+  // Pla A2 (v208): passos numerats, sigui quin sigui el verb. L'OCR de Google
+  // lliura cada paràgraf en una línia, i «1. Start by making the broth…» no
+  // passava el pla A perquè «Start» no era a la llista: els cinc passos es
+  // quedaven amb els ingredients i el filtre de frases llargues els llençava.
+  // Perquè un ingredient no s'hi confongui («4 sweet potato, cut into bite sized
+  // chunks», «2 garlic cloves, crushed»), es demana tot això alhora:
+  //   · un «1.» o «1)» amb el punt o el parèntesi —els ingredients no en porten—,
+  //   · que el que ve darrere no comenci per una xifra («1. 200 g de farina»),
+  //   · que sigui una frase de debò (40 caràcters o més),
+  //   · i que més avall hi hagi el «2.» o el «2)».
+  // El reconeixement pel verb (pla A, i els B i C de sota) es manté: aquest
+  // només entra quan el pla A no ha trobat res.
+  if (idxPrimerPas === -1) {
+    const reNumPas = n => new RegExp('^' + n + '\\s*[\\.\\)]\\s+(\\D.*)$');
+    for (let i = 0; i < lines.length; i++) {
+      const m1 = lines[i].match(reNumPas(1));
+      if (!m1 || m1[1].trim().length < 40) continue;
+      const hiHaElDos = lines.slice(i + 1).some(l => reNumPas(2).test(l));
+      if (hiHaElDos) { idxPrimerPas = i; break; }
+    }
+  }
   // Pla B: sense numeració, busquem la primera frase que comenci amb un verb
   // imperatiu de cuina ("Renteu les verdures i talleu-les...")
   if (idxPrimerPas === -1) {
@@ -8477,6 +8525,7 @@ function extraccioLocal(text, fontDefecte) {
   const fiIng    = ingDespres ? fiCos : (idxInstr !== -1 ? idxInstr : fiCos);
   let racions = '';
   let candidats = [];
+  const sobrant = [];   // el text llarg que no és cap ingredient (v208)
   for (let i = iniciIng; i < fiIng; i++) {
     if (i === idxCapInstr) continue;
     let l = corregirUnMalLlegit(lines[i].replace(/^[\-–—•*·]\s*/, '').trim());
@@ -8507,14 +8556,19 @@ function extraccioLocal(text, fontDefecte) {
     // (la lletra ha d'anar darrere d'una paraula, no d'un número: així
     //  "Xocolata negra 200 g" es queda, que la "g" hi és a posta)
     if (/[a-zà-úç]\s[b-df-hj-np-tv-xzç]$/i.test(l)) continue;
-    // Descarta la descripció d'entrada: frases llargues acabades en punt
-    if (l.length >= 45 && /\.\s*$/.test(l)) continue;
-    if (l.length >= 60 && /\.\s+[A-ZÀ-Ú]/.test(l)) continue; // diverses frases seguides
+    // Descarta la descripció d'entrada: frases llargues acabades en punt.
+    // (v208) No es llença: es guarda a «sobrant» i, si ve d'una foto, va al
+    // final dels passos amb un rètol (afegirTextSenseLloc). Així, si uns passos
+    // no s'han reconegut, no es perden sense avisar.
+    // (Es guarda la línia tal com ha arribat: corregirUnMalLlegit, pensat per a
+    //  les quantitats, convertiria «I love a bowl…» en «1 love a bowl…».)
+    if (l.length >= 45 && /\.\s*$/.test(l)) { sobrant.push(lines[i].trim()); continue; }
+    if (l.length >= 60 && /\.\s+[A-ZÀ-Ú]/.test(l)) { sobrant.push(lines[i].trim()); continue; } // diverses frases seguides
     // Primer separem els ingredients que l'OCR ha enganxat en una sola línia i
     // NOMÉS DESPRÉS mirem la llargada: si no, un bloc de sis ingredients seguits
     // passa dels 120 caràcters i es perden tots de cop.
     for (const tros of separarIngredientsEnganxats(l)) {
-      if (tros.length > 120) continue;             // això sí que és un paràgraf
+      if (tros.length > 120) { sobrant.push(tros); continue; } // això sí que és un paràgraf
       candidats.push(corregirUnMalLlegit(tros));   // i el de darrere d'un tall, també
     }
   }
@@ -8531,7 +8585,25 @@ function extraccioLocal(text, fontDefecte) {
   const ingredients = candidats.length > 0 ? candidats.join(' · ') : lines.slice(1, 8).join(' · ');
 
   const font = detectarFont(linesOriginals, fontDefecte);
-  return { nom, ingredients, instruccions, racions, font };
+  return { nom, ingredients, instruccions, racions, font, sobrant };
+}
+
+// ── El text d'una foto que no ha anat enlloc, al final dels passos (v208) ──
+// extraccioLocal deixa a «sobrant» les frases llargues que no són ingredients:
+// la presentació del llibre o, si no s'han reconegut, uns passos sencers. Abans
+// es llençaven sense avisar. Ara van al final de les instruccions, sota un
+// rètol, i a la pantalla de revisió es veu què és i es pot esborrar o moure.
+// Només per a les fotos: als enllaços i als documents, el que queda fora és
+// sobretot publicitat i menús de la pàgina, i allà sí que es llença.
+// Rètol aprovat per la Judy el 18-11-2026.
+const RETOL_TEXT_SENSE_LLOC = 'Text de la foto que l\'aplicació no sap on ubicar';
+function afegirTextSenseLloc(recepta) {
+  const sobrant = (recepta && recepta.sobrant) || [];
+  if (recepta) delete recepta.sobrant;
+  if (!sobrant.length) return recepta;
+  const bloc = '—\n' + RETOL_TEXT_SENSE_LLOC + '\n' + sobrant.join('\n');
+  recepta.instruccions = recepta.instruccions ? recepta.instruccions + '\n\n' + bloc : bloc;
+  return recepta;
 }
 
 // ── Desar a Google Sheets ──
