@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════╗
-  ║  VERSIÓ 208 · 18-11-2026                                     ║
+  ║  VERSIÓ 209 · 18-11-2026                                     ║
   ╚══════════════════════════════════════════════════════════════╝
   Aquest és el fitxer viu de l'app: sempre conté els últims canvis.
   El número de dalt s'apuja UNA unitat per cada tanda de canvis, i és el
@@ -1506,6 +1506,32 @@
     margin-bottom: 8px;
   }
   .detall-ing-header .detall-seccio-label { margin-bottom: 0; }
+
+  /* ── Una secció buida de la fitxa (v209): el text i les dues píndoles,
+        les mateixes d'«Afegir racions» ── */
+  .seccio-buida-text { font-size: 13px; color: var(--text-muted); font-style: italic; margin-bottom: 10px; }
+  .seccio-buida-pindoles { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seccio-buida-pindoles .racions-pindola { font-family: 'Poppins', sans-serif; min-height: 36px; }
+
+  /* ── La revisió del text d'una foto abans d'afegir-lo (v209) ── */
+  .revisio-part-titol {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.3rem; font-weight: 400; color: var(--text);
+    line-height: 1.3; margin-bottom: 14px;
+  }
+  .revisio-part-foto {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; font-size: 12px; color: var(--text-muted);
+  }
+  .revisio-part-foto img {
+    width: 48px; height: 48px; object-fit: cover; border-radius: 8px;
+    border: 1px solid var(--border-dim); background: var(--surface2);
+  }
+  .revisio-part-ajuda { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+  .revisio-part textarea { min-height: 300px; font-size: 14px; line-height: 1.6; }
+  .revisio-part textarea:disabled { opacity: 0.7; }
+  .revisio-part-botons { display: flex; gap: 10px; margin-top: 16px; }
+  .revisio-part-botons .btn-primary { flex: 1.4; }
 
   /* ── Només mòbil: el botó "Mode cuinar" al final del detall,
         després de les instruccions i els comentaris ── */
@@ -5766,7 +5792,14 @@ function obrirDetall(id, desDePopstate, origen) {
     </div>`;
   }
 
-  const ingSecHTML = ckTotal ? `<div class="detall-seccio">
+  // v209: si no hi ha ingredients, la secció surt igualment, buida, amb les
+  // dues maneres d'omplir-la (seccioBuidaHTML)
+  const ingSecHTML = !ckTotal ? `<div class="detall-seccio">
+    <div class="detall-ing-header">
+      <div class="detall-seccio-label">Ingredients</div>
+    </div>
+    ${seccioBuidaHTML(id, 'ing')}
+  </div>` : `<div class="detall-seccio">
     <div class="detall-ing-header">
       <div class="detall-seccio-label">Ingredients</div>
       ${racionsHTML}
@@ -5793,7 +5826,7 @@ function obrirDetall(id, desDePopstate, origen) {
         </div>`;
       }).join('')}
     </div>
-  </div>` : '';
+  </div>`;
 
   const passos = instruccions ? instruccions.split('\n').filter(Boolean) : [];
   const ckPassosTotal = passos.length;
@@ -5821,7 +5854,10 @@ function obrirDetall(id, desDePopstate, origen) {
            }).join('')}
          </div>
        </div>`
-    : '';
+    : `<div class="detall-seccio detall-instruccions">
+         <div class="detall-seccio-label">Instruccions</div>
+         ${seccioBuidaHTML(id, 'instr')}
+       </div>`;
 
   const comHTML = comentaris
     ? `<div class="detall-seccio">
@@ -7062,6 +7098,166 @@ function cancelarEdicioDetall(id) {
   obrirDetall(id, true);
 }
 
+// ── Afegir una part a una recepta ja entrada (v209) ──
+// Si a la fitxa falten els ingredients o les instruccions, la secció surt
+// igualment amb dues píndoles: «Afegir des d'una foto» i «Escriure-les».
+// Amb la foto, TOT el text va a la part triada: l'ha triada ella, i l'app no
+// ha d'endevinar on comencen els passos (així no es perd res, com va passar
+// amb els Miso noodles). Ho revisa abans d'afegir-ho, i no se substitueix
+// mai res: s'afegeix al final. (Mockup aprovat per la Judy, 18-11-2026.)
+function seccioBuidaHTML(id, part) {
+  const esIng = part === 'ing';
+  return `<div class="seccio-buida">
+    <div class="seccio-buida-text">${esIng ? 'Encara no hi ha ingredients' : 'Encara no hi ha instruccions'}</div>
+    <div class="seccio-buida-pindoles">
+      <button type="button" class="racions-pindola" onclick="afegirPartDesDeFoto('${id}','${part}')">
+        <span class="racions-pindola-icon"><i class="ti ti-camera" aria-hidden="true"></i></span>
+        <span class="racions-pindola-text">Afegir des d'una foto</span>
+      </button>
+      <button type="button" class="racions-pindola" onclick="escriurePart('${id}','${part}')">
+        <span class="racions-pindola-icon"><i class="ti ti-pencil" aria-hidden="true"></i></span>
+        <span class="racions-pindola-text">${esIng ? 'Escriure\'ls' : 'Escriure-les'}</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+// «Escriure-les»: el formulari d'edició de la fitxa, amb el cursor a la part buida
+function escriurePart(id, part) {
+  const r = receptaPerId(id);
+  if (!r) return;
+  id = String(r['_id']);
+  detallEditar(id);
+  const camp = document.getElementById((part === 'ing' ? 'edit-ing-' : 'edit-instruccions-') + id + SUFIX_EDICIO_DETALL);
+  if (camp) { camp.scrollIntoView({ block: 'center' }); camp.focus(); }
+}
+
+// «Afegir des d'una foto»: el mòbil obre el seu selector (càmera o galeria)
+function afegirPartDesDeFoto(id, part) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (file) revisarPartDesDeFoto(id, part, file);
+  });
+  input.click();
+}
+
+// La revisió en curs. Si es torna a la recepta mentre es llegeix la foto, el
+// resultat que arribi després ja no ha de pintar res.
+let revisioPartActual = null;
+
+async function revisarPartDesDeFoto(id, part, file) {
+  const r = receptaPerId(id);
+  if (!r) return;
+  id = String(r['_id']);
+  const esIng = part === 'ing';
+  const revisio = {};
+  revisioPartActual = revisio;
+  const urlFoto = URL.createObjectURL(file);
+
+  const panell = document.getElementById('panell-detall');
+  panell.innerHTML = `
+    <div class="detall-header">
+      <button class="detall-header-back" onclick="tancarRevisioPart('${id}')">
+        <i class="ti ti-arrow-left" aria-hidden="true"></i>
+        <span class="detall-header-text">Tornar a la recepta</span>
+      </button>
+    </div>
+    <div class="detall-contingut revisio-part">
+      <div class="revisio-part-titol">${esIng ? 'Revisa els ingredients abans d\'afegir-los' : 'Revisa les instruccions abans d\'afegir-les'}</div>
+      <div class="revisio-part-foto">
+        <img src="${urlFoto}" alt="">
+        <span>La foto que has fet</span>
+      </div>
+      <div class="revisio-part-ajuda">${esIng ? 'Esborra el que no siguin ingredients.' : 'Esborra el que no siguin instruccions.'}</div>
+      <div class="card-edit-group">
+        <textarea id="revisio-part-text" rows="12" disabled placeholder="Llegint la foto…"></textarea>
+      </div>
+      <div class="revisio-part-botons">
+        <button class="btn-secondary" onclick="tancarRevisioPart('${id}')">Cancel·lar</button>
+        <button class="btn-primary" id="revisio-part-btn" disabled onclick="desarPartAfegida('${id}','${part}')">Afegir a la recepta</button>
+      </div>
+    </div>`;
+  window.scrollTo(0, 0);
+
+  let text;
+  try {
+    text = await textDeFoto(file);
+  } catch (e) {
+    console.warn('No s\'ha pogut llegir la foto:', e.message);
+    if (revisioPartActual !== revisio) return;
+    revisioPartActual = null;
+    obrirDetall(id, true);
+    mostrarToast('❌ No s\'ha pogut llegir la fotografia');
+    return;
+  }
+  if (revisioPartActual !== revisio) return;   // ja ha tornat a la recepta
+
+  let linies = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Als ingredients, les mateixes correccions que a la importació: l'«l» o
+  // la «I» que eren un 1, i els ingredients que l'OCR ha enganxat en una línia
+  if (esIng) linies = linies.flatMap(l => separarIngredientsEnganxats(corregirUnMalLlegit(l)));
+
+  const camp = document.getElementById('revisio-part-text');
+  const btn  = document.getElementById('revisio-part-btn');
+  if (!camp || !btn) return;
+  camp.value = linies.join('\n');
+  camp.disabled = false;
+  camp.placeholder = '';
+  btn.disabled = false;
+}
+
+function tancarRevisioPart(id) {
+  revisioPartActual = null;
+  obrirDetall(id, true);
+}
+
+async function desarPartAfegida(id, part) {
+  const r = receptaPerId(id);
+  if (!r) { mostrarToast('❌ No s\'ha trobat la recepta'); return; }
+  id = String(r['_id']);
+  const text = (document.getElementById('revisio-part-text')?.value || '').trim();
+  if (!text) { tancarRevisioPart(id); return; }   // ho ha esborrat tot: no hi ha res per afegir
+
+  const btn = document.getElementById('revisio-part-btn');
+  btn.disabled = true;
+  btn.textContent = 'Desant…';
+
+  // S'afegeix al final del que hi hagi; mai no se substitueix
+  let dades;
+  if (part === 'ing') {
+    const tots = getIngredientsParsed(r).concat(parseAllIngredients(text));
+    dades = { ingredients: serializeIngredients(tots) };
+  } else {
+    const ja = (r['Instruccions'] || '').trim();
+    dades = { instruccions: ja ? ja + '\n' + text : text };
+  }
+
+  const desat = await dbActualitzarRecepta(r['_id'], dades);
+  // Si no s'ha desat, el text es queda a la revisió per tornar-ho a provar.
+  // L'avís del què ha fallat el dona dbActualitzarRecepta.
+  if (!desat) {
+    btn.disabled = false;
+    btn.textContent = 'Afegir a la recepta';
+    return;
+  }
+  if (part === 'ing') r['Ingredients'] = dades.ingredients;
+  else r['Instruccions'] = dades.instruccions;
+
+  // El mode cuinar es reinicia, com en editar
+  delete cookState[id];
+  delete racionsActual[id];
+  cuinantActius.delete(id);
+  gestionarWakeLock();
+
+  revisioPartActual = null;
+  obrirDetall(id, true);
+  mostrarToast(part === 'ing' ? 'Ingredients afegits' : 'Instruccions afegides');
+  setTimeout(() => { construirFiltres(); aplicar(); }, 400);
+}
+
 async function eliminarRecepta(domId) {
   const id = idDeDom(domId);
   const r  = receptaPerId(id);
@@ -7984,6 +8180,15 @@ async function receptaImatgeLocal(file) {
 // ── OCR al núvol: envia la imatge a l'Apps Script, que la converteix en un
 //    Google Doc temporal amb OCR i en retorna el text; després l'extracció local ──
 async function receptaImatgeDrive(file) {
+  const text = await textImatgeDrive(file);
+  // Mateix camí que els PDF: extracció local del text
+  const fontDefecte = document.getElementById('fontDefecte').value || '';
+  return extraccioLocal(text, fontDefecte);
+}
+
+// El text de la foto tal com el lliura l'OCR del núvol, sense repartir-lo.
+// (Separat de receptaImatgeDrive a la v209: «Afegir des d'una foto» el vol sencer.)
+async function textImatgeDrive(file) {
   // Redimensiona per no enviar fotos de molts MB (l'OCR no ho necessita)
   const dataUrl = await redimensionaImatge(file, 1600, 0.85);
   // POST amb text/plain: evita el preflight CORS i permet llegir la resposta
@@ -7997,9 +8202,31 @@ async function receptaImatgeDrive(file) {
   if (!dades.ok) throw new Error(dades.error || 'L\'OCR de Drive ha fallat');
   const text = (dades.text || '').trim();
   if (!text) throw new Error('No s\'ha trobat text a la imatge');
-  // Mateix camí que els PDF: extracció local del text
-  const fontDefecte = document.getElementById('fontDefecte').value || '';
-  return extraccioLocal(text, fontDefecte);
+  return text;
+}
+
+// El text sencer d'una foto, per a «Afegir des d'una foto» (v209). Els
+// mateixos dos camins que receptaDesDeImatge: primer el núvol i, si falla, el
+// servidor d'aquest ordinador, que ja el dona repartit i per això s'ajunta.
+async function textDeFoto(file) {
+  if (AJUDANT_URL) {
+    try {
+      const text = await textImatgeDrive(file);
+      marcarOcrDisponible(true);
+      return text;
+    } catch (e) {
+      console.warn('OCR al núvol fallit, provem el servidor local:', e.message);
+    }
+  }
+  if (await comprovarServidor()) {
+    const r = await receptaImatgeLocal(file);
+    marcarOcrDisponible(true);
+    const text = [r.nom, r.ingredients, r.instruccions].filter(Boolean).join('\n').trim();
+    if (!text) throw new Error('No s\'ha trobat text a la imatge');
+    return text;
+  }
+  marcarOcrDisponible(false);
+  throw new Error('No s\'ha pogut llegir la fotografia (ni al núvol ni en local)');
 }
 
 // ── Fusiona diverses receptes (una per foto) en una de sola ──
